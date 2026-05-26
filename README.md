@@ -98,10 +98,10 @@ configs and creates timestamped backups before editing config files.
 
 ## GStack Upgrade Safety
 
-This farm is stored in this project at `.gstack/tools/browser-agent-mcp-farm/`
-and runs from the absolute path registered in Codex/Claude config. A normal
-gstack skill upgrade updates `~/.codex/skills/gstack*`; it should not overwrite
-this local package or the MCP config marker block.
+This farm is an independent local package. It runs from the absolute path
+registered in Codex/Claude config. A normal gstack skill upgrade updates
+`~/.codex/skills/gstack*`; it should not overwrite this local package or the
+MCP config marker block.
 
 After any gstack or agent-host upgrade, run:
 
