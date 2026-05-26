@@ -1,0 +1,33 @@
+{
+  "name": "browser-agent-mcp-farm",
+  "version": "0.2.6",
+  "private": true,
+  "type": "module",
+  "description": "Playwright BrowserContext farm exposed through MCP tools.",
+  "bin": {
+    "browser-agent-mcp-farm": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/lease-manager.test.ts tests/artifact-writer.test.ts",
+    "smoke": "node ./dist/cli.js smoke",
+    "smoke:web": "node ./dist/cli.js smoke-web --timeout-ms 10000",
+    "smoke:media": "node ./dist/cli.js smoke-media",
+    "smoke:proxy": "node ./dist/cli.js smoke-proxy",
+    "critique:next": "node ./dist/cli.js critique-next",
+    "critique:complete": "node ./dist/cli.js critique-complete",
+    "evidence:run": "node ./dist/cli.js evidence-run",
+    "verify": "npm run build && npm test && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.60.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}
