@@ -189,10 +189,9 @@ export class FarmService {
     return { ok: true as const, reportPath: parsed.reportPath, content };
   }
 
-  async listArtifacts(input: ListArtifactsInput) {
-    const parsed = ListArtifactsInputSchema.parse(input);
-    const text = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
-    const rows = text
+  private async readArtifactRows(runDir: string): Promise<Array<Record<string, unknown>>> {
+    const text = await readFile(join(runDir, "artifacts.jsonl"), "utf8").catch(() => "");
+    return text
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
@@ -204,6 +203,11 @@ export class FarmService {
         }
       })
       .filter((row): row is Record<string, unknown> => row !== undefined);
+  }
+
+  async listArtifacts(input: ListArtifactsInput) {
+    const parsed = ListArtifactsInputSchema.parse(input);
+    const rows = await this.readArtifactRows(parsed.runDir);
     const filtered = parsed.evidenceKind === undefined
       ? rows
       : rows.filter((row) => row.evidence_kind === parsed.evidenceKind);
@@ -224,19 +228,7 @@ export class FarmService {
   // can both see the evidence and detect tampering (recordedSha256 vs recomputed).
   async readArtifact(input: ReadArtifactInput) {
     const parsed = ReadArtifactInputSchema.parse(input);
-    const text = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
-    const rows = text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line) => {
-        try {
-          return JSON.parse(line) as Record<string, unknown>;
-        } catch {
-          return undefined;
-        }
-      })
-      .filter((row): row is Record<string, unknown> => row !== undefined);
+    const rows = await this.readArtifactRows(parsed.runDir);
     const row = rows.find((candidate) =>
       (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) ||
       (parsed.path !== undefined && candidate.path === parsed.path));
@@ -311,18 +303,7 @@ export class FarmService {
   // is not grounded in the cited bytes makes gate.ok false).
   async addClaim(input: AddClaimInput) {
     const parsed = AddClaimInputSchema.parse(input);
-    const artifactText = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
-    const registered = artifactText
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .some((line) => {
-        try {
-          return (JSON.parse(line) as { artifact_id?: string }).artifact_id === parsed.artifactId;
-        } catch {
-          return false;
-        }
-      });
+    const registered = (await this.readArtifactRows(parsed.runDir)).some((row) => row.artifact_id === parsed.artifactId);
     if (!registered) {
       return { ok: false as const, appended: false as const, error: `cited artifact not registered: ${parsed.artifactId}` };
     }
