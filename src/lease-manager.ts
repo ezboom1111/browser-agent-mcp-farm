@@ -36,6 +36,29 @@ export interface LeaseManagerOptions {
   defaultTtlMs?: number;
   defaultMaxPages?: number;
   now?: () => Date;
+  /**
+   * Global cap on concurrently-active leases. When the cap is reached, acquire() rejects
+   * with a typed `capacity_exhausted` error instead of overloading the host — backpressure.
+   * Capacity auto-recovers as leases are released or expire. Undefined = unlimited.
+   */
+  maxContexts?: number;
+}
+
+/**
+ * Read LeaseManager options from the environment. `FARM_MAX_CONTEXTS` (a positive integer)
+ * sets the global concurrent-context cap so a deployed `serve`/`serve-http` applies real
+ * backpressure; unset/invalid leaves the farm unlimited (unchanged default behavior).
+ */
+export function leaseManagerOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): LeaseManagerOptions {
+  const raw = env.FARM_MAX_CONTEXTS;
+  if (raw === undefined || raw.trim().length === 0) {
+    return {};
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return {};
+  }
+  return { maxContexts: parsed };
 }
 
 export class LeaseManager {
@@ -43,15 +66,38 @@ export class LeaseManager {
   private readonly now: () => Date;
   private readonly defaultTtlMs: number;
   private readonly defaultMaxPages: number;
+  private readonly maxContexts: number | undefined;
 
   constructor(options: LeaseManagerOptions = {}) {
     this.now = options.now ?? (() => new Date());
     this.defaultTtlMs = options.defaultTtlMs ?? 5 * 60 * 1000;
     this.defaultMaxPages = options.defaultMaxPages ?? 3;
+    this.maxContexts = options.maxContexts;
+  }
+
+  /** Count leases that are active and not yet past their expiry (i.e. holding capacity). */
+  activeContextCount(): number {
+    const nowMs = this.now().getTime();
+    let count = 0;
+    for (const lease of this.leases.values()) {
+      if (lease.status === "active" && Date.parse(lease.expiresAt) > nowMs) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   acquire(input: AcquireContextInput): Lease {
     const now = this.now();
+    if (this.maxContexts !== undefined) {
+      const active = this.activeContextCount();
+      if (active >= this.maxContexts) {
+        throw new FarmError(
+          "capacity_exhausted",
+          `Lease capacity exhausted: ${active}/${this.maxContexts} active contexts — release or wait for expiry`
+        );
+      }
+    }
     const ttlMs = input.ttlMs ?? this.defaultTtlMs;
     const token = `ctx_${randomUUID()}`;
     const lease: Lease = {
