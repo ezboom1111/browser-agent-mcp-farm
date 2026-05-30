@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSourceCoverageCalibrationLoopPlan,
-  formatSourceCoverageCalibrationLoopReport,
-  sourceCoverageCalibrationLoopOutputPaths
-} from "../src/source-coverage-calibration-loop.js";
+import { buildSourceCoverageCalibrationLoopPlan, formatSourceCoverageCalibrationLoopReport, sourceCoverageCalibrationLoopOutputPaths } from "../src/source-coverage-calibration-loop.js";
 import type { SourceNavigationPromotionSummary } from "../src/source-navigation-promotion.js";
 import { reviewSourceNavigationPromotion } from "../src/source-navigation-promotion.js";
 
@@ -32,12 +28,8 @@ describe("source coverage calibration loop", () => {
         maxDepth: 2,
         deepeningConcurrency: 2
       },
-      selectorHintFiles: [
-        "C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"
-      ],
-      promotionSummaries: [
-        promotionSummary("google_search", "ready", 2)
-      ]
+      selectorHintFiles: ["C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"],
+      promotionSummaries: [promotionSummary("google_search", "ready", 2)]
     });
 
     expect(plan).toMatchObject({
@@ -58,9 +50,7 @@ describe("source coverage calibration loop", () => {
         maxDepth: 2,
         deepeningConcurrency: 2
       },
-      selectorHintFiles: [
-        "C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"
-      ],
+      selectorHintFiles: ["C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"],
       targetCount: 2
     });
     expect(plan.targets.map((target) => target.id)).toEqual(["naver_search", "daum_search"]);
@@ -203,29 +193,12 @@ describe("source coverage calibration loop", () => {
     });
 
     expect(plan.includeSearchVariants).toBe(true);
-    expect(plan.targets.map((target) => target.id)).toEqual(expect.arrayContaining([
-      "naver_search",
-      "naver_search-news",
-      "naver_search-images",
-      "naver_search-videos",
-      "naver_search-place",
-      "naver_search-shopping",
-      "google_search",
-      "google_search-news",
-      "google_search-images",
-      "google_search-videos",
-      "google_search-local"
-    ]));
+    expect(plan.targets.map((target) => target.id)).toEqual(
+      expect.arrayContaining(["naver_search", "naver_search-news", "naver_search-images", "naver_search-videos", "naver_search-place", "naver_search-shopping", "google_search", "google_search-news", "google_search-images", "google_search-videos", "google_search-local"])
+    );
     expect(plan.targetLines).toContain("naver_search-news https://search.naver.com/search.naver");
     expect(plan.targetLines).toContain("google_search-videos https://www.google.com/search");
-    expect(plan.targets.map((target) => target.id)).toEqual(expect.arrayContaining([
-      "daum_search-news",
-      "daum_search-blog",
-      "daum_search-images",
-      "daum_search-videos",
-      "daum_search-place",
-      "daum_search-shopping"
-    ]));
+    expect(plan.targets.map((target) => target.id)).toEqual(expect.arrayContaining(["daum_search-news", "daum_search-blog", "daum_search-images", "daum_search-videos", "daum_search-place", "daum_search-shopping"]));
     expect(plan.targetDetectionSummary).toMatchObject({
       targetCount: 20,
       crossPlatformVariantCount: 2,
@@ -251,45 +224,51 @@ describe("source coverage calibration loop", () => {
 
   it("rejects invalid promotion-review evidence-run budgets", () => {
     const paths = sourceCoverageCalibrationLoopOutputPaths("C:\\runs\\bad-budget");
-    expect(() => buildSourceCoverageCalibrationLoopPlan({
-      category: "search",
-      locale: "ko-KR",
-      runRoot: paths.runRoot,
-      targetFile: paths.targetFile,
-      promotionDir: paths.promotionDir,
-      promotionReviewEvidenceRunOptions: {
-        followUpConcurrency: 0
-      }
-    })).toThrow("--source-navigation-followup-concurrency must be an integer between 1 and 5");
+    expect(() =>
+      buildSourceCoverageCalibrationLoopPlan({
+        category: "search",
+        locale: "ko-KR",
+        runRoot: paths.runRoot,
+        targetFile: paths.targetFile,
+        promotionDir: paths.promotionDir,
+        promotionReviewEvidenceRunOptions: {
+          followUpConcurrency: 0
+        }
+      })
+    ).toThrow("--source-navigation-followup-concurrency must be an integer between 1 and 5");
   });
 
   it("rejects invalid calibration batch concurrency", () => {
     const paths = sourceCoverageCalibrationLoopOutputPaths("C:\\runs\\bad-concurrency");
-    expect(() => buildSourceCoverageCalibrationLoopPlan({
-      category: "search",
-      locale: "ko-KR",
-      runRoot: paths.runRoot,
-      targetFile: paths.targetFile,
-      promotionDir: paths.promotionDir,
-      calibrationConcurrency: 0
-    })).toThrow("Coverage calibration loop concurrency must be an integer between 1 and 5");
+    expect(() =>
+      buildSourceCoverageCalibrationLoopPlan({
+        category: "search",
+        locale: "ko-KR",
+        runRoot: paths.runRoot,
+        targetFile: paths.targetFile,
+        promotionDir: paths.promotionDir,
+        calibrationConcurrency: 0
+      })
+    ).toThrow("Coverage calibration loop concurrency must be an integer between 1 and 5");
   });
 
   it("rejects concurrent calibration with persistent profiles", () => {
     const paths = sourceCoverageCalibrationLoopOutputPaths("C:\\runs\\bad-profile-concurrency");
-    expect(() => buildSourceCoverageCalibrationLoopPlan({
-      category: "search",
-      locale: "ko-KR",
-      runRoot: paths.runRoot,
-      targetFile: paths.targetFile,
-      promotionDir: paths.promotionDir,
-      calibrationConcurrency: 2,
-      calibrationRuntime: {
-        headed: true,
-        storagePolicy: "persistent-profile",
-        profileName: "google-search"
-      }
-    })).toThrow("Coverage calibration loop concurrency must be 1 when persistent-profile calibration is used");
+    expect(() =>
+      buildSourceCoverageCalibrationLoopPlan({
+        category: "search",
+        locale: "ko-KR",
+        runRoot: paths.runRoot,
+        targetFile: paths.targetFile,
+        promotionDir: paths.promotionDir,
+        calibrationConcurrency: 2,
+        calibrationRuntime: {
+          headed: true,
+          storagePolicy: "persistent-profile",
+          profileName: "google-search"
+        }
+      })
+    ).toThrow("Coverage calibration loop concurrency must be 1 when persistent-profile calibration is used");
   });
 
   it("prints promotion destination extraction totals when promotion review is supplied", () => {

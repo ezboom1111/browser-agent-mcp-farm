@@ -5,11 +5,7 @@ import type { Dirent } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import type { SourceNavigationCalibrationReport } from "./source-navigation-calibration.js";
 
-export type SourceNavigationCalibrationReportSourceKind =
-  | "file"
-  | "batch_manifest"
-  | "run_dir_manifest"
-  | "run_dir_fallback";
+export type SourceNavigationCalibrationReportSourceKind = "file" | "batch_manifest" | "run_dir_manifest" | "run_dir_fallback";
 
 export interface SourceNavigationCalibrationReportSource {
   input: string;
@@ -44,11 +40,7 @@ interface BatchManifestRecord {
   attempts?: unknown;
 }
 
-export async function loadSourceNavigationCalibrationReports(input: {
-  files?: string[] | undefined;
-  runDirs?: string[] | undefined;
-  batchManifests?: string[] | undefined;
-}): Promise<SourceNavigationCalibrationReportLoadResult> {
+export async function loadSourceNavigationCalibrationReports(input: { files?: string[] | undefined; runDirs?: string[] | undefined; batchManifests?: string[] | undefined }): Promise<SourceNavigationCalibrationReportLoadResult> {
   const files = uniqueStrings(input.files ?? []);
   const runDirs = uniqueStrings(input.runDirs ?? []);
   const batchManifests = uniqueStrings(input.batchManifests ?? []);
@@ -137,9 +129,7 @@ function isCalibrationBatchManifest(value: unknown): value is { attempts: BatchM
     return false;
   }
   const record = value as BatchManifestRecord;
-  return record.schemaVersion === "1.0"
-    && record.executionPolicy === "read_only_selector_probe_batch"
-    && Array.isArray(record.attempts);
+  return record.schemaVersion === "1.0" && record.executionPolicy === "read_only_selector_probe_batch" && Array.isArray(record.attempts);
 }
 
 async function loadCalibrationReportsFromRunDir(runDir: string): Promise<SourceNavigationCalibrationReportLoadResult> {
@@ -151,9 +141,7 @@ async function loadCalibrationReportsFromRunDir(runDir: string): Promise<SourceN
   };
   const manifestPath = join(resolvedRunDir, "artifacts.jsonl");
   const manifestCandidates = await candidateArtifactPathsFromManifest(resolvedRunDir, manifestPath, result.warnings);
-  const paths = manifestCandidates.length > 0
-    ? manifestCandidates
-    : await fallbackCalibrationPaths(resolvedRunDir, result.warnings);
+  const paths = manifestCandidates.length > 0 ? manifestCandidates : await fallbackCalibrationPaths(resolvedRunDir, result.warnings);
 
   const seen = new Set<string>();
   for (const path of paths) {
@@ -179,15 +167,11 @@ async function loadCalibrationReportsFromRunDir(runDir: string): Promise<SourceN
   return result;
 }
 
-async function candidateArtifactPathsFromManifest(
-  runDir: string,
-  manifestPath: string,
-  warnings: string[]
-): Promise<string[]> {
+async function candidateArtifactPathsFromManifest(runDir: string, manifestPath: string, warnings: string[]): Promise<string[]> {
   let text: string;
   try {
     text = await readFile(manifestPath, "utf8");
-  } catch (error) {
+  } catch (_error) {
     warnings.push(`Could not read ${manifestPath}; falling back to raw/structured artifact discovery.`);
     return [];
   }
@@ -234,7 +218,7 @@ async function fallbackCalibrationPaths(runDir: string, warnings: string[]): Pro
   const roots = [join(runDir, "raw"), join(runDir, "structured")];
   const paths: string[] = [];
   for (const root of roots) {
-    paths.push(...await findCalibrationFiles(root, warnings, 0));
+    paths.push(...(await findCalibrationFiles(root, warnings, 0)));
   }
   const rawPaths = paths.filter((path) => path.toLowerCase().endsWith(".txt"));
   return rawPaths.length > 0 ? uniqueStrings(rawPaths) : uniqueStrings(paths);
@@ -247,14 +231,14 @@ async function findCalibrationFiles(dir: string, warnings: string[], depth: numb
   let entries: Dirent<string>[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
   const paths: string[] = [];
   for (const entry of entries) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
-      paths.push(...await findCalibrationFiles(path, warnings, depth + 1));
+      paths.push(...(await findCalibrationFiles(path, warnings, depth + 1)));
       continue;
     }
     if (!entry.isFile()) {
@@ -278,11 +262,7 @@ function isSourceNavigationCalibrationReport(value: unknown): value is SourceNav
     actionCalibrations?: unknown;
     summary?: unknown;
   };
-  return report.schemaVersion === "1.0"
-    && report.executionPolicy === "read_only_selector_probe"
-    && Array.isArray(report.actionCalibrations)
-    && typeof report.summary === "object"
-    && report.summary !== null;
+  return report.schemaVersion === "1.0" && report.executionPolicy === "read_only_selector_probe" && Array.isArray(report.actionCalibrations) && typeof report.summary === "object" && report.summary !== null;
 }
 
 function resolveInside(root: string, relPath: string): string {

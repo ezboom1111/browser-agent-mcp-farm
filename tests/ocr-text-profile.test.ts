@@ -7,13 +7,7 @@ describe("buildOcrTextProfile", () => {
 
     expect(profile.lineCount).toBe(5);
     expect(profile.nonWhitespaceCharCount).toBeGreaterThan(0);
-    expect(profile.scripts).toEqual(expect.arrayContaining([
-      "latin",
-      "hangul",
-      "cjk",
-      "digit",
-      "currency"
-    ]));
+    expect(profile.scripts).toEqual(expect.arrayContaining(["latin", "hangul", "cjk", "digit", "currency"]));
     expect(profile.hasDigits).toBe(true);
     expect(profile.hasCurrency).toBe(true);
     expect(profile.hasPriceLikeText).toBe(true);

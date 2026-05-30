@@ -1,12 +1,6 @@
 export type PlatformId = "youtube" | "instagram" | "tiktok" | "generic";
 
-export type CapabilityName =
-  | "metadata"
-  | "thumbnail"
-  | "captionTrackList"
-  | "captionBody"
-  | "visibleFrameSampling"
-  | "rawVideoBytes";
+export type CapabilityName = "metadata" | "thumbnail" | "captionTrackList" | "captionBody" | "visibleFrameSampling" | "rawVideoBytes";
 
 export type CapabilityStatus = "available" | "unavailable" | "not_attempted";
 export type CredentialKind = "none" | "api_key" | "oauth" | "research_api" | "browser_session";
@@ -41,14 +35,7 @@ export interface PlatformEvidenceAdapter {
   describe(url: URL): PlatformCapabilityMap;
 }
 
-export const CAPABILITY_NAMES: CapabilityName[] = [
-  "metadata",
-  "thumbnail",
-  "captionTrackList",
-  "captionBody",
-  "visibleFrameSampling",
-  "rawVideoBytes"
-];
+export const CAPABILITY_NAMES: CapabilityName[] = ["metadata", "thumbnail", "captionTrackList", "captionBody", "visibleFrameSampling", "rawVideoBytes"];
 
 export function capability(input: EvidenceCapability): EvidenceCapability {
   return input;

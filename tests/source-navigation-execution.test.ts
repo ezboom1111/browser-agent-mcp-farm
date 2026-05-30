@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSourceNavigationExecutionPlan,
-  DEFAULT_SOURCE_NAVIGATION_EXECUTION_LIMITS
-} from "../src/source-navigation-execution.js";
+import { buildSourceNavigationExecutionPlan, DEFAULT_SOURCE_NAVIGATION_EXECUTION_LIMITS } from "../src/source-navigation-execution.js";
 import { describeSourceNavigationPlan } from "../src/source-navigation.js";
 import { describeSourceStrategy } from "../src/source-strategy.js";
 
@@ -46,11 +43,9 @@ describe("buildSourceNavigationExecutionPlan", () => {
     const navigationPlan = planFor("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
     const executionPlan = buildSourceNavigationExecutionPlan(navigationPlan);
 
-    expect(executionPlan.unsupportedSteps).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: "unsupported:raw-stream-download", status: "unsupported" }),
-      expect.objectContaining({ key: "unsupported:gate-bypass", status: "unsupported" }),
-      expect.objectContaining({ key: "unsupported:social-write", status: "unsupported" })
-    ]));
+    expect(executionPlan.unsupportedSteps).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: "unsupported:raw-stream-download", status: "unsupported" }), expect.objectContaining({ key: "unsupported:gate-bypass", status: "unsupported" }), expect.objectContaining({ key: "unsupported:social-write", status: "unsupported" })])
+    );
     expect(executionPlan.unsupportedSteps.every((step) => !step.captureBefore && !step.captureAfter)).toBe(true);
   });
 

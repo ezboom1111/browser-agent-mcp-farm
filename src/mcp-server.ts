@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+import type { z } from "zod";
 import { toToolError } from "./farm-error.js";
 import { FarmService } from "./farm-service.js";
 import {
@@ -45,13 +45,15 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_scroll: "Scroll a page down/up/top/bottom to reveal lazy-loaded content before capture.",
   farm_capture_after_idle: "Wait for network/DOM idle (bounded), then capture. Use for SPA/dynamic pages where content arrives after load.",
   farm_sample_frames: "Sample timestamped frame screenshots from visible media (required to support visual claims). Supports dense sampling around transcript/OCR/scene-change hits.",
-  farm_evidence_run: "Flagship one-shot research workflow: given a URL (and optional bounded source-navigation recipe) it captures the page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a final claim-gated report. Prefer this for end-to-end research; it manages its own lease. Returns runDir + reportPath; the result is isError when the final claim gate fails.",
+  farm_evidence_run:
+    "Flagship one-shot research workflow: given a URL (and optional bounded source-navigation recipe) it captures the page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a final claim-gated report. Prefer this for end-to-end research; it manages its own lease. Returns runDir + reportPath; the result is isError when the final claim gate fails.",
   farm_read_report: "Read back the Markdown report a prior farm_evidence_run produced, given its reportPath. Read-only; no browser.",
   farm_list_artifacts: "List the artifact ledger (artifacts.jsonl) for a prior run's runDir, optionally filtered by evidence kind. Read-only; no browser.",
   farm_run_claim_gate: "Re-run the claim gate over an existing run's runDir to validate that claims cite registered, hash-verified artifacts. Read-only; the result is isError when the gate fails.",
   farm_read_artifact: "Read one registered artifact's bytes (text or base64) by artifactId or path, RE-HASHING on read to detect tampering (recordedSha256 vs recomputed). Lets a parallel agent SEE another run's evidence and verify it. Read-only; isError if not found or tampered.",
   farm_register_evidence: "Register a piece of evidence (the exact bytes/text you saw) as a hash-verified artifact you can then cite, returning its artifactId. The first half of authoring a cite-or-fail claim.",
-  farm_add_claim: "Author a substantive claim that cites a registered artifact, with an optional anchor (where in the artifact it is grounded). The gate runs immediately: a claim whose anchor text is NOT in the cited bytes makes the result isError. This is how an agent's OWN answer becomes cite-or-fail, not just runner boilerplate.",
+  farm_add_claim:
+    "Author a substantive claim that cites a registered artifact, with an optional anchor (where in the artifact it is grounded). The gate runs immediately: a claim whose anchor text is NOT in the cited bytes makes the result isError. This is how an agent's OWN answer becomes cite-or-fail, not just runner boilerplate.",
   farm_close_page: "Close a page in a leased context when finished with it.",
   farm_click: "Guarded click on a selector. Requires a read-write lease; payment/booking/account-changing controls are refused.",
   farm_fill: "Guarded fill of a form field. Requires a read-write lease.",
@@ -82,13 +84,37 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_scroll", ScrollInputSchema, (input) => service.scroll(input));
   registerJsonTool(server, "farm_capture_after_idle", CaptureAfterIdleInputSchema, (input) => service.captureAfterIdle(input));
   registerJsonTool(server, "farm_sample_frames", SampleFramesInputSchema, (input) => service.sampleFrames(input));
-  registerJsonTool(server, "farm_evidence_run", EvidenceRunInputSchema, (input) => service.evidenceRun(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(
+    server,
+    "farm_evidence_run",
+    EvidenceRunInputSchema,
+    (input) => service.evidenceRun(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
   registerJsonTool(server, "farm_read_report", ReadReportInputSchema, (input) => service.readReport(input));
   registerJsonTool(server, "farm_list_artifacts", ListArtifactsInputSchema, (input) => service.listArtifacts(input));
-  registerJsonTool(server, "farm_run_claim_gate", RunClaimGateInputSchema, (input) => service.runClaimGate(input), (result) => resultHasFailedClaimGate(result));
-  registerJsonTool(server, "farm_read_artifact", ReadArtifactInputSchema, (input) => service.readArtifact(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(
+    server,
+    "farm_run_claim_gate",
+    RunClaimGateInputSchema,
+    (input) => service.runClaimGate(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
+  registerJsonTool(
+    server,
+    "farm_read_artifact",
+    ReadArtifactInputSchema,
+    (input) => service.readArtifact(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
   registerJsonTool(server, "farm_register_evidence", RegisterEvidenceInputSchema, (input) => service.registerEvidence(input));
-  registerJsonTool(server, "farm_add_claim", AddClaimInputSchema, (input) => service.addClaim(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(
+    server,
+    "farm_add_claim",
+    AddClaimInputSchema,
+    (input) => service.addClaim(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
   registerJsonTool(server, "farm_close_page", ClosePageInputSchema, (input) => service.closePage(input));
   registerJsonTool(server, "farm_click", ClickInputSchema, (input) => service.click(input));
   registerJsonTool(server, "farm_fill", FillInputSchema, (input) => service.fill(input));
@@ -101,7 +127,13 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_list_runs", ListRunsInputSchema, (input) => service.listRuns(input));
   registerJsonTool(server, "farm_extract_structured", ExtractStructuredInputSchema, (input) => service.extractStructured(input));
   registerJsonTool(server, "farm_export_bundle", ExportBundleInputSchema, (input) => service.exportBundle(input));
-  registerJsonTool(server, "farm_verify_bundle", VerifyBundleInputSchema, (input) => service.verifyBundle(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(
+    server,
+    "farm_verify_bundle",
+    VerifyBundleInputSchema,
+    (input) => service.verifyBundle(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
 
   return server;
 }
@@ -112,13 +144,7 @@ export async function runStdioServer(service = new FarmService()): Promise<void>
   await server.connect(transport);
 }
 
-function registerJsonTool<T extends z.ZodRawShape>(
-  server: McpServer,
-  name: string,
-  schema: z.ZodObject<T>,
-  handler: (input: z.infer<z.ZodObject<T>>) => unknown | Promise<unknown>,
-  isErrorResult?: (result: unknown) => boolean
-): void {
+function registerJsonTool<T extends z.ZodRawShape>(server: McpServer, name: string, schema: z.ZodObject<T>, handler: (input: z.infer<z.ZodObject<T>>) => unknown | Promise<unknown>, isErrorResult?: (result: unknown) => boolean): void {
   server.registerTool(
     name,
     {
@@ -144,8 +170,5 @@ function registerJsonTool<T extends z.ZodRawShape>(
 }
 
 function resultHasFailedClaimGate(result: unknown): boolean {
-  return typeof result === "object"
-    && result !== null
-    && "ok" in result
-    && (result as { ok?: unknown }).ok === false;
+  return typeof result === "object" && result !== null && "ok" in result && (result as { ok?: unknown }).ok === false;
 }

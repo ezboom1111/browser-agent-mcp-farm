@@ -11,9 +11,7 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "login_wall", confidence: "high" })
-    ]));
+    expect(report.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "login_wall", confidence: "high" })]));
   });
 
   it("detects app-open interstitials", () => {
@@ -24,9 +22,7 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "app_interstitial", confidence: "high" })
-    ]));
+    expect(report.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "app_interstitial", confidence: "high" })]));
   });
 
   it("detects TikTok server-error pages as unavailable media", () => {
@@ -37,16 +33,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "media_unavailable",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "something went wrong",
-          "something wrong with the server"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "media_unavailable",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["something went wrong", "something wrong with the server"])
+        })
+      ])
+    );
   });
 
   it("detects bot blocks", () => {
@@ -57,9 +52,7 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "bot_block", confidence: "high" })
-    ]));
+    expect(report.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "bot_block", confidence: "high" })]));
   });
 
   it("detects Korean marketplace access and bot-check blocks", () => {
@@ -76,9 +69,7 @@ describe("classifyBrowserObstructions", () => {
 
     for (const report of [naverShopping, gmarket]) {
       expect(report.status).toBe("detected");
-      expect(report.detections).toEqual(expect.arrayContaining([
-        expect.objectContaining({ kind: "bot_block", confidence: "high" })
-      ]));
+      expect(report.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "bot_block", confidence: "high" })]));
     }
   });
 
@@ -91,17 +82,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "\uC561\uC138\uC2A4\uAC00 \uC77C\uC2DC\uC801\uC73C\uB85C \uC81C\uD55C",
-          "\uCD94\uAC00 \uAC80\uC99D\uC774 \uD544\uC694",
-          "\uB85C\uBD07\uC73C\uB85C \uC758\uC2EC"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["\uC561\uC138\uC2A4\uAC00 \uC77C\uC2DC\uC801\uC73C\uB85C \uC81C\uD55C", "\uCD94\uAC00 \uAC80\uC99D\uC774 \uD544\uC694", "\uB85C\uBD07\uC73C\uB85C \uC758\uC2EC"])
+        })
+      ])
+    );
   });
 
   it("detects Naver Map service-limit pages as bot blocks", () => {
@@ -113,16 +102,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "\uC11C\uBE44\uC2A4 \uC774\uC6A9\uC774 \uC81C\uD55C",
-          "\uACFC\uB3C4\uD55C \uC811\uADFC \uC694\uCCAD"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["\uC11C\uBE44\uC2A4 \uC774\uC6A9\uC774 \uC81C\uD55C", "\uACFC\uB3C4\uD55C \uC811\uADFC \uC694\uCCAD"])
+        })
+      ])
+    );
   });
 
   it("detects global travel security and access blocks", () => {
@@ -134,17 +122,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "access to this page has been denied",
-          "complete the security check",
-          "enable cookies to continue"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["access to this page has been denied", "complete the security check", "enable cookies to continue"])
+        })
+      ])
+    );
   });
 
   it("detects Cloudflare-style security verification and network security blocks", () => {
@@ -162,20 +148,10 @@ describe("classifyBrowserObstructions", () => {
 
     for (const report of [cloudflare, networkSecurity]) {
       expect(report.status).toBe("detected");
-      expect(report.detections).toEqual(expect.arrayContaining([
-        expect.objectContaining({ kind: "bot_block", confidence: "high" })
-      ]));
+      expect(report.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "bot_block", confidence: "high" })]));
     }
-    expect(cloudflare.detections.find((detection) => detection.kind === "bot_block")?.matchedSignals).toEqual(expect.arrayContaining([
-      "performing security verification",
-      "security service to protect against malicious bots",
-      "verifies you are not a bot",
-      "ray id:"
-    ]));
-    expect(networkSecurity.detections.find((detection) => detection.kind === "bot_block")?.matchedSignals).toEqual(expect.arrayContaining([
-      "you've been blocked by network security",
-      "blocked by network security"
-    ]));
+    expect(cloudflare.detections.find((detection) => detection.kind === "bot_block")?.matchedSignals).toEqual(expect.arrayContaining(["performing security verification", "security service to protect against malicious bots", "verifies you are not a bot", "ray id:"]));
+    expect(networkSecurity.detections.find((detection) => detection.kind === "bot_block")?.matchedSignals).toEqual(expect.arrayContaining(["you've been blocked by network security", "blocked by network security"]));
   });
 
   it("detects DataDome captcha-delivery challenge shells", () => {
@@ -187,18 +163,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "datadome",
-          "captcha-delivery.com",
-          "geo.captcha-delivery.com",
-          "var dd="
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["datadome", "captcha-delivery.com", "geo.captcha-delivery.com", "var dd="])
+        })
+      ])
+    );
   });
 
   it("detects Expedia human-or-bot challenge pages", () => {
@@ -210,18 +183,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "show us your human side",
-          "human or a bot",
-          "can't tell if you're a human or a bot",
-          "bot or not?"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["show us your human side", "human or a bot", "can't tell if you're a human or a bot", "bot or not?"])
+        })
+      ])
+    );
   });
 
   it("detects Bing-style solve-the-task search challenges", () => {
@@ -233,17 +203,15 @@ describe("classifyBrowserObstructions", () => {
     });
 
     expect(report.status).toBe("detected");
-    expect(report.detections).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: "bot_block",
-        confidence: "high",
-        matchedSignals: expect.arrayContaining([
-          "solve the task below",
-          "\uACC4\uC18D\uD558\uB824\uBA74 \uC544\uB798 \uACFC\uC81C",
-          "\uC544\uB798 \uACFC\uC81C \uD574\uACB0"
-        ])
-      })
-    ]));
+    expect(report.detections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "bot_block",
+          confidence: "high",
+          matchedSignals: expect.arrayContaining(["solve the task below", "\uACC4\uC18D\uD558\uB824\uBA74 \uC544\uB798 \uACFC\uC81C", "\uC544\uB798 \uACFC\uC81C \uD574\uACB0"])
+        })
+      ])
+    );
   });
 
   it("does not classify a stray robot token as a bot block", () => {

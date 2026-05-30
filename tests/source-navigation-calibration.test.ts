@@ -7,10 +7,7 @@ import { chromium } from "playwright";
 import { ArtifactWriter } from "../src/artifact-writer.js";
 import { BrowserPool } from "../src/browser-pool.js";
 import { LeaseManager } from "../src/lease-manager.js";
-import {
-  calibrateSourceNavigationRecipePlan,
-  writeSourceNavigationCalibrationArtifact
-} from "../src/source-navigation-calibration.js";
+import { calibrateSourceNavigationRecipePlan, writeSourceNavigationCalibrationArtifact } from "../src/source-navigation-calibration.js";
 import { describeSourceNavigationPlan } from "../src/source-navigation.js";
 import { describeSourceNavigationRecipePlan } from "../src/source-navigation-recipes.js";
 import { describeSourceStrategy } from "../src/source-strategy.js";
@@ -24,7 +21,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("probes Google-like selector candidates read-only and records calibration artifacts", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration test because Playwright Chromium is not installed.");
       return;
     }
@@ -69,10 +66,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
       expect(report.summary.matchedCaptureScopeCount).toBeGreaterThanOrEqual(3);
       expect(report.summary.blockedSignalHits).toBe(0);
       expect(report.actionCalibrations.find((action) => action.actionKey === "destination-followup")?.status).toBe("observed");
-      const destinationProbe = report.actionCalibrations
-        .find((action) => action.actionKey === "destination-followup")
-        ?.selectorResults.find((result) => result.selector === "#result-card")
-        ?.destinationProbe;
+      const destinationProbe = report.actionCalibrations.find((action) => action.actionKey === "destination-followup")?.selectorResults.find((result) => result.selector === "#result-card")?.destinationProbe;
       expect(destinationProbe).toMatchObject({
         status: "ok",
         usableCandidateCount: 1,
@@ -94,8 +88,8 @@ describe("calibrateSourceNavigationRecipePlan", () => {
       expect(records.some((record) => record.evidence_kind === "source_navigation_calibration")).toBe(true);
 
       const artifactText = await readFile(join(runDir, "raw", "source-navigation-calibration.txt"), "utf8");
-      expect(artifactText).toContain("\"executionPolicy\": \"read_only_selector_probe\"");
-      expect(artifactText).toContain("\"destinationProbe\"");
+      expect(artifactText).toContain('"executionPolicy": "read_only_selector_probe"');
+      expect(artifactText).toContain('"destinationProbe"');
       expect(artifactText).toContain("Tokyo hotel result");
     } finally {
       await pool.shutdown();
@@ -104,7 +98,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("records no-usable-link destination probes for visible destination containers without links", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration destination-probe test because Playwright Chromium is not installed.");
       return;
     }
@@ -134,9 +128,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         url: `${fixture.baseUrl}/google-like-no-destination`
       });
 
-      const destinationResult = report.actionCalibrations
-        .find((action) => action.actionKey === "destination-followup")
-        ?.selectorResults.find((result) => result.selector === "#result-card");
+      const destinationResult = report.actionCalibrations.find((action) => action.actionKey === "destination-followup")?.selectorResults.find((result) => result.selector === "#result-card");
       expect(destinationResult).toMatchObject({
         status: "matched",
         destinationProbe: {
@@ -159,7 +151,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("probes result selectors and destination links inside iframes", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration iframe test because Playwright Chromium is not installed.");
       return;
     }
@@ -189,9 +181,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         url: `${fixture.baseUrl}/google-like-iframe`
       });
 
-      const resultCard = report.actionCalibrations
-        .find((action) => action.actionKey === "result-selection")
-        ?.selectorResults.find((result) => result.selector === "#result-card");
+      const resultCard = report.actionCalibrations.find((action) => action.actionKey === "result-selection")?.selectorResults.find((result) => result.selector === "#result-card");
       expect(resultCard).toMatchObject({
         status: "matched",
         matchedFrameCount: 1,
@@ -199,18 +189,13 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         firstVisibleFrameUrl: expect.stringContaining("/google-like-frame-content")
       });
 
-      const destinationProbe = report.actionCalibrations
-        .find((action) => action.actionKey === "destination-followup")
-        ?.selectorResults.find((result) => result.selector === "#result-card")
-        ?.destinationProbe;
+      const destinationProbe = report.actionCalibrations.find((action) => action.actionKey === "destination-followup")?.selectorResults.find((result) => result.selector === "#result-card")?.destinationProbe;
       expect(destinationProbe).toMatchObject({
         status: "ok",
         usableCandidateCount: 1,
         promotableCandidateCount: 1,
         matchedFrameCount: 1,
-        samplePromotableUrls: [
-          `${fixture.baseUrl}/destination`
-        ],
+        samplePromotableUrls: [`${fixture.baseUrl}/destination`],
         samplePromotableTargets: [
           expect.objectContaining({
             url: `${fixture.baseUrl}/destination`,
@@ -228,7 +213,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("classifies provider shell and login destination probes as non-promotable for map pages", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration provider-shell probe test because Playwright Chromium is not installed.");
       return;
     }
@@ -258,10 +243,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         url: "https://map.naver.com/p/search/seongsu%20cafe"
       });
 
-      const destinationProbe = report.actionCalibrations
-        .find((action) => action.actionKey === "destination-followup")
-        ?.selectorResults.find((result) => result.selector === "#root a[href^=\"http\"]")
-        ?.destinationProbe;
+      const destinationProbe = report.actionCalibrations.find((action) => action.actionKey === "destination-followup")?.selectorResults.find((result) => result.selector === '#root a[href^="http"]')?.destinationProbe;
       expect(destinationProbe).toMatchObject({
         status: "ok",
         usableCandidateCount: 2,
@@ -271,10 +253,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
           { warning: "login_or_account_surface", count: 1 },
           { warning: "low_value_navigation_surface", count: 1 }
         ]),
-        sampleNonPromotableUrls: [
-          "https://www.naver.com/",
-          "https://nid.naver.com/nidlogin.login"
-        ],
+        sampleNonPromotableUrls: ["https://www.naver.com/", "https://nid.naver.com/nidlogin.login"],
         sampleNonPromotableTargets: [
           expect.objectContaining({
             url: "https://www.naver.com/",
@@ -296,7 +275,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("probes client-state destination extraction candidates read-only", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration client-state test because Playwright Chromium is not installed.");
       return;
     }
@@ -338,18 +317,9 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         parsedFrameCount: 1,
         rawCandidateCount: 2,
         uniqueCandidateCount: 2,
-        sampleUrls: [
-          "https://map.naver.com/p/entry/place/1790076538",
-          "https://map.naver.com/p/entry/place/9876543210"
-        ],
-        sampleOriginalUrls: [
-          "https://place.naver.com/restaurant/1790076538",
-          "https://place.naver.com/restaurant/9876543210"
-        ],
-        sampleTexts: [
-          expect.stringContaining("\uC131\uC218 \uCE74\uD398"),
-          expect.stringContaining("\uC131\uC218 \uB514\uC800\uD2B8")
-        ]
+        sampleUrls: ["https://map.naver.com/p/entry/place/1790076538", "https://map.naver.com/p/entry/place/9876543210"],
+        sampleOriginalUrls: ["https://place.naver.com/restaurant/1790076538", "https://place.naver.com/restaurant/9876543210"],
+        sampleTexts: [expect.stringContaining("\uC131\uC218 \uCE74\uD398"), expect.stringContaining("\uC131\uC218 \uB514\uC800\uD2B8")]
       });
       expect(report.summary.clientStateProbeCount).toBe(1);
       expect(report.summary.clientStateProbeOkCount).toBe(1);
@@ -360,7 +330,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("records global destination discovery when planned map selectors miss a promotable link", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration destination discovery test because Playwright Chromium is not installed.");
       return;
     }
@@ -397,10 +367,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         usableCandidateCount: 2,
         promotableCandidateCount: 2,
         nonPromotableCandidateCount: 0,
-        samplePromotableUrls: expect.arrayContaining([
-          "https://place.naver.com/restaurant/12345",
-          "https://place.naver.com/restaurant/67890"
-        ]),
+        samplePromotableUrls: expect.arrayContaining(["https://place.naver.com/restaurant/12345", "https://place.naver.com/restaurant/67890"]),
         samplePromotableTargets: expect.arrayContaining([
           expect.objectContaining({
             url: "https://place.naver.com/restaurant/12345",
@@ -424,7 +391,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("classifies global discovery map shell hash anchors as non-promotable", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration destination discovery shell test because Playwright Chromium is not installed.");
       return;
     }
@@ -464,12 +431,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
           { warning: "low_value_navigation_surface", count: 3 },
           { warning: "login_or_account_surface", count: 1 }
         ]),
-        sampleNonPromotableUrls: expect.arrayContaining([
-          "https://map.naver.com/p/#section_content",
-          "https://map.naver.com/p/#header",
-          "https://www.naver.com/",
-          "https://nid.naver.com/nidlogin.login"
-        ]),
+        sampleNonPromotableUrls: expect.arrayContaining(["https://map.naver.com/p/#section_content", "https://map.naver.com/p/#header", "https://www.naver.com/", "https://nid.naver.com/nidlogin.login"]),
         sampleNonPromotableTargets: expect.arrayContaining([
           expect.objectContaining({
             url: "https://map.naver.com/p/#section_content",
@@ -489,7 +451,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("classifies Google News navigation shell links as non-promotable while probing read links", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration Google News shell test because Playwright Chromium is not installed.");
       return;
     }
@@ -526,9 +488,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         usableCandidateCount: 1,
         promotableCandidateCount: 1,
         nonPromotableCandidateCount: 0,
-        samplePromotableUrls: [
-          "https://news.google.com/read/CBMiFixtureArticle?hl=en-US&gl=US&ceid=US%3Aen"
-        ],
+        samplePromotableUrls: ["https://news.google.com/read/CBMiFixtureArticle?hl=en-US&gl=US&ceid=US%3Aen"],
         samplePromotableTargets: [
           expect.objectContaining({
             url: "https://news.google.com/read/CBMiFixtureArticle?hl=en-US&gl=US&ceid=US%3Aen",
@@ -542,15 +502,8 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         status: "ok",
         promotableCandidateCount: 2,
         nonPromotableCandidateCount: 4,
-        warningCounts: expect.arrayContaining([
-          { warning: "low_value_navigation_surface", count: 4 }
-        ]),
-        sampleNonPromotableUrls: expect.arrayContaining([
-          "https://news.google.com/?hl=en-US&gl=US&ceid=US%3Aen",
-          "https://news.google.com/home?hl=en-US&gl=US&ceid=US%3Aen",
-          "https://news.google.com/my/library?hl=en-US&gl=US&ceid=US%3Aen",
-          "https://www.google.co.kr/intl/en/about/products?tab=nh"
-        ])
+        warningCounts: expect.arrayContaining([{ warning: "low_value_navigation_surface", count: 4 }]),
+        sampleNonPromotableUrls: expect.arrayContaining(["https://news.google.com/?hl=en-US&gl=US&ceid=US%3Aen", "https://news.google.com/home?hl=en-US&gl=US&ceid=US%3Aen", "https://news.google.com/my/library?hl=en-US&gl=US&ceid=US%3Aen", "https://www.google.co.kr/intl/en/about/products?tab=nh"])
       });
     } finally {
       await pool.shutdown();
@@ -559,7 +512,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("classifies Reuters shell links as non-promotable while probing dated article links", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration Reuters shell test because Playwright Chromium is not installed.");
       return;
     }
@@ -596,9 +549,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         usableCandidateCount: 1,
         promotableCandidateCount: 1,
         nonPromotableCandidateCount: 0,
-        samplePromotableUrls: [
-          "https://www.reuters.com/world/us/ai-policy-lawmakers-debate-new-rules-2026-05-28/"
-        ],
+        samplePromotableUrls: ["https://www.reuters.com/world/us/ai-policy-lawmakers-debate-new-rules-2026-05-28/"],
         samplePromotableTargets: [
           expect.objectContaining({
             url: "https://www.reuters.com/world/us/ai-policy-lawmakers-debate-new-rules-2026-05-28/",
@@ -612,15 +563,8 @@ describe("calibrateSourceNavigationRecipePlan", () => {
         status: "ok",
         promotableCandidateCount: 2,
         nonPromotableCandidateCount: 4,
-        warningCounts: expect.arrayContaining([
-          { warning: "low_value_navigation_surface", count: 4 }
-        ]),
-        sampleNonPromotableUrls: expect.arrayContaining([
-          "https://www.reuters.com/world/",
-          "https://www.reuters.com/business/",
-          "https://www.reuters.com/site-search/?query=AI%20policy",
-          "https://www.thomsonreuters.com/en/privacy-statement.html"
-        ])
+        warningCounts: expect.arrayContaining([{ warning: "low_value_navigation_surface", count: 4 }]),
+        sampleNonPromotableUrls: expect.arrayContaining(["https://www.reuters.com/world/", "https://www.reuters.com/business/", "https://www.reuters.com/site-search/?query=AI%20policy", "https://www.thomsonreuters.com/en/privacy-statement.html"])
       });
     } finally {
       await pool.shutdown();
@@ -629,7 +573,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces blocked signals for video/social calibration pages", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration blocked-signal test because Playwright Chromium is not installed.");
       return;
     }
@@ -669,7 +613,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("does not mark visible social pages blocked for login chrome alone", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration visible-social test because Playwright Chromium is not installed.");
       return;
     }
@@ -709,7 +653,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces search engine bot-check pages as blocked calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration search block test because Playwright Chromium is not installed.");
       return;
     }
@@ -748,7 +692,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces global community security verification pages as blocked calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration community security block test because Playwright Chromium is not installed.");
       return;
     }
@@ -789,7 +733,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces DataDome captcha-delivery pages as blocked calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration DataDome block test because Playwright Chromium is not installed.");
       return;
     }
@@ -830,7 +774,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces Korean marketplace access blocks as commerce calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration commerce block test because Playwright Chromium is not installed.");
       return;
     }
@@ -871,7 +815,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces global travel security challenges as travel calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration travel block test because Playwright Chromium is not installed.");
       return;
     }
@@ -912,7 +856,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("surfaces Expedia human-or-bot challenges as travel calibration signals", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration Expedia block test because Playwright Chromium is not installed.");
       return;
     }
@@ -953,7 +897,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("does not treat generic Naver Blog login and join header links as a blocked page", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration Naver Blog shell test because Playwright Chromium is not installed.");
       return;
     }
@@ -986,13 +930,12 @@ describe("calibrateSourceNavigationRecipePlan", () => {
       expect(report.summary.blockedSignalHits).toBe(0);
       expect(report.actionCalibrations.find((action) => action.actionKey === "article-capture")?.status).toBe("observed");
       expect(report.actionCalibrations.find((action) => action.actionKey === "obstruction-check")?.status).toBe("observed");
-      expect(report.actionCalibrations
-        .find((action) => action.actionKey === "article-capture")
-        ?.captureScopeResults.filter((result) => result.status === "matched").map((result) => result.selector)).toEqual(expect.arrayContaining([
-          "#content",
-          "#app",
-          ".post_list_wrap"
-        ]));
+      expect(
+        report.actionCalibrations
+          .find((action) => action.actionKey === "article-capture")
+          ?.captureScopeResults.filter((result) => result.status === "matched")
+          .map((result) => result.selector)
+      ).toEqual(expect.arrayContaining(["#content", "#app", ".post_list_wrap"]));
     } finally {
       await pool.shutdown();
       await fixture.close();
@@ -1000,7 +943,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("still surfaces specific Naver Cafe membership walls as blocked", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration Naver Cafe membership-wall test because Playwright Chromium is not installed.");
       return;
     }
@@ -1039,7 +982,7 @@ describe("calibrateSourceNavigationRecipePlan", () => {
   });
 
   it("probes map shell capture scopes read-only", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation calibration map shell test because Playwright Chromium is not installed.");
       return;
     }
@@ -1080,9 +1023,11 @@ describe("calibrateSourceNavigationRecipePlan", () => {
 });
 
 function recipePlanFor(url: string) {
-  return describeSourceNavigationRecipePlan(describeSourceNavigationPlan({
-    sourceStrategy: describeSourceStrategy(url)
-  }));
+  return describeSourceNavigationRecipePlan(
+    describeSourceNavigationPlan({
+      sourceStrategy: describeSourceStrategy(url)
+    })
+  );
 }
 
 async function chromiumAvailable(): Promise<boolean> {
@@ -1452,8 +1397,9 @@ async function startCalibrationFixtureServer(): Promise<{ baseUrl: string; close
   }
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
-    close: () => new Promise((resolvePromise, reject) => {
-      server.close((error) => error ? reject(error) : resolvePromise());
-    })
+    close: () =>
+      new Promise((resolvePromise, reject) => {
+        server.close((error) => (error ? reject(error) : resolvePromise()));
+      })
   };
 }

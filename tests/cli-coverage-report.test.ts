@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runCli, trackTempDirs } from "./helpers/cli-harness.js";
 
-const { dirs, cleanup, makeTempDir } = trackTempDirs();
+const { cleanup, makeTempDir } = trackTempDirs();
 afterEach(cleanup);
 
 describe("cli coverage-report command", () => {

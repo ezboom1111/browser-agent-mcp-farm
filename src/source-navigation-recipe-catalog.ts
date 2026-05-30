@@ -12,20 +12,9 @@ import type {
   SourceNavigationSelectorCalibrationResult,
   SourceNavigationSignalCalibrationResult
 } from "./source-navigation-calibration.js";
-import type {
-  SourceNavigationRecipeActionCandidate,
-  SourceNavigationRecipePlan,
-  SourceNavigationSelectorCandidate
-} from "./source-navigation-recipes.js";
+import type { SourceNavigationRecipeActionCandidate, SourceNavigationRecipePlan, SourceNavigationSelectorCandidate } from "./source-navigation-recipes.js";
 
-export type SourceNavigationRecipeCatalogReadiness =
-  | "maintained_recipe_ready"
-  | "single_run_ready"
-  | "manual_review_required"
-  | "manual_value_required"
-  | "calibration_required"
-  | "blocked_signal_detected"
-  | "not_supported";
+export type SourceNavigationRecipeCatalogReadiness = "maintained_recipe_ready" | "single_run_ready" | "manual_review_required" | "manual_value_required" | "calibration_required" | "blocked_signal_detected" | "not_supported";
 
 export interface SourceNavigationRecipeCatalogEntry {
   actionKey: string;
@@ -146,9 +135,7 @@ export interface SourceNavigationDestinationSelectorHintLine {
   promotionPolicy: SourceNavigationDestinationDiscoverySelectorHint["promotionPolicy"];
 }
 
-export function parseSourceNavigationDestinationSelectorHintsAsLines(
-  text: string
-): SourceNavigationDestinationSelectorHintLine[] {
+export function parseSourceNavigationDestinationSelectorHintsAsLines(text: string): SourceNavigationDestinationSelectorHintLine[] {
   const hints: SourceNavigationDestinationSelectorHintLine[] = [];
   for (const [index, rawLine] of stripBom(text).split(/\r?\n/).entries()) {
     const line = rawLine.trim();
@@ -194,13 +181,8 @@ export function parseSourceNavigationDestinationSelectorHintsAsLines(
   return hints;
 }
 
-export function applySourceNavigationSelectorHintsToRecipePlan(
-  recipePlan: SourceNavigationRecipePlan,
-  hints: SourceNavigationDestinationSelectorHintLine[]
-): SourceNavigationRecipePlan {
-  const relevantHints = hints.filter((hint) =>
-    hint.platform === recipePlan.platform && hint.sourceFamily === recipePlan.sourceFamily
-  );
+export function applySourceNavigationSelectorHintsToRecipePlan(recipePlan: SourceNavigationRecipePlan, hints: SourceNavigationDestinationSelectorHintLine[]): SourceNavigationRecipePlan {
+  const relevantHints = hints.filter((hint) => hint.platform === recipePlan.platform && hint.sourceFamily === recipePlan.sourceFamily);
   if (relevantHints.length === 0) {
     return recipePlan;
   }
@@ -213,58 +195,35 @@ export function applySourceNavigationSelectorHintsToRecipePlan(
       }
       return {
         ...action,
-        selectorCandidates: uniqueSelectorCandidates([
-          ...action.selectorCandidates,
-          ...selectorCandidates
-        ]),
-        riskNotes: uniqueStrings([
-          ...action.riskNotes,
-          "Selector-hint candidates are calibration handoffs only; repeated browser-visible calibration is required before maintained export."
-        ])
+        selectorCandidates: uniqueSelectorCandidates([...action.selectorCandidates, ...selectorCandidates]),
+        riskNotes: uniqueStrings([...action.riskNotes, "Selector-hint candidates are calibration handoffs only; repeated browser-visible calibration is required before maintained export."])
       };
     }),
-    warnings: uniqueStrings([
-      ...recipePlan.warnings,
-      "Selector hints were supplied as additional manual calibration candidates; they are not maintained recipes."
-    ])
+    warnings: uniqueStrings([...recipePlan.warnings, "Selector hints were supplied as additional manual calibration candidates; they are not maintained recipes."])
   };
 }
 
-export function collectSourceNavigationDestinationSelectorHints(
-  catalog: SourceNavigationRecipeCatalog
-): SourceNavigationDestinationSelectorHintLine[] {
-  return catalog.entries.flatMap((entry) => (entry.destinationDiscovery?.selectorHints ?? []).map((hint) => ({
-    platform: catalog.platform,
-    sourceFamily: catalog.sourceFamily,
-    actionKey: entry.actionKey,
-    selector: hint.selector,
-    scopedSelectorSuggestions: hint.scopedSelectorSuggestions ?? [],
-    sampleUrl: hint.sampleUrl,
-    host: hint.host,
-    ...(hint.pathPrefix === undefined ? {} : { pathPrefix: hint.pathPrefix }),
-    source: hint.source,
-    ...(hint.attributeName === undefined ? {} : { attributeName: hint.attributeName }),
-    promotionPolicy: hint.promotionPolicy
-  })));
+export function collectSourceNavigationDestinationSelectorHints(catalog: SourceNavigationRecipeCatalog): SourceNavigationDestinationSelectorHintLine[] {
+  return catalog.entries.flatMap((entry) =>
+    (entry.destinationDiscovery?.selectorHints ?? []).map((hint) => ({
+      platform: catalog.platform,
+      sourceFamily: catalog.sourceFamily,
+      actionKey: entry.actionKey,
+      selector: hint.selector,
+      scopedSelectorSuggestions: hint.scopedSelectorSuggestions ?? [],
+      sampleUrl: hint.sampleUrl,
+      host: hint.host,
+      ...(hint.pathPrefix === undefined ? {} : { pathPrefix: hint.pathPrefix }),
+      source: hint.source,
+      ...(hint.attributeName === undefined ? {} : { attributeName: hint.attributeName }),
+      promotionPolicy: hint.promotionPolicy
+    }))
+  );
 }
 
-export function formatSourceNavigationDestinationSelectorHintsAsLines(
-  catalog: SourceNavigationRecipeCatalog
-): string {
+export function formatSourceNavigationDestinationSelectorHintsAsLines(catalog: SourceNavigationRecipeCatalog): string {
   const hints = collectSourceNavigationDestinationSelectorHints(catalog);
-  return hints.map((hint) => [
-    hint.platform,
-    hint.sourceFamily,
-    hint.actionKey,
-    hint.selector,
-    hint.scopedSelectorSuggestions.join("|"),
-    hint.sampleUrl,
-    hint.host,
-    hint.pathPrefix ?? "",
-    hint.source,
-    hint.attributeName ?? "",
-    hint.promotionPolicy
-  ].join("\t")).join("\n") + (hints.length > 0 ? "\n" : "");
+  return hints.map((hint) => [hint.platform, hint.sourceFamily, hint.actionKey, hint.selector, hint.scopedSelectorSuggestions.join("|"), hint.sampleUrl, hint.host, hint.pathPrefix ?? "", hint.source, hint.attributeName ?? "", hint.promotionPolicy].join("\t")).join("\n") + (hints.length > 0 ? "\n" : "");
 }
 
 export function buildSourceNavigationRecipeCatalog(input: {
@@ -274,19 +233,10 @@ export function buildSourceNavigationRecipeCatalog(input: {
   minimumCalibrationRunsRequired?: number | undefined;
 }): SourceNavigationRecipeCatalog {
   const providedCalibrationReports = normalizeCalibrationReports(input.calibrationReport, input.calibrationReports);
-  const { compatibleReports: calibrationReports, skippedReports } = filterCompatibleCalibrationReports(
-    input.recipePlan,
-    providedCalibrationReports
-  );
+  const { compatibleReports: calibrationReports, skippedReports } = filterCompatibleCalibrationReports(input.recipePlan, providedCalibrationReports);
   const calibrationByKey = groupCalibrationsByActionKey(calibrationReports);
   const minimumCalibrationRunsRequired = Math.max(2, input.minimumCalibrationRunsRequired ?? 2);
-  const entries = input.recipePlan.actionCandidates.map((candidate) => catalogEntryFor(
-    candidate,
-    calibrationByKey.get(calibrationGroupKey(candidate.actionKey, candidate.operation)) ?? [],
-    minimumCalibrationRunsRequired,
-    input.recipePlan.platform,
-    input.recipePlan.sourceFamily
-  ));
+  const entries = input.recipePlan.actionCandidates.map((candidate) => catalogEntryFor(candidate, calibrationByKey.get(calibrationGroupKey(candidate.actionKey, candidate.operation)) ?? [], minimumCalibrationRunsRequired, input.recipePlan.platform, input.recipePlan.sourceFamily));
   const calibrationUrls = [...new Set(calibrationReports.map((report) => report.url))];
   return {
     schemaVersion: "1.0",
@@ -320,11 +270,7 @@ export function exportMaintainedSourceNavigationRecipes(catalog: SourceNavigatio
     exportedActionKeys.add(action.actionKey);
   }
   const omittedEntries = catalog.entries
-    .filter((entry) =>
-      entry.readiness !== "maintained_recipe_ready" ||
-      entry.recommendedAction === undefined ||
-      !actions.includes(entry.recommendedAction)
-    )
+    .filter((entry) => entry.readiness !== "maintained_recipe_ready" || entry.recommendedAction === undefined || !actions.includes(entry.recommendedAction))
     .map((entry) => ({
       actionKey: entry.actionKey,
       readiness: entry.readiness,
@@ -347,13 +293,7 @@ export function exportMaintainedSourceNavigationRecipes(catalog: SourceNavigatio
   };
 }
 
-function catalogEntryFor(
-  candidate: SourceNavigationRecipeActionCandidate,
-  calibrations: SourceNavigationActionCalibrationResult[],
-  minimumCalibrationRunsRequired: number,
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): SourceNavigationRecipeCatalogEntry {
+function catalogEntryFor(candidate: SourceNavigationRecipeActionCandidate, calibrations: SourceNavigationActionCalibrationResult[], minimumCalibrationRunsRequired: number, platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): SourceNavigationRecipeCatalogEntry {
   if (calibrations.length === 0) {
     return baseEntry(candidate, {
       readiness: "calibration_required",
@@ -363,11 +303,17 @@ function catalogEntryFor(
 
   const matchedSelectors = calibrations.flatMap((calibration) => calibration.selectorResults).filter((result) => result.status === "matched");
   const matchedCaptureScopes = calibrations.flatMap((calibration) => calibration.captureScopeResults).filter((result) => result.status === "matched");
-  const promotableMatchedSelectors = preferredSelectorResultsFor(candidate, matchedSelectors.filter((result) => isPromotableSelectorResultFor(candidate, result)));
+  const promotableMatchedSelectors = preferredSelectorResultsFor(
+    candidate,
+    matchedSelectors.filter((result) => isPromotableSelectorResultFor(candidate, result))
+  );
   const promotableMatchedCaptureScopes = matchedCaptureScopes.filter((result) => isPromotableSelectorResultFor(candidate, result));
   const blockedSignals = calibrations.flatMap((calibration) => calibration.blockedSignals).filter((signal) => signal.status === "present");
   const expectedSignalsPresent = calibrations.flatMap((calibration) => calibration.expectedTextSignals).filter((signal) => signal.status === "present");
-  const stableSelectors = preferredSelectorResultsFor(candidate, stableSelectorResults(calibrations, "selectorResults", minimumCalibrationRunsRequired).filter((result) => isPromotableSelectorResultFor(candidate, result)));
+  const stableSelectors = preferredSelectorResultsFor(
+    candidate,
+    stableSelectorResults(calibrations, "selectorResults", minimumCalibrationRunsRequired).filter((result) => isPromotableSelectorResultFor(candidate, result))
+  );
   const stableCaptureScopes = stableSelectorResults(calibrations, "captureScopeResults", minimumCalibrationRunsRequired).filter((result) => isPromotableSelectorResultFor(candidate, result));
   const destinationDiscovery = summarizeDestinationDiscovery(calibrations, platform, sourceFamily);
   const clientStateProbe = summarizeClientStateProbe(calibrations);
@@ -463,26 +409,22 @@ function catalogEntryFor(
   const recommendedAction = recommendedActionFor(candidate, firstSelector, promotableMatchedCaptureScopes);
   if (recommendedAction === undefined) {
     const hasFixtureOnlyMatch = matchedSelectors.length > 0 || matchedCaptureScopes.length > 0;
-    const hasBroadDestinationFallbackMatch = candidate.operation === "extract_destinations"
-      && matchedSelectors.some(isBroadDestinationFallbackSelector);
-    const hasUnusableDestinationProbe = candidate.operation === "extract_destinations"
-      && matchedSelectors.some((result) => result.destinationProbe !== undefined && result.destinationProbe.usableCandidateCount <= 0);
-    const hasNonPromotableOnlyDestinationProbe = candidate.operation === "extract_destinations"
-      && matchedSelectors.some((result) => result.destinationProbe !== undefined
-        && result.destinationProbe.promotableCandidateCount !== undefined
-        && result.destinationProbe.usableCandidateCount > 0
-        && result.destinationProbe.promotableCandidateCount <= 0);
-    const baseReason = candidate.operation === "scroll"
-      ? "Bounded scroll can be supplied explicitly; repeated calibration is still required before default catalog promotion."
-      : hasBroadDestinationFallbackMatch
-        ? "Only broad destination fallback selectors matched; narrower destination selectors require calibration before maintained export."
-        : hasUnusableDestinationProbe
-          ? "Matched destination selectors produced no usable HTTP(S) destination links; destination extraction requires deeper calibration before export."
-          : hasNonPromotableOnlyDestinationProbe
-            ? "Matched destination selectors produced only low-value, login, or unsupported destination links; destination extraction requires more specific calibration before export."
-            : hasFixtureOnlyMatch
-              ? "Only fixture-scoped selectors matched; real-site selectors require calibration before an explicit recipe can be exported."
-              : "No visible selector was matched for this read-only operation.";
+    const hasBroadDestinationFallbackMatch = candidate.operation === "extract_destinations" && matchedSelectors.some(isBroadDestinationFallbackSelector);
+    const hasUnusableDestinationProbe = candidate.operation === "extract_destinations" && matchedSelectors.some((result) => result.destinationProbe !== undefined && result.destinationProbe.usableCandidateCount <= 0);
+    const hasNonPromotableOnlyDestinationProbe =
+      candidate.operation === "extract_destinations" && matchedSelectors.some((result) => result.destinationProbe !== undefined && result.destinationProbe.promotableCandidateCount !== undefined && result.destinationProbe.usableCandidateCount > 0 && result.destinationProbe.promotableCandidateCount <= 0);
+    const baseReason =
+      candidate.operation === "scroll"
+        ? "Bounded scroll can be supplied explicitly; repeated calibration is still required before default catalog promotion."
+        : hasBroadDestinationFallbackMatch
+          ? "Only broad destination fallback selectors matched; narrower destination selectors require calibration before maintained export."
+          : hasUnusableDestinationProbe
+            ? "Matched destination selectors produced no usable HTTP(S) destination links; destination extraction requires deeper calibration before export."
+            : hasNonPromotableOnlyDestinationProbe
+              ? "Matched destination selectors produced only low-value, login, or unsupported destination links; destination extraction requires more specific calibration before export."
+              : hasFixtureOnlyMatch
+                ? "Only fixture-scoped selectors matched; real-site selectors require calibration before an explicit recipe can be exported."
+                : "No visible selector was matched for this read-only operation.";
     return baseEntry(candidate, {
       readiness: candidate.operation === "scroll" ? "single_run_ready" : "calibration_required",
       reason: withDestinationDiscoveryReason(baseReason, destinationDiscovery),
@@ -550,14 +492,8 @@ function baseEntry(
   };
 }
 
-function summarizeDestinationDiscovery(
-  calibrations: SourceNavigationActionCalibrationResult[],
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): SourceNavigationDestinationDiscoveryCatalogSummary | undefined {
-  const discoveries = calibrations
-    .map((calibration) => calibration.destinationDiscovery)
-    .filter((discovery): discovery is SourceNavigationDestinationProbeResult => discovery !== undefined);
+function summarizeDestinationDiscovery(calibrations: SourceNavigationActionCalibrationResult[], platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): SourceNavigationDestinationDiscoveryCatalogSummary | undefined {
+  const discoveries = calibrations.map((calibration) => calibration.destinationDiscovery).filter((discovery): discovery is SourceNavigationDestinationProbeResult => discovery !== undefined);
   if (discoveries.length === 0) {
     return undefined;
   }
@@ -578,12 +514,8 @@ function summarizeDestinationDiscovery(
   };
 }
 
-function summarizeClientStateProbe(
-  calibrations: SourceNavigationActionCalibrationResult[]
-): SourceNavigationClientStateProbeCatalogSummary | undefined {
-  const probes = calibrations
-    .map((calibration) => calibration.clientStateProbe)
-    .filter((probe): probe is SourceNavigationClientStateProbeResult => probe !== undefined);
+function summarizeClientStateProbe(calibrations: SourceNavigationActionCalibrationResult[]): SourceNavigationClientStateProbeCatalogSummary | undefined {
+  const probes = calibrations.map((calibration) => calibration.clientStateProbe).filter((probe): probe is SourceNavigationClientStateProbeResult => probe !== undefined);
   if (probes.length === 0) {
     return undefined;
   }
@@ -608,26 +540,15 @@ function summarizeClientStateProbe(
   };
 }
 
-function clientStateProbeReady(
-  summary: SourceNavigationClientStateProbeCatalogSummary | undefined,
-  minimumCalibrationRunsRequired: number
-): boolean {
-  return summary !== undefined &&
-    summary.runCount >= minimumCalibrationRunsRequired &&
-    summary.okRunCount >= minimumCalibrationRunsRequired &&
-    summary.totalUniqueCandidateCount > 0;
+function clientStateProbeReady(summary: SourceNavigationClientStateProbeCatalogSummary | undefined, minimumCalibrationRunsRequired: number): boolean {
+  return summary !== undefined && summary.runCount >= minimumCalibrationRunsRequired && summary.okRunCount >= minimumCalibrationRunsRequired && summary.totalUniqueCandidateCount > 0;
 }
 
-function hasSuccessfulClientStateProbe(
-  summary: SourceNavigationClientStateProbeCatalogSummary | undefined
-): boolean {
+function hasSuccessfulClientStateProbe(summary: SourceNavigationClientStateProbeCatalogSummary | undefined): boolean {
   return summary !== undefined && summary.okRunCount > 0 && summary.totalUniqueCandidateCount > 0;
 }
 
-function clientStateProbeReason(
-  summary: SourceNavigationClientStateProbeCatalogSummary | undefined,
-  minimumCalibrationRunsRequired: number
-): string {
+function clientStateProbeReason(summary: SourceNavigationClientStateProbeCatalogSummary | undefined, minimumCalibrationRunsRequired: number): string {
   if (summary === undefined || summary.runCount === 0) {
     return "Client-state destination extraction needs calibration reports with a successful client-state probe before export.";
   }
@@ -640,9 +561,7 @@ function clientStateProbeReason(
   return "Client-state destination extraction needs repeated successful probe calibration before export.";
 }
 
-function countClientStateProbeStatuses(
-  probes: SourceNavigationClientStateProbeResult[]
-): Array<{ status: SourceNavigationClientStateProbeStatus; count: number }> {
+function countClientStateProbeStatuses(probes: SourceNavigationClientStateProbeResult[]): Array<{ status: SourceNavigationClientStateProbeStatus; count: number }> {
   const order: SourceNavigationClientStateProbeStatus[] = ["ok", "no_state_found", "no_candidates", "error"];
   return order
     .map((status) => ({
@@ -652,57 +571,35 @@ function countClientStateProbeStatuses(
     .filter((entry) => entry.count > 0);
 }
 
-function countDestinationDiscoveryStatuses(
-  discoveries: SourceNavigationDestinationProbeResult[]
-): Array<{ status: SourceNavigationDestinationProbeStatus; count: number }> {
+function countDestinationDiscoveryStatuses(discoveries: SourceNavigationDestinationProbeResult[]): Array<{ status: SourceNavigationDestinationProbeStatus; count: number }> {
   const counts = new Map<SourceNavigationDestinationProbeStatus, number>();
   for (const discovery of discoveries) {
     counts.set(discovery.status, (counts.get(discovery.status) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([status, count]) => ({ status, count }));
+  return [...counts.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([status, count]) => ({ status, count }));
 }
 
-function sumProbeCounts(
-  discoveries: SourceNavigationDestinationProbeResult[],
-  key: "rawCandidateCount" | "usableCandidateCount"
-): number {
+function sumProbeCounts(discoveries: SourceNavigationDestinationProbeResult[], key: "rawCandidateCount" | "usableCandidateCount"): number {
   return discoveries.reduce((sum, discovery) => sum + discovery[key], 0);
 }
 
-function sumOptionalProbeCounts(
-  discoveries: SourceNavigationDestinationProbeResult[],
-  key: "promotableCandidateCount" | "nonPromotableCandidateCount"
-): number {
+function sumOptionalProbeCounts(discoveries: SourceNavigationDestinationProbeResult[], key: "promotableCandidateCount" | "nonPromotableCandidateCount"): number {
   return discoveries.reduce((sum, discovery) => sum + (discovery[key] ?? 0), 0);
 }
 
-function mergeDestinationDiscoveryWarnings(
-  warnings: Array<{ warning: string; count: number }>
-): Array<{ warning: string; count: number }> {
+function mergeDestinationDiscoveryWarnings(warnings: Array<{ warning: string; count: number }>): Array<{ warning: string; count: number }> {
   const counts = new Map<string, number>();
   for (const warning of warnings) {
     counts.set(warning.warning, (counts.get(warning.warning) ?? 0) + warning.count);
   }
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([warning, count]) => ({ warning, count }));
+  return [...counts.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([warning, count]) => ({ warning, count }));
 }
 
-function uniqueSampleTargets(
-  targets: SourceNavigationDestinationProbeSampleTarget[]
-): SourceNavigationDestinationProbeSampleTarget[] {
+function uniqueSampleTargets(targets: SourceNavigationDestinationProbeSampleTarget[]): SourceNavigationDestinationProbeSampleTarget[] {
   const seen = new Set<string>();
   const unique: SourceNavigationDestinationProbeSampleTarget[] = [];
   for (const target of targets) {
-    const key = [
-      target.url,
-      target.source ?? "",
-      target.attributeName ?? "",
-      target.frameUrl ?? "",
-      target.text
-    ].join("\0");
+    const key = [target.url, target.source ?? "", target.attributeName ?? "", target.frameUrl ?? "", target.text].join("\0");
     if (seen.has(key)) {
       continue;
     }
@@ -715,11 +612,7 @@ function uniqueSampleTargets(
   return unique;
 }
 
-function selectorHintsFromSampleTargets(
-  targets: SourceNavigationDestinationProbeSampleTarget[],
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): SourceNavigationDestinationDiscoverySelectorHint[] {
+function selectorHintsFromSampleTargets(targets: SourceNavigationDestinationProbeSampleTarget[], platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): SourceNavigationDestinationDiscoverySelectorHint[] {
   const hints: SourceNavigationDestinationDiscoverySelectorHint[] = [];
   const seen = new Set<string>();
   for (const target of targets) {
@@ -736,11 +629,7 @@ function selectorHintsFromSampleTargets(
   return hints;
 }
 
-function selectorHintFromSampleTarget(
-  target: SourceNavigationDestinationProbeSampleTarget,
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): SourceNavigationDestinationDiscoverySelectorHint | undefined {
+function selectorHintFromSampleTarget(target: SourceNavigationDestinationProbeSampleTarget, platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): SourceNavigationDestinationDiscoverySelectorHint | undefined {
   if (target.source !== "anchor" && target.source !== "attribute") {
     return undefined;
   }
@@ -780,21 +669,13 @@ function selectorHintFromSampleTarget(
   return undefined;
 }
 
-function scopedSelectorSuggestions(
-  selector: string,
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): string[] {
+function scopedSelectorSuggestions(selector: string, platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): string[] {
   return uniqueStrings(selectorHintContainerScopes(platform, sourceFamily).map((scope) => `${scope} ${selector}`));
 }
 
-function selectorCandidatesFromHints(
-  hints: SourceNavigationDestinationSelectorHintLine[]
-): SourceNavigationSelectorCandidate[] {
+function selectorCandidatesFromHints(hints: SourceNavigationDestinationSelectorHintLine[]): SourceNavigationSelectorCandidate[] {
   return hints.flatMap((hint) => {
-    const selectors = hint.scopedSelectorSuggestions.length > 0
-      ? hint.scopedSelectorSuggestions
-      : [hint.selector];
+    const selectors = hint.scopedSelectorSuggestions.length > 0 ? hint.scopedSelectorSuggestions : [hint.selector];
     return selectors.map((selector) => ({
       selector,
       target: "fallback" as const,
@@ -804,9 +685,7 @@ function selectorCandidatesFromHints(
   });
 }
 
-function uniqueSelectorCandidates(
-  candidates: SourceNavigationSelectorCandidate[]
-): SourceNavigationSelectorCandidate[] {
+function uniqueSelectorCandidates(candidates: SourceNavigationSelectorCandidate[]): SourceNavigationSelectorCandidate[] {
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
     const key = `${candidate.selector}\0${candidate.target}\0${candidate.source}`;
@@ -832,13 +711,13 @@ function optionalColumn(columns: string[], index: number): string | undefined {
 }
 
 function splitSelectorSuggestions(value: string): string[] {
-  return value.split("|").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+  return value
+    .split("|")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 }
 
-function selectorHintContainerScopes(
-  platform: SourceNavigationRecipePlan["platform"],
-  sourceFamily: SourceNavigationRecipePlan["sourceFamily"]
-): string[] {
+function selectorHintContainerScopes(platform: SourceNavigationRecipePlan["platform"], sourceFamily: SourceNavigationRecipePlan["sourceFamily"]): string[] {
   switch (platform) {
     case "naver_search":
     case "naver_news":
@@ -863,13 +742,13 @@ function selectorHintContainerScopes(
     case "kakao_map":
       return ["#info", "#mArticle"];
     case "google_maps":
-      return ["[role=\"main\"]", "#pane", "#QA0Szd"];
+      return ['[role="main"]', "#pane", "#QA0Szd"];
     case "apple_maps":
-      return ["[role=\"main\"]", "#maps-app", "[data-testid*=\"map\"]"];
+      return ['[role="main"]', "#maps-app", '[data-testid*="map"]'];
     case "yelp":
-      return ["#main-content", "main", "[data-testid*=\"serp\"]"];
+      return ["#main-content", "main", '[data-testid*="serp"]'];
     case "tripadvisor":
-      return ["#BODYCON", "main", "[data-automation*=\"searchResults\"]", "[data-test-target*=\"search-results\"]"];
+      return ["#BODYCON", "main", '[data-automation*="searchResults"]', '[data-test-target*="search-results"]'];
     case "naver_blog":
       return ["#content", "main", "article"];
     case "naver_cafe":
@@ -878,27 +757,27 @@ function selectorHintContainerScopes(
     case "reddit":
     case "quora":
     case "stack_overflow":
-      return ["main", "article", "[role=\"main\"]"];
+      return ["main", "article", '[role="main"]'];
     case "youtube":
     case "instagram":
     case "tiktok":
     case "x_twitter":
-      return ["main", "[role=\"main\"]"];
+      return ["main", '[role="main"]'];
     case "amazon":
-      return ["[data-component-type*=\"search-result\"]"];
+      return ['[data-component-type*="search-result"]'];
     case "coupang":
       return ["#product-list", "#productList", ".search-product"];
     case "naver_shopping":
-      return ["#content", "#container", "[class*=\"product\"]"];
+      return ["#content", "#container", '[class*="product"]'];
     case "gmarket":
       return ["#section__inner-content-body-container", ".box__item", ".itemcard"];
     case "elevenst":
-      return ["[class*=\"product\"]", "[class*=\"item\"]"];
+      return ['[class*="product"]', '[class*="item"]'];
     case "booking_com":
     case "agoda":
     case "trip_com":
     case "expedia":
-      return ["main", "[data-testid*=\"property-card\"]", "[class*=\"card\"]"];
+      return ["main", '[data-testid*="property-card"]', '[class*="card"]'];
     case "wikipedia":
       return ["#mw-content-text", ".mw-parser-output", "#content"];
     case "namuwiki":
@@ -917,13 +796,13 @@ function selectorHintContainerScopes(
       break;
   }
   if (sourceFamily === "search" || sourceFamily === "portal") {
-    return ["main", "[role=\"main\"]"];
+    return ["main", '[role="main"]'];
   }
   if (sourceFamily === "map") {
-    return ["main", "[role=\"main\"]"];
+    return ["main", '[role="main"]'];
   }
   if (sourceFamily === "commerce" || sourceFamily === "travel_booking") {
-    return ["main", "[class*=\"card\"]"];
+    return ["main", '[class*="card"]'];
   }
   return ["main"];
 }
@@ -948,7 +827,10 @@ function parseUrlForSelectorHint(url: string): { host: string; pathPrefix?: stri
 }
 
 function semanticPathPrefixForSelectorHint(host: string, pathname: string): string | undefined {
-  const segments = pathname.split("/").filter((segment) => segment.length > 0).map(decodeURIComponentSafely);
+  const segments = pathname
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map(decodeURIComponentSafely);
   if (segments.length === 0) {
     return undefined;
   }
@@ -974,20 +856,15 @@ function safeAttributeName(value: string): boolean {
 }
 
 function cssStringValue(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-function withDestinationDiscoveryReason(
-  reason: string,
-  discovery: SourceNavigationDestinationDiscoveryCatalogSummary | undefined
-): string {
+function withDestinationDiscoveryReason(reason: string, discovery: SourceNavigationDestinationDiscoveryCatalogSummary | undefined): string {
   const discoveryReason = destinationDiscoveryReason(discovery);
   return discoveryReason === undefined ? reason : `${reason} ${discoveryReason}`;
 }
 
-function destinationDiscoveryReason(
-  discovery: SourceNavigationDestinationDiscoveryCatalogSummary | undefined
-): string | undefined {
+function destinationDiscoveryReason(discovery: SourceNavigationDestinationDiscoveryCatalogSummary | undefined): string | undefined {
   if (discovery === undefined) {
     return undefined;
   }
@@ -1015,19 +892,18 @@ function requiresManualReview(operation: SourceNavigationExecutableOperation): b
   return operation === "click";
 }
 
-function recommendedActionFor(
-  candidate: SourceNavigationRecipeActionCandidate,
-  firstSelector: SourceNavigationSelectorCalibrationResult | undefined,
-  matchedCaptureScopes: SourceNavigationSelectorCalibrationResult[]
-): SourceNavigationExecutableAction | undefined {
+function recommendedActionFor(candidate: SourceNavigationRecipeActionCandidate, firstSelector: SourceNavigationSelectorCalibrationResult | undefined, matchedCaptureScopes: SourceNavigationSelectorCalibrationResult[]): SourceNavigationExecutableAction | undefined {
   if (candidate.operation === "capture") {
     if (candidate.captureScopeCandidates.length > 0 && matchedCaptureScopes.length === 0) {
       return undefined;
     }
-    return withOptionalScopes({
-      actionKey: candidate.actionKey,
-      operation: "capture"
-    }, matchedCaptureScopes);
+    return withOptionalScopes(
+      {
+        actionKey: candidate.actionKey,
+        operation: "capture"
+      },
+      matchedCaptureScopes
+    );
   }
   if (candidate.operation === "follow_up" && firstSelector !== undefined) {
     return { actionKey: candidate.actionKey, operation: "follow_up", selector: firstSelector.selector };
@@ -1040,20 +916,25 @@ function recommendedActionFor(
       actionKey: candidate.actionKey,
       operation: "extract_client_state_destinations",
       selector: firstSelector.selector,
-      ...(candidate.clientStateExtraction === undefined ? {} : {
-        stateKey: candidate.clientStateExtraction.stateKey,
-        extractor: candidate.clientStateExtraction.extractor,
-        ...(candidate.clientStateExtraction.destinationPath === undefined ? {} : { destinationPath: candidate.clientStateExtraction.destinationPath }),
-        ...(candidate.clientStateExtraction.maxLinks === undefined ? {} : { maxLinks: candidate.clientStateExtraction.maxLinks })
-      })
+      ...(candidate.clientStateExtraction === undefined
+        ? {}
+        : {
+            stateKey: candidate.clientStateExtraction.stateKey,
+            extractor: candidate.clientStateExtraction.extractor,
+            ...(candidate.clientStateExtraction.destinationPath === undefined ? {} : { destinationPath: candidate.clientStateExtraction.destinationPath }),
+            ...(candidate.clientStateExtraction.maxLinks === undefined ? {} : { maxLinks: candidate.clientStateExtraction.maxLinks })
+          })
     };
   }
   if (candidate.operation === "wait_for_selector" && firstSelector !== undefined) {
-    return withOptionalScopes({
-      actionKey: candidate.actionKey,
-      operation: "wait_for_selector",
-      selector: firstSelector.selector
-    }, matchedCaptureScopes);
+    return withOptionalScopes(
+      {
+        actionKey: candidate.actionKey,
+        operation: "wait_for_selector",
+        selector: firstSelector.selector
+      },
+      matchedCaptureScopes
+    );
   }
   if (candidate.operation === "scroll") {
     return { actionKey: candidate.actionKey, operation: "scroll", direction: "bottom" };
@@ -1061,13 +942,7 @@ function recommendedActionFor(
   return undefined;
 }
 
-function stableEnoughForMaintainedRecipe(
-  candidate: SourceNavigationRecipeActionCandidate,
-  stableSelectors: SourceNavigationSelectorCalibrationResult[],
-  stableCaptureScopes: SourceNavigationSelectorCalibrationResult[],
-  minimumCalibrationRunsRequired: number,
-  calibrationRunCount: number
-): boolean {
+function stableEnoughForMaintainedRecipe(candidate: SourceNavigationRecipeActionCandidate, stableSelectors: SourceNavigationSelectorCalibrationResult[], stableCaptureScopes: SourceNavigationSelectorCalibrationResult[], minimumCalibrationRunsRequired: number, calibrationRunCount: number): boolean {
   if (calibrationRunCount < minimumCalibrationRunsRequired) {
     return false;
   }
@@ -1084,10 +959,7 @@ function isPromotableSelectorResult(result: SourceNavigationSelectorCalibrationR
   return result.source !== "local_fixture";
 }
 
-function isPromotableSelectorResultFor(
-  candidate: SourceNavigationRecipeActionCandidate,
-  result: SourceNavigationSelectorCalibrationResult
-): boolean {
+function isPromotableSelectorResultFor(candidate: SourceNavigationRecipeActionCandidate, result: SourceNavigationSelectorCalibrationResult): boolean {
   if (!isPromotableSelectorResult(result)) {
     return false;
   }
@@ -1097,13 +969,7 @@ function isPromotableSelectorResultFor(
   if (candidate.operation === "extract_destinations" && result.destinationProbe !== undefined && result.destinationProbe.usableCandidateCount <= 0) {
     return false;
   }
-  if (
-    candidate.operation === "extract_destinations" &&
-    result.destinationProbe !== undefined &&
-    result.destinationProbe.promotableCandidateCount !== undefined &&
-    result.destinationProbe.usableCandidateCount > 0 &&
-    result.destinationProbe.promotableCandidateCount <= 0
-  ) {
+  if (candidate.operation === "extract_destinations" && result.destinationProbe !== undefined && result.destinationProbe.promotableCandidateCount !== undefined && result.destinationProbe.usableCandidateCount > 0 && result.destinationProbe.promotableCandidateCount <= 0) {
     return false;
   }
   return true;
@@ -1117,81 +983,61 @@ function isBroadDestinationFallbackSelector(result: SourceNavigationSelectorCali
   if (/^(?:main|article)\s+a\[href\*=["']reuters\.com["']\]/.test(selector)) {
     return true;
   }
-  if ([
-    /^body$/,
-    /^html$/,
-    /^main$/,
-    /^article$/,
-    /^#root$/,
-    /^#app$/,
-    /^#view$/,
-    /^#content$/,
-    /^#contents$/,
-    /^#b_results$/,
-    /^#rso$/,
-    /^#web$/,
-    /^#results$/,
-    /^#search$/,
-    /^#main_pack$/,
-    /^#marticle$/,
-    /^#cmain$/,
-    /^#daumcontent$/,
-    /^\[role="main"\]$/
-  ].some((pattern) => pattern.test(selector))) {
+  if ([/^body$/, /^html$/, /^main$/, /^article$/, /^#root$/, /^#app$/, /^#view$/, /^#content$/, /^#contents$/, /^#b_results$/, /^#rso$/, /^#web$/, /^#results$/, /^#search$/, /^#main_pack$/, /^#marticle$/, /^#cmain$/, /^#daumcontent$/, /^\[role="main"\]$/].some((pattern) => pattern.test(selector))) {
     return true;
   }
-  return [
-    /^body\s+a\[href(?:\]|\^=)/,
-    /^html\s+a\[href(?:\]|\^=)/,
-    /^main\s+a\[href(?:\]|\^=)/,
-    /^article\s+a\[href(?:\]|\^=)/,
-    /^#root\s+a\[href(?:\]|\^=)/,
-    /^#app\s+a\[href(?:\]|\^=)/,
-    /^#view\s+a\[href(?:\]|\^=)/,
-    /^#content\s+a\[href(?:\]|\^=)/,
-    /^#contents\s+a\[href(?:\]|\^=)/,
-    /^#b_results\s+a\[href(?:\]|\^=)/,
-    /^#web\s+a\[href(?:\]|\^=)/,
-    /^#results\s+a\[href(?:\]|\^=)/,
-    /^#search\s+a\[href(?:\]|\^=)/,
-    /^#main_pack\s+a\[href(?:\]|\^=)/,
-    /^#marticle\s+a\[href(?:\]|\^=)/,
-    /^#cmain\s+a\[href(?:\]|\^=)/,
-    /^#daumcontent\s+a\[href(?:\]|\^=)/,
-    /^\[role="main"\]\s+a\[href(?:\]|\^=)/,
-    /^ytd-video-renderer\s+a\[href(?:\]|\^=)/,
-    /^ytd-rich-item-renderer\s+a\[href(?:\]|\^=)/
-  ].some((pattern) => pattern.test(selector)) || [
-    /^body\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^html\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^main\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^article\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#root\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#app\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#view\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#content\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#contents\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#b_results\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#web\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#results\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#search\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#rso\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#main_pack\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#marticle\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#cmain\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^#daumcontent\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
-    /^\[role="main"\]\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/
-  ].some((pattern) => pattern.test(selector));
+  return (
+    [
+      /^body\s+a\[href(?:\]|\^=)/,
+      /^html\s+a\[href(?:\]|\^=)/,
+      /^main\s+a\[href(?:\]|\^=)/,
+      /^article\s+a\[href(?:\]|\^=)/,
+      /^#root\s+a\[href(?:\]|\^=)/,
+      /^#app\s+a\[href(?:\]|\^=)/,
+      /^#view\s+a\[href(?:\]|\^=)/,
+      /^#content\s+a\[href(?:\]|\^=)/,
+      /^#contents\s+a\[href(?:\]|\^=)/,
+      /^#b_results\s+a\[href(?:\]|\^=)/,
+      /^#web\s+a\[href(?:\]|\^=)/,
+      /^#results\s+a\[href(?:\]|\^=)/,
+      /^#search\s+a\[href(?:\]|\^=)/,
+      /^#main_pack\s+a\[href(?:\]|\^=)/,
+      /^#marticle\s+a\[href(?:\]|\^=)/,
+      /^#cmain\s+a\[href(?:\]|\^=)/,
+      /^#daumcontent\s+a\[href(?:\]|\^=)/,
+      /^\[role="main"\]\s+a\[href(?:\]|\^=)/,
+      /^ytd-video-renderer\s+a\[href(?:\]|\^=)/,
+      /^ytd-rich-item-renderer\s+a\[href(?:\]|\^=)/
+    ].some((pattern) => pattern.test(selector)) ||
+    [
+      /^body\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^html\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^main\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^article\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#root\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#app\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#view\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#content\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#contents\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#b_results\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#web\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#results\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#search\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#rso\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#main_pack\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#marticle\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#cmain\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^#daumcontent\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/,
+      /^\[role="main"\]\s+\[(?:data-url|data-href|data-link|data-link-url|data-target-url)\]$/
+    ].some((pattern) => pattern.test(selector))
+  );
 }
 
 function normalizeSelectorForPromotion(selector: string): string {
   return selector.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function preferredSelectorResultsFor(
-  candidate: SourceNavigationRecipeActionCandidate,
-  results: SourceNavigationSelectorCalibrationResult[]
-): SourceNavigationSelectorCalibrationResult[] {
+function preferredSelectorResultsFor(candidate: SourceNavigationRecipeActionCandidate, results: SourceNavigationSelectorCalibrationResult[]): SourceNavigationSelectorCalibrationResult[] {
   if (candidate.operation !== "extract_destinations" || results.length <= 1) {
     return results;
   }
@@ -1240,10 +1086,7 @@ function destinationExtractionSelectorScore(result: SourceNavigationSelectorCali
   return score;
 }
 
-function withOptionalScopes<T extends SourceNavigationExecutableAction>(
-  action: T,
-  matchedCaptureScopes: SourceNavigationSelectorCalibrationResult[]
-): T {
+function withOptionalScopes<T extends SourceNavigationExecutableAction>(action: T, matchedCaptureScopes: SourceNavigationSelectorCalibrationResult[]): T {
   if (matchedCaptureScopes.length === 0) {
     return action;
   }
@@ -1258,12 +1101,7 @@ function withOptionalScopes<T extends SourceNavigationExecutableAction>(
   };
 }
 
-function summarizeCatalogEntries(
-  entries: SourceNavigationRecipeCatalogEntry[],
-  minimumCalibrationRunsRequired: number,
-  calibrationReportCount: number,
-  skippedCalibrationReportCount: number
-): SourceNavigationRecipeCatalogSummary {
+function summarizeCatalogEntries(entries: SourceNavigationRecipeCatalogEntry[], minimumCalibrationRunsRequired: number, calibrationReportCount: number, skippedCalibrationReportCount: number): SourceNavigationRecipeCatalogSummary {
   return {
     entryCount: entries.length,
     calibrationReportCount,
@@ -1281,10 +1119,7 @@ function summarizeCatalogEntries(
   };
 }
 
-function normalizeCalibrationReports(
-  calibrationReport: SourceNavigationCalibrationReport | undefined,
-  calibrationReports: SourceNavigationCalibrationReport[] | undefined
-): SourceNavigationCalibrationReport[] {
+function normalizeCalibrationReports(calibrationReport: SourceNavigationCalibrationReport | undefined, calibrationReports: SourceNavigationCalibrationReport[] | undefined): SourceNavigationCalibrationReport[] {
   const reports: SourceNavigationCalibrationReport[] = [];
   if (calibrationReport !== undefined) {
     reports.push(calibrationReport);
@@ -1314,9 +1149,7 @@ function filterCompatibleCalibrationReports(
   return { compatibleReports, skippedReports };
 }
 
-function groupCalibrationsByActionKey(
-  reports: SourceNavigationCalibrationReport[]
-): Map<string, SourceNavigationActionCalibrationResult[]> {
+function groupCalibrationsByActionKey(reports: SourceNavigationCalibrationReport[]): Map<string, SourceNavigationActionCalibrationResult[]> {
   const grouped = new Map<string, SourceNavigationActionCalibrationResult[]>();
   for (const report of reports) {
     for (const calibration of report.actionCalibrations) {
@@ -1343,11 +1176,7 @@ function generatedFromFor(calibrationReportCount: number): SourceNavigationRecip
   return "calibration_reports";
 }
 
-function stableSelectorResults(
-  calibrations: SourceNavigationActionCalibrationResult[],
-  key: "selectorResults" | "captureScopeResults",
-  minimumCalibrationRunsRequired: number
-): SourceNavigationSelectorCalibrationResult[] {
+function stableSelectorResults(calibrations: SourceNavigationActionCalibrationResult[], key: "selectorResults" | "captureScopeResults", minimumCalibrationRunsRequired: number): SourceNavigationSelectorCalibrationResult[] {
   const grouped = new Map<string, { sample: SourceNavigationSelectorCalibrationResult; runIndexes: Set<number> }>();
   for (const [runIndex, calibration] of calibrations.entries()) {
     for (const result of calibration[key]) {
@@ -1360,7 +1189,5 @@ function stableSelectorResults(
       grouped.set(groupKey, existing);
     }
   }
-  return [...grouped.values()]
-    .filter((entry) => entry.runIndexes.size >= minimumCalibrationRunsRequired)
-    .map((entry) => entry.sample);
+  return [...grouped.values()].filter((entry) => entry.runIndexes.size >= minimumCalibrationRunsRequired).map((entry) => entry.sample);
 }

@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  SOURCE_REGISTRY,
-  SOURCE_LEGAL_BASIS_VALUES,
-  assertRegistryCoverage,
-  listSourceRegistryEntries,
-  selectSourceRegistryEntriesForIntent,
-  selectSourceRegistryEntriesForUrl,
-  summarizeSourceRegistryMatch
-} from "../src/source-registry.js";
+import { SOURCE_REGISTRY, SOURCE_LEGAL_BASIS_VALUES, assertRegistryCoverage, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "../src/source-registry.js";
 import { describeSourceStrategy } from "../src/source-strategy.js";
 
 describe("source registry", () => {
@@ -45,9 +37,7 @@ describe("source registry", () => {
   it("keeps Korean search coverage explicit across top slots", () => {
     const entries = listSourceRegistryEntries({ category: "search", locale: "ko-KR" });
     const platforms = entries.map((entry) => entry.platform);
-    const topRanks = entries.flatMap((entry) => entry.topSlots
-      .filter((slot) => slot.category === "search" && slot.segment === "ko-KR")
-      .map((slot) => slot.rank));
+    const topRanks = entries.flatMap((entry) => entry.topSlots.filter((slot) => slot.category === "search" && slot.segment === "ko-KR").map((slot) => slot.rank));
 
     expect(platforms).toEqual(expect.arrayContaining(["naver_search", "google_search", "daum_search"]));
     expect(new Set(topRanks).size).toBeGreaterThanOrEqual(3);
@@ -56,9 +46,7 @@ describe("source registry", () => {
   it("keeps Japanese search coverage explicit across top slots", () => {
     const entries = listSourceRegistryEntries({ category: "search", locale: "ja-JP" });
     const platforms = entries.map((entry) => entry.platform);
-    const topRanks = entries.flatMap((entry) => entry.topSlots
-      .filter((slot) => slot.category === "search" && slot.segment === "ja-JP")
-      .map((slot) => slot.rank));
+    const topRanks = entries.flatMap((entry) => entry.topSlots.filter((slot) => slot.category === "search" && slot.segment === "ja-JP").map((slot) => slot.rank));
 
     expect(platforms).toEqual(expect.arrayContaining(["google_search", "yahoo_japan_search", "bing"]));
     expect(new Set(topRanks).size).toBeGreaterThanOrEqual(3);
@@ -91,9 +79,7 @@ describe("source registry", () => {
     for (const expectation of expectations) {
       const entries = listSourceRegistryEntries({ category: expectation.category, locale: "en-US" });
       const platforms = entries.map((entry) => entry.platform);
-      const topRanks = entries.flatMap((entry) => entry.topSlots
-        .filter((slot) => slot.category === expectation.category && slot.segment === "en-US")
-        .map((slot) => slot.rank));
+      const topRanks = entries.flatMap((entry) => entry.topSlots.filter((slot) => slot.category === expectation.category && slot.segment === "en-US").map((slot) => slot.rank));
 
       expect(platforms).toEqual(expect.arrayContaining([...expectation.platforms]));
       expect(new Set(topRanks)).toEqual(new Set([1, 2, 3]));
@@ -103,9 +89,7 @@ describe("source registry", () => {
   it("keeps Korean content media coverage explicit across top slots", () => {
     const entries = listSourceRegistryEntries({ category: "content_media", locale: "ko-KR" });
     const platforms = entries.map((entry) => entry.platform);
-    const topRanks = entries.flatMap((entry) => entry.topSlots
-      .filter((slot) => slot.category === "content_media" && slot.segment === "ko-KR")
-      .map((slot) => slot.rank));
+    const topRanks = entries.flatMap((entry) => entry.topSlots.filter((slot) => slot.category === "content_media" && slot.segment === "ko-KR").map((slot) => slot.rank));
 
     expect(platforms).toEqual(expect.arrayContaining(["naver_blog", "youtube", "instagram"]));
     expect(new Set(topRanks).size).toBeGreaterThanOrEqual(3);
@@ -133,11 +117,7 @@ describe("source registry", () => {
   it("marks AI answer engines as derivative evidence", () => {
     const match = selectSourceRegistryEntriesForIntent({ category: "ai_search", locale: "global" });
 
-    expect(match.entries.map((entry) => entry.platform)).toEqual(expect.arrayContaining([
-      "chatgpt_search",
-      "gemini",
-      "perplexity"
-    ]));
+    expect(match.entries.map((entry) => entry.platform)).toEqual(expect.arrayContaining(["chatgpt_search", "gemini", "perplexity"]));
     expect(match.entries.every((entry) => entry.evidenceRole === "derivative")).toBe(true);
     expect(match.warnings.join("\n")).toContain("derivative evidence");
   });
@@ -151,11 +131,7 @@ describe("source registry", () => {
   });
 
   it("keeps global community source-family metadata compatible with detected strategies", () => {
-    const urls = [
-      "https://www.reddit.com/search/?q=tokyo%20travel",
-      "https://www.quora.com/search?q=tokyo%20travel",
-      "https://stackoverflow.com/search?q=playwright"
-    ];
+    const urls = ["https://www.reddit.com/search/?q=tokyo%20travel", "https://www.quora.com/search?q=tokyo%20travel", "https://stackoverflow.com/search?q=playwright"];
 
     for (const url of urls) {
       const strategy = describeSourceStrategy(url);
@@ -167,12 +143,7 @@ describe("source registry", () => {
   });
 
   it("keeps publisher news source-family metadata compatible with detected strategies", () => {
-    const urls = [
-      "https://www.reuters.com/site-search/?query=AI%20policy",
-      "https://www.bloomberg.com/search?query=AI%20policy",
-      "https://www.bbc.com/search?q=AI%20policy",
-      "https://www.yna.co.kr/search/index?query=AI%20policy"
-    ];
+    const urls = ["https://www.reuters.com/site-search/?query=AI%20policy", "https://www.bloomberg.com/search?query=AI%20policy", "https://www.bbc.com/search?q=AI%20policy", "https://www.yna.co.kr/search/index?query=AI%20policy"];
 
     for (const url of urls) {
       const strategy = describeSourceStrategy(url);

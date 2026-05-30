@@ -1,12 +1,7 @@
 import { Buffer } from "node:buffer";
 import { safeUrl } from "./util/url.js";
 
-export type DestinationUrlResolutionMethod =
-  | "bing_ck_u"
-  | "google_url_param"
-  | "naver_redirect_param"
-  | "naver_place_entry_fallback"
-  | "yahoo_ru_path";
+export type DestinationUrlResolutionMethod = "bing_ck_u" | "google_url_param" | "naver_redirect_param" | "naver_place_entry_fallback" | "yahoo_ru_path";
 
 export interface DestinationUrlResolution {
   url: string;
@@ -60,10 +55,7 @@ function unwrapSearchRedirectUrl(url: string): DestinationUrlResolution | undefi
     return resolved === undefined ? undefined : { url: resolved, method: "google_url_param" };
   }
 
-  if (
-    (host === "cr.naver.com" || host === "link.naver.com") &&
-    (path === "/rd" || path === "/bridge")
-  ) {
+  if ((host === "cr.naver.com" || host === "link.naver.com") && (path === "/rd" || path === "/bridge")) {
     const resolved = firstHttpParam(parsed, ["u", "url"]);
     return resolved === undefined ? undefined : { url: resolved, method: "naver_redirect_param" };
   }
@@ -91,10 +83,7 @@ function resolveBingRedirectParam(rawValue: string | null): string | undefined {
     return direct;
   }
 
-  const base64Candidates = [
-    value,
-    /^a\d/i.test(value) ? value.slice(2) : undefined
-  ].filter((candidate): candidate is string => candidate !== undefined && candidate.length > 0);
+  const base64Candidates = [value, /^a\d/i.test(value) ? value.slice(2) : undefined].filter((candidate): candidate is string => candidate !== undefined && candidate.length > 0);
 
   for (const candidate of base64Candidates) {
     const decoded = decodeBase64Url(candidate);

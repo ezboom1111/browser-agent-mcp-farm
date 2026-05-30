@@ -1,12 +1,4 @@
-export type SourceFamily =
-  | "search"
-  | "map"
-  | "blog"
-  | "travel_booking"
-  | "commerce"
-  | "portal"
-  | "video_social"
-  | "generic_web";
+export type SourceFamily = "search" | "map" | "blog" | "travel_booking" | "commerce" | "portal" | "video_social" | "generic_web";
 
 export type SourcePlatform =
   | "naver_search"
@@ -143,10 +135,7 @@ function detectSourcePlatform(url: URL): SourcePlatform {
     if (host.startsWith("shopping.")) {
       return "naver_shopping";
     }
-    if (
-      host.startsWith("search.")
-      && (url.searchParams.get("where") === "news" || url.searchParams.get("ssc")?.startsWith("tab.news"))
-    ) {
+    if (host.startsWith("search.") && (url.searchParams.get("where") === "news" || url.searchParams.get("ssc")?.startsWith("tab.news"))) {
       return "naver_news";
     }
     if (host.startsWith("search.") || path.startsWith("/search")) {
@@ -189,11 +178,7 @@ function detectSourcePlatform(url: URL): SourcePlatform {
     if (host.startsWith("map.") || host.startsWith("map.kakao.") || path.includes("/map")) {
       return "kakao_map";
     }
-    if (
-      host.startsWith("news.")
-      || path.startsWith("/news")
-      || (host.startsWith("search.") && url.searchParams.get("w") === "news")
-    ) {
+    if (host.startsWith("news.") || path.startsWith("/news") || (host.startsWith("search.") && url.searchParams.get("w") === "news")) {
       return "daum_news";
     }
     return "daum_search";
@@ -544,91 +529,45 @@ function evidencePlanFor(sourceFamily: SourceFamily, platform: SourcePlatform): 
 
 function extractionHintsFor(sourceFamily: SourceFamily, platform: SourcePlatform): string[] {
   if (sourceFamily === "map") {
-    return [
-      "Set locale/timezone/profile deliberately before running location-sensitive captures.",
-      "Capture both map viewport and selected place/listing panel when available.",
-      "Record search query, zoom/viewport, visible filters, and whether results are sponsored."
-    ];
+    return ["Set locale/timezone/profile deliberately before running location-sensitive captures.", "Capture both map viewport and selected place/listing panel when available.", "Record search query, zoom/viewport, visible filters, and whether results are sponsored."];
   }
   if (sourceFamily === "travel_booking") {
-    return [
-      "Always record dates, guests, rooms, currency, taxes/fees, cancellation policy, and timestamp.",
-      "Treat prices as browser-visible point-in-time evidence, not durable facts.",
-      "Use profile/headed mode when login changes price visibility, but do not automate booking/payment."
-    ];
+    return ["Always record dates, guests, rooms, currency, taxes/fees, cancellation policy, and timestamp.", "Treat prices as browser-visible point-in-time evidence, not durable facts.", "Use profile/headed mode when login changes price visibility, but do not automate booking/payment."];
   }
   if (sourceFamily === "commerce") {
-    return [
-      "Always record query, filters, sort, currency, price, shipping/fee visibility, seller context, and timestamp.",
-      "Treat prices and availability as browser-visible point-in-time evidence, not durable facts.",
-      "Do not automate cart, checkout, purchase, account, or subscription actions."
-    ];
+    return ["Always record query, filters, sort, currency, price, shipping/fee visibility, seller context, and timestamp.", "Treat prices and availability as browser-visible point-in-time evidence, not durable facts.", "Do not automate cart, checkout, purchase, account, or subscription actions."];
   }
   if (sourceFamily === "search") {
-    return [
-      "Search result snippets are evidence of what the portal displayed, not proof of the destination content.",
-      "Use follow-up evidence runs for cited result pages.",
-      "Record locale, query, filters, and visible ranking."
-    ];
+    return ["Search result snippets are evidence of what the portal displayed, not proof of the destination content.", "Use follow-up evidence runs for cited result pages.", "Record locale, query, filters, and visible ranking."];
   }
   if (sourceFamily === "blog") {
-    return [
-      "Preserve visible article text and screenshot before extracting summaries.",
-      "Capture author/date/permalink if visible.",
-      "Treat comments and embedded media as separate evidence when claims depend on them."
-    ];
+    return ["Preserve visible article text and screenshot before extracting summaries.", "Capture author/date/permalink if visible.", "Treat comments and embedded media as separate evidence when claims depend on them."];
   }
   if (sourceFamily === "video_social") {
-    return [
-      "Use timestamped frame screenshots for visual claims.",
-      "Use transcript/OCR/audio artifacts only when actually collected and cited.",
-      "Preserve browser-visible obstructions instead of claiming content access."
-    ];
+    return ["Use timestamped frame screenshots for visual claims.", "Use transcript/OCR/audio artifacts only when actually collected and cited.", "Preserve browser-visible obstructions instead of claiming content access."];
   }
-  return [
-    `No specialized strategy is registered for ${platform}; start with browser-visible capture and add focused derivatives only after inspecting the page.`
-  ];
+  return [`No specialized strategy is registered for ${platform}; start with browser-visible capture and add focused derivatives only after inspecting the page.`];
 }
 
-function requiredAgentWorkFor(sourceFamily: SourceFamily, platform: SourcePlatform): string[] {
-  const common = [
-    "Choose the exact source URL and query state that the final claim depends on.",
-    "Keep generated evidence run output out of git unless a small fixture is explicitly needed."
-  ];
+function requiredAgentWorkFor(sourceFamily: SourceFamily, _platform: SourcePlatform): string[] {
+  const common = ["Choose the exact source URL and query state that the final claim depends on.", "Keep generated evidence run output out of git unless a small fixture is explicitly needed."];
   if (sourceFamily === "travel_booking") {
-    return [
-      ...common,
-      "Specify check-in/check-out dates, occupancy, currency, and filters before comparing offers.",
-      "Use multiple captures if price or availability changes across sessions or login state."
-    ];
+    return [...common, "Specify check-in/check-out dates, occupancy, currency, and filters before comparing offers.", "Use multiple captures if price or availability changes across sessions or login state."];
   }
   if (sourceFamily === "commerce") {
-    return [
-      ...common,
-      "Specify query, filters, sort, currency, seller context, and shipping/fee visibility before comparing offers.",
-      "Use multiple captures if price or availability changes across sessions or login state."
-    ];
+    return [...common, "Specify query, filters, sort, currency, seller context, and shipping/fee visibility before comparing offers.", "Use multiple captures if price or availability changes across sessions or login state."];
   }
   if (sourceFamily === "map") {
-    return [
-      ...common,
-      "Specify place/search query, region/viewport, and whether route or listing context matters."
-    ];
+    return [...common, "Specify place/search query, region/viewport, and whether route or listing context matters."];
   }
   if (sourceFamily === "search") {
-    return [
-      ...common,
-      "Separate search-result evidence from destination-page evidence in final claims."
-    ];
+    return [...common, "Separate search-result evidence from destination-page evidence in final claims."];
   }
   return common;
 }
 
 function warningsFor(sourceFamily: SourceFamily, platform: SourcePlatform): string[] {
-  const warnings = [
-    "Browser-visible evidence can change by locale, login state, personalization, date, and anti-automation surfaces.",
-    "Do not bypass access controls, payment flows, DRM, or raw media stream protections."
-  ];
+  const warnings = ["Browser-visible evidence can change by locale, login state, personalization, date, and anti-automation surfaces.", "Do not bypass access controls, payment flows, DRM, or raw media stream protections."];
   if (sourceFamily === "travel_booking") {
     warnings.push("Travel prices and availability are volatile; cite timestamped screenshots and visible search parameters.");
   }

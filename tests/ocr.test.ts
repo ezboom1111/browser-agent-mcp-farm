@@ -72,10 +72,7 @@ describe("runOcrForFrameArtifacts", () => {
       contextToken: "ctx_test",
       pageId: "ocr",
       baseCaptureId: "ocr-test",
-      frameRecords: [
-        frameRecord("frame-1", framePath, "same-sha"),
-        frameRecord("frame-2", framePath, "same-sha")
-      ],
+      frameRecords: [frameRecord("frame-1", framePath, "same-sha"), frameRecord("frame-2", framePath, "same-sha")],
       options: { enabled: true, maxFrames: 20, timeoutMs: 1_000, language: "eng+kor", minConfidence: 50 },
       workerFactory: async (language) => {
         requestedLanguage = language;
@@ -117,9 +114,7 @@ describe("runOcrForFrameArtifacts", () => {
     });
     expect(firstMetadata.ocr.textProfile.scripts).toEqual(["latin"]);
     expect(firstMetadata.ocr.wordCount).toBe(1);
-    expect(firstMetadata.ocr.words).toEqual([
-      { text: "HELLO", confidence: 93, bbox: { x0: 1, y0: 2, x1: 30, y1: 14 } }
-    ]);
+    expect(firstMetadata.ocr.words).toEqual([{ text: "HELLO", confidence: 93, bbox: { x0: 1, y0: 2, x1: 30, y1: 14 } }]);
     expect(secondMetadata.ocr.cacheHit).toBe(true);
   });
 
@@ -240,13 +235,7 @@ describe("runOcrForFrameArtifacts", () => {
       hasTravelOrCommerceLikeText: true,
       hasRatingLikeText: false
     });
-    expect((metadata.ocr.textProfile as { scripts: string[] }).scripts).toEqual(expect.arrayContaining([
-      "latin",
-      "hangul",
-      "cjk",
-      "digit",
-      "currency"
-    ]));
+    expect((metadata.ocr.textProfile as { scripts: string[] }).scripts).toEqual(expect.arrayContaining(["latin", "hangul", "cjk", "digit", "currency"]));
   });
 
   it("records per-frame OCR engine failures and continues with later frames", async () => {
@@ -275,19 +264,14 @@ describe("runOcrForFrameArtifacts", () => {
       contextToken: "ctx_test",
       pageId: "ocr",
       baseCaptureId: "ocr-engine-error-test",
-      frameRecords: [
-        frameRecord("frame-1", "screenshots/frame-sample-frame-001-000001s000ms.png", "sha-1"),
-        frameRecord("frame-2", "screenshots/frame-sample-frame-002-000002s000ms.png", "sha-2")
-      ],
+      frameRecords: [frameRecord("frame-1", "screenshots/frame-sample-frame-001-000001s000ms.png", "sha-1"), frameRecord("frame-2", "screenshots/frame-sample-frame-002-000002s000ms.png", "sha-2")],
       options: { enabled: true, maxFrames: 20, timeoutMs: 1_000, language: "eng", minConfidence: 50 },
       workerFactory: async () => worker
     });
 
     expect(recognizeCalls).toBe(2);
     expect(terminated).toBe(true);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.stringContaining("OCR engine_error for frame-1")
-    ]));
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining("OCR engine_error for frame-1")]));
     const metadata = await readOcrMetadataRecords(runDir, result.records);
     expect(metadata.map((entry) => entry.ocr.status)).toEqual(["engine_error", "ok"]);
     expect(metadata[0]?.ocr).toMatchObject({
@@ -335,9 +319,7 @@ describe("runOcrForFrameArtifacts", () => {
     });
 
     expect(terminated).toBe(true);
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.stringContaining("OCR timeout for frame-timeout")
-    ]));
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining("OCR timeout for frame-timeout")]));
     const metadata = await readOcrMetadata(runDir, result.records);
     expect(metadata.ocr).toMatchObject({
       status: "timeout",

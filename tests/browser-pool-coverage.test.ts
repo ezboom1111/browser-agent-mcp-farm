@@ -28,12 +28,8 @@ describe("BrowserPool no-browser validation", () => {
         artifactRunDir: "x",
         allowedDomains: ["example.com"]
       });
-      await expect(
-        pool.openPage("a", lease.contextToken, "https://evil.test/x")
-      ).rejects.toMatchObject({ code: "domain_not_allowed" });
-      await expect(
-        pool.openPage("a", lease.contextToken, "https://evil.test/x")
-      ).rejects.toThrow("Domain is not allowed for this lease: evil.test");
+      await expect(pool.openPage("a", lease.contextToken, "https://evil.test/x")).rejects.toMatchObject({ code: "domain_not_allowed" });
+      await expect(pool.openPage("a", lease.contextToken, "https://evil.test/x")).rejects.toThrow("Domain is not allowed for this lease: evil.test");
     } finally {
       await pool.shutdown();
     }
@@ -93,12 +89,7 @@ describe("BrowserPool no-browser validation", () => {
       });
       const controller = new AbortController();
       controller.abort("cancel-now");
-      const rejection = pool.openPage(
-        "a",
-        lease.contextToken,
-        "https://example.com/page",
-        controller.signal
-      );
+      const rejection = pool.openPage("a", lease.contextToken, "https://example.com/page", controller.signal);
       await expect(rejection).rejects.toMatchObject({ name: "AbortError" });
       await expect(rejection).rejects.toThrow("cancel-now");
     } finally {
@@ -112,15 +103,9 @@ describe("BrowserPool no-browser validation", () => {
     try {
       const lease = manager.acquire({ agentId: "a", runId: "r", artifactRunDir: "x" });
       // isSafeWindowPropertyName guard runs first, before assertActive/getPageState.
-      await expect(
-        pool.readClientState("a", lease.contextToken, "page_x", "1bad name")
-      ).rejects.toMatchObject({ code: "client_state_property_invalid" });
-      await expect(
-        pool.readClientState("a", lease.contextToken, "page_x", "1bad name")
-      ).rejects.toThrow("Client state property must be a plain window property name: 1bad name");
-      await expect(
-        pool.readClientState("a", lease.contextToken, "page_x", "__proto__.x")
-      ).rejects.toMatchObject({ code: "client_state_property_invalid" });
+      await expect(pool.readClientState("a", lease.contextToken, "page_x", "1bad name")).rejects.toMatchObject({ code: "client_state_property_invalid" });
+      await expect(pool.readClientState("a", lease.contextToken, "page_x", "1bad name")).rejects.toThrow("Client state property must be a plain window property name: 1bad name");
+      await expect(pool.readClientState("a", lease.contextToken, "page_x", "__proto__.x")).rejects.toMatchObject({ code: "client_state_property_invalid" });
     } finally {
       await pool.shutdown();
     }
@@ -146,9 +131,7 @@ describe("BrowserPool no-browser validation", () => {
       await expectPageNotFound(pool.fill("a", rw.contextToken, "page_x", "#s", "v"));
       await expectPageNotFound(pool.press("a", rw.contextToken, "page_x", "Enter"));
       await expectPageNotFound(pool.selectOption("a", rw.contextToken, "page_x", "#s", "v"));
-      await expect(
-        pool.click("a", rw.contextToken, "page_x", "#s")
-      ).rejects.toThrow("Page not found: page_x");
+      await expect(pool.click("a", rw.contextToken, "page_x", "#s")).rejects.toThrow("Page not found: page_x");
     } finally {
       await pool.shutdown();
     }
@@ -165,12 +148,8 @@ describe("BrowserPool no-browser validation", () => {
         artifactRunDir: "x",
         allowedDomains: ["example.com"]
       });
-      await expect(
-        pool.click("a", ro.contextToken, "page_x", "#s")
-      ).rejects.toMatchObject({ code: "capability_denied" });
-      await expect(
-        pool.click("a", ro.contextToken, "page_x", "#s")
-      ).rejects.toThrow(/^Lease does not allow write actions: ctx_/);
+      await expect(pool.click("a", ro.contextToken, "page_x", "#s")).rejects.toMatchObject({ code: "capability_denied" });
+      await expect(pool.click("a", ro.contextToken, "page_x", "#s")).rejects.toThrow(/^Lease does not allow write actions: ctx_/);
     } finally {
       await pool.shutdown();
     }
@@ -206,9 +185,7 @@ describe("BrowserPool no-browser validation", () => {
       for (const call of calls) {
         await expect(call).rejects.toMatchObject({ code: "page_not_found" });
       }
-      await expect(
-        pool.capturePage("a", t, "page_x", "cap")
-      ).rejects.toThrow("Page not found: page_x");
+      await expect(pool.capturePage("a", t, "page_x", "cap")).rejects.toThrow("Page not found: page_x");
     } finally {
       await pool.shutdown();
     }
@@ -221,12 +198,8 @@ describe("BrowserPool no-browser validation", () => {
       const lease = manager.acquire({ agentId: "a", runId: "r", artifactRunDir: "x" });
       const controller = new AbortController();
       controller.abort("cancel-now");
-      await expect(
-        pool.capturePage("a", lease.contextToken, "p", "c", controller.signal)
-      ).rejects.toMatchObject({ name: "AbortError" });
-      await expect(
-        pool.capturePage("a", lease.contextToken, "p", "c", controller.signal)
-      ).rejects.toThrow("cancel-now");
+      await expect(pool.capturePage("a", lease.contextToken, "p", "c", controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+      await expect(pool.capturePage("a", lease.contextToken, "p", "c", controller.signal)).rejects.toThrow("cancel-now");
       await expect(
         pool.sampleFrames("a", lease.contextToken, "p", {
           selector: "#v",
@@ -255,8 +228,6 @@ describe("BrowserPool no-browser validation", () => {
     await expect(pool.shutdown()).resolves.toBeUndefined();
 
     // The lease was released, so it is no longer active.
-    expect(() => manager.assertActive(lease.contextToken)).toThrow(
-      /^Lease is released: ctx_/
-    );
+    expect(() => manager.assertActive(lease.contextToken)).toThrow(/^Lease is released: ctx_/);
   });
 });

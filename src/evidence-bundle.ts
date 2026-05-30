@@ -123,10 +123,7 @@ export async function buildBundleManifest(runDir: string): Promise<BundleManifes
 
 // Build a self-contained archive: manifest + embedded artifact bytes (base64), signed
 // if a private key is supplied. Large files are omitted with a recorded reason.
-export async function exportBundleArchive(
-  runDir: string,
-  options: { privateKeyPem?: string; maxFileBytes?: number } = {}
-): Promise<BundleArchive> {
+export async function exportBundleArchive(runDir: string, options: { privateKeyPem?: string; maxFileBytes?: number } = {}): Promise<BundleArchive> {
   const manifest = await buildBundleManifest(runDir);
   if (options.privateKeyPem !== undefined && options.privateKeyPem.length > 0) {
     manifest.signature = signManifest(manifest, options.privateKeyPem);
@@ -239,10 +236,7 @@ export async function verifyBundle(runDir: string, manifest: BundleManifest, pub
     signatureValid = verifyManifestSignature(manifest.merkleRoot, manifest.signature, publicKeyPem);
   }
 
-  const ok = tamperedArtifacts.length === 0
-    && missingArtifacts.length === 0
-    && merkleMatches
-    && signatureValid !== false;
+  const ok = tamperedArtifacts.length === 0 && missingArtifacts.length === 0 && merkleMatches && signatureValid !== false;
 
   const verification: BundleVerification = { ok, merkleMatches, tamperedArtifacts, missingArtifacts };
   if (signatureValid !== undefined) {

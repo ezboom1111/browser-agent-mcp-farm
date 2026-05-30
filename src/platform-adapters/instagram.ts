@@ -1,8 +1,6 @@
 import { capability, type PlatformCapabilityMap, type PlatformEvidenceAdapter } from "./types.js";
 
-const INSTAGRAM_SOURCES = [
-  "https://developers.facebook.com/docs/instagram-platform/reference/instagram-media"
-];
+const INSTAGRAM_SOURCES = ["https://developers.facebook.com/docs/instagram-platform/reference/instagram-media"];
 
 export class InstagramEvidenceAdapter implements PlatformEvidenceAdapter {
   readonly platform = "instagram" as const;
@@ -21,11 +19,7 @@ export class InstagramEvidenceAdapter implements PlatformEvidenceAdapter {
       ...(shortcode === undefined ? {} : { mediaId: shortcode.id }),
       confidence: shortcode === undefined ? "medium" : "high",
       sources: INSTAGRAM_SOURCES,
-      warnings: [
-        "Instagram Graph API media reads are account, permission, and media-ownership constrained.",
-        "The documented Graph path cannot be treated as a general public post metadata endpoint.",
-        "media_url can be omitted for copyright-flagged material."
-      ],
+      warnings: ["Instagram Graph API media reads are account, permission, and media-ownership constrained.", "The documented Graph path cannot be treated as a general public post metadata endpoint.", "media_url can be omitted for copyright-flagged material."],
       capabilities: {
         metadata: capability({
           name: "metadata",

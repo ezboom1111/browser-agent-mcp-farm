@@ -42,6 +42,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "boundaries": "node scripts/check-boundaries.mjs",
     "prepack": "npm run build",
     "prepublishOnly": "npm run verify",
@@ -63,7 +65,7 @@
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",
-    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm run test:tarball && npm audit --audit-level=moderate && npm run status && npm run scorecard"
+    "verify": "npm run build && npm run typecheck && npm run lint && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm run test:tarball && npm audit --audit-level=moderate && npm run status && npm run scorecard"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -79,6 +81,7 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.16",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.1.7",
     "typescript": "^6.0.3",

@@ -12,12 +12,18 @@ export interface ParsedTranscript {
 }
 
 export function parseWebVtt(input: string): ParsedTranscript {
-  const normalized = input.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const normalized = input
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
   const blocks = normalized.split(/\n{2,}/);
   const cues: TranscriptCue[] = [];
 
   for (const block of blocks) {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const lines = block
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
     if (lines.length === 0 || lines[0] === "WEBVTT" || lines[0]?.startsWith("NOTE")) {
       continue;
     }
@@ -37,7 +43,10 @@ export function parseWebVtt(input: string): ParsedTranscript {
     if (startSec === undefined || endSec === undefined) {
       continue;
     }
-    const text = lines.slice(timingIndex + 1).join("\n").trim();
+    const text = lines
+      .slice(timingIndex + 1)
+      .join("\n")
+      .trim();
     if (text.length === 0) {
       continue;
     }

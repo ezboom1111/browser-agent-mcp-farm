@@ -18,8 +18,12 @@ export async function runCli(args: string[]): Promise<{ out: string; exitCode: n
   const savedExit = process.exitCode;
   process.exitCode = undefined;
   const lines: string[] = [];
-  const logSpy = vi.spyOn(console, "log").mockImplementation((...parts: unknown[]) => { lines.push(parts.join(" ")); });
-  const errSpy = vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => { lines.push(parts.join(" ")); });
+  const logSpy = vi.spyOn(console, "log").mockImplementation((...parts: unknown[]) => {
+    lines.push(parts.join(" "));
+  });
+  const errSpy = vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+    lines.push(parts.join(" "));
+  });
   const outSpy = vi.spyOn(process.stdout, "write").mockImplementation(((chunk: unknown): boolean => {
     lines.push(typeof chunk === "string" ? chunk : String(chunk));
     return true;
@@ -69,7 +73,12 @@ export async function makeRun(dirs: string[], text = "evidence one"): Promise<st
   dirs.push(runDir);
   const writer = new ArtifactWriter();
   await writer.writeCaptureBundle({
-    runDir, sourceUrl: "https://example.com/", contextToken: "ctx", pageId: "p", captureId: "c", text
+    runDir,
+    sourceUrl: "https://example.com/",
+    contextToken: "ctx",
+    pageId: "p",
+    captureId: "c",
+    text
   });
   return runDir;
 }

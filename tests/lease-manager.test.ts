@@ -65,4 +65,3 @@ describe("LeaseManager", () => {
     expect(() => manager.assertCanOpen(lease.contextToken, "agent-a", "https://example.com/next")).toThrow(/page limit/);
   });
 });
-

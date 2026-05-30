@@ -127,18 +127,9 @@ export interface SceneChangePairDistance {
   distance: number;
 }
 
-export type SceneChangeThresholdRecommendation =
-  | "insufficient_data"
-  | "keep_threshold"
-  | "lower_threshold"
-  | "raise_threshold"
-  | "review_near_miss";
+export type SceneChangeThresholdRecommendation = "insufficient_data" | "keep_threshold" | "lower_threshold" | "raise_threshold" | "review_near_miss";
 
-export type SceneChangeSamplingDensityStatus =
-  | "insufficient_data"
-  | "ok"
-  | "sparse_pairs"
-  | "sparse_selected_hits";
+export type SceneChangeSamplingDensityStatus = "insufficient_data" | "ok" | "sparse_pairs" | "sparse_selected_hits";
 
 export interface SceneChangeDetectionDiagnostics {
   threshold: number;
@@ -204,9 +195,7 @@ export function buildTimestampPlan(input: TimestampPlanInput = {}): TimestampPla
   const maxFrames = input.maxFrames ?? DEFAULT_MAX_FRAME_SAMPLES;
   const strideSec = input.strideSec ?? DEFAULT_FRAME_STRIDE_SEC;
   const durationSec = normalizeDuration(input.durationSec);
-  const raw = input.timestampsSec === undefined
-    ? defaultTimestamps(durationSec, strideSec)
-    : input.timestampsSec;
+  const raw = input.timestampsSec === undefined ? defaultTimestamps(durationSec, strideSec) : input.timestampsSec;
   const bounded = normalizeTimestamps(raw, durationSec);
   const timestampsSec = bounded.slice(0, maxFrames);
   return {
@@ -256,9 +245,7 @@ export function detectSceneChangeHits(input: SceneChangeDetectionInput): SceneCh
 export function analyzeSceneChanges(input: SceneChangeDetectionInput): SceneChangeDetectionResult {
   const minDistance = input.minDistance ?? 16;
   const maxHits = input.maxHits ?? 20;
-  const comparableFrames = [...input.frames]
-    .filter((frame) => frame.status === "ok" && frame.visualFingerprint.status === "ok" && frame.visualFingerprint.hash !== undefined)
-    .sort((left, right) => left.timestampSec - right.timestampSec);
+  const comparableFrames = [...input.frames].filter((frame) => frame.status === "ok" && frame.visualFingerprint.status === "ok" && frame.visualFingerprint.hash !== undefined).sort((left, right) => left.timestampSec - right.timestampSec);
   const distances: SceneChangePairDistance[] = [];
 
   for (let index = 1; index < comparableFrames.length; index += 1) {
@@ -314,15 +301,7 @@ function hammingDistance(left: string, right: string): number {
   return distance;
 }
 
-function buildSceneChangeDiagnostics(input: {
-  input: SceneChangeDetectionInput;
-  minDistance: number;
-  maxHits: number;
-  comparableFrames: FrameSample[];
-  distances: SceneChangePairDistance[];
-  candidates: SceneChangePairDistance[];
-  hits: SceneChangeHit[];
-}): SceneChangeDetectionDiagnostics {
+function buildSceneChangeDiagnostics(input: { input: SceneChangeDetectionInput; minDistance: number; maxHits: number; comparableFrames: FrameSample[]; distances: SceneChangePairDistance[]; candidates: SceneChangePairDistance[]; hits: SceneChangeHit[] }): SceneChangeDetectionDiagnostics {
   const distances = input.distances.map((pair) => pair.distance);
   const diagnostics: SceneChangeDetectionDiagnostics = {
     threshold: input.minDistance,
@@ -367,9 +346,7 @@ function buildSceneChangeDiagnostics(input: {
     diagnostics.selectedHitSpacingMinSec = Math.min(...selectedHitSpacings);
     diagnostics.selectedHitSpacingMaxSec = Math.max(...selectedHitSpacings);
   }
-  const nearestBelowThreshold = input.distances
-    .filter((pair) => pair.distance < input.minDistance)
-    .sort((left, right) => right.distance - left.distance || left.midpointSec - right.midpointSec)[0];
+  const nearestBelowThreshold = input.distances.filter((pair) => pair.distance < input.minDistance).sort((left, right) => right.distance - left.distance || left.midpointSec - right.midpointSec)[0];
   if (nearestBelowThreshold !== undefined) {
     diagnostics.nearestBelowThreshold = nearestBelowThreshold;
   }
@@ -429,14 +406,7 @@ function roundMillis(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
 
-function recommendSceneChangeThreshold(input: {
-  threshold: number;
-  maxHits: number;
-  distances: SceneChangePairDistance[];
-  candidates: SceneChangePairDistance[];
-  hits: SceneChangeHit[];
-  nearestBelowThreshold?: SceneChangePairDistance | undefined;
-}): {
+function recommendSceneChangeThreshold(input: { threshold: number; maxHits: number; distances: SceneChangePairDistance[]; candidates: SceneChangePairDistance[]; hits: SceneChangeHit[]; nearestBelowThreshold?: SceneChangePairDistance | undefined }): {
   recommendation: SceneChangeThresholdRecommendation;
   reason: string;
   recommendedThreshold?: number | undefined;
@@ -464,9 +434,7 @@ function recommendSceneChangeThreshold(input: {
   }
 
   if (input.candidates.length > input.hits.length) {
-    const omitted = [...input.candidates]
-      .sort((left, right) => right.distance - left.distance || left.midpointSec - right.midpointSec)
-      .slice(input.maxHits);
+    const omitted = [...input.candidates].sort((left, right) => right.distance - left.distance || left.midpointSec - right.midpointSec).slice(input.maxHits);
     const firstOmitted = omitted[0];
     const selectedDistanceMin = Math.min(...input.hits.map((hit) => hit.distance));
     if (firstOmitted !== undefined && firstOmitted.distance < 64) {

@@ -6,20 +6,9 @@ import { latestCanaryByRecipe, type RecipeCanaryResult, type RecipeCanaryVerdict
 // "headed_only" (recalibration required), and anything outside the actively-canaried
 // maintenance budget is honestly labelled "unmaintained" rather than implied-supported.
 
-export type CoverageClass =
-  | "autonomous_ready"
-  | "api_backed"
-  | "headed_only"
-  | "blocked"
-  | "unmaintained";
+export type CoverageClass = "autonomous_ready" | "api_backed" | "headed_only" | "blocked" | "unmaintained";
 
-export const COVERAGE_CLASSES: CoverageClass[] = [
-  "autonomous_ready",
-  "api_backed",
-  "headed_only",
-  "blocked",
-  "unmaintained"
-];
+export const COVERAGE_CLASSES: CoverageClass[] = ["autonomous_ready", "api_backed", "headed_only", "blocked", "unmaintained"];
 
 // The honest, explicitly-named maintenance budget: the free, sustainable search sources
 // the project commits to actively canarying. Everything else is "unmaintained" unless a
@@ -185,9 +174,7 @@ export function formatCoverageReportAsMarkdown(report: CoverageReport): string {
     "",
     "| Source | Class | Last verified | Fresh |",
     "| --- | --- | --- | --- |",
-    ...report.entries.map(
-      (e) => `| ${e.displayName} (${e.platform}) | ${e.coverageClass} | ${e.lastVerifiedAt ?? "—"} | ${e.lastVerifiedAt === undefined ? "—" : e.fresh ? "yes" : "no"} |`
-    )
+    ...report.entries.map((e) => `| ${e.displayName} (${e.platform}) | ${e.coverageClass} | ${e.lastVerifiedAt ?? "—"} | ${e.lastVerifiedAt === undefined ? "—" : e.fresh ? "yes" : "no"} |`)
   ];
   return `${lines.join("\n")}\n`;
 }

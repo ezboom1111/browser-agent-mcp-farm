@@ -111,37 +111,30 @@ export class ArtifactWriter {
         if (mediaNote !== undefined) {
           mediaInput.note = mediaNote;
         }
-        records.push(await this.writeBytes(
-          input.runDir,
-          `media/${captureId}/${mediaFileName(media, index, format)}`,
-          media.bytes,
-          "media",
-          format,
-          media.mime,
-          mediaInput,
-          media.status ?? status
-        ));
+        records.push(await this.writeBytes(input.runDir, `media/${captureId}/${mediaFileName(media, index, format)}`, media.bytes, "media", format, media.mime, mediaInput, media.status ?? status));
         const transcript = transcriptForMedia(media);
         if (transcript !== undefined) {
-          records.push(await this.writeJson(
-            input.runDir,
-            `structured/${captureId}.transcripts/${mediaFileName(media, index, "json")}`,
-            {
-              sourceUrl: media.url,
-              mime: media.mime,
-              resourceType: media.resourceType,
-              ...transcript
-            },
-            {
-              ...input,
-              captureId,
-              sourceUrl: media.url,
-              note: media.note ?? "parsed transcript from captured caption artifact",
-              captureMethod: input.captureMethod ?? "browser-agent-mcp-farm transcript-parse",
-              toolName: input.toolName ?? "farm_capture"
-            },
-            media.status ?? status
-          ));
+          records.push(
+            await this.writeJson(
+              input.runDir,
+              `structured/${captureId}.transcripts/${mediaFileName(media, index, "json")}`,
+              {
+                sourceUrl: media.url,
+                mime: media.mime,
+                resourceType: media.resourceType,
+                ...transcript
+              },
+              {
+                ...input,
+                captureId,
+                sourceUrl: media.url,
+                note: media.note ?? "parsed transcript from captured caption artifact",
+                captureMethod: input.captureMethod ?? "browser-agent-mcp-farm transcript-parse",
+                toolName: input.toolName ?? "farm_capture"
+              },
+              media.status ?? status
+            )
+          );
         }
       }
     }
@@ -175,51 +168,20 @@ export class ArtifactWriter {
     });
   }
 
-  private async writeJson(
-    runDir: string,
-    relPath: string,
-    value: unknown,
-    input: CaptureBundleInput,
-    status: ArtifactStatus
-  ): Promise<ArtifactRecord> {
+  private async writeJson(runDir: string, relPath: string, value: unknown, input: CaptureBundleInput, status: ArtifactStatus): Promise<ArtifactRecord> {
     return this.writeText(runDir, relPath, `${JSON.stringify(value, null, 2)}\n`, "structured", "json", "application/json", input, status);
   }
 
-  private async writeJsonl(
-    runDir: string,
-    relPath: string,
-    rows: unknown[],
-    input: CaptureBundleInput,
-    status: ArtifactStatus,
-    note: string
-  ): Promise<ArtifactRecord> {
+  private async writeJsonl(runDir: string, relPath: string, rows: unknown[], input: CaptureBundleInput, status: ArtifactStatus, note: string): Promise<ArtifactRecord> {
     const text = rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length > 0 ? "\n" : "");
     return this.writeText(runDir, relPath, text, "structured", "jsonl", "application/jsonl", { ...input, note }, status);
   }
 
-  private async writeText(
-    runDir: string,
-    relPath: string,
-    text: string,
-    kind: ArtifactKind,
-    format: string,
-    mime: string,
-    input: CaptureBundleInput,
-    status: ArtifactStatus
-  ): Promise<ArtifactRecord> {
+  private async writeText(runDir: string, relPath: string, text: string, kind: ArtifactKind, format: string, mime: string, input: CaptureBundleInput, status: ArtifactStatus): Promise<ArtifactRecord> {
     return this.writeBytes(runDir, relPath, Buffer.from(text, "utf8"), kind, format, mime, input, status);
   }
 
-  private async writeBytes(
-    runDir: string,
-    relPath: string,
-    bytes: Uint8Array,
-    kind: ArtifactKind,
-    format: string,
-    mime: string,
-    input: CaptureBundleInput,
-    status: ArtifactStatus
-  ): Promise<ArtifactRecord> {
+  private async writeBytes(runDir: string, relPath: string, bytes: Uint8Array, kind: ArtifactKind, format: string, mime: string, input: CaptureBundleInput, status: ArtifactStatus): Promise<ArtifactRecord> {
     const path = resolveInside(runDir, relPath);
     await atomicWrite(path, bytes);
     const record: ArtifactRecord = {
@@ -325,7 +287,10 @@ function inferEvidenceKind(kind: ArtifactKind, relPath: string, input: CaptureBu
 export const SANITIZED_FILE_BASE_MAX_LENGTH = 96;
 
 export function sanitizeFileBase(value: string): string {
-  const cleaned = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  const cleaned = value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
   return cleaned.slice(0, SANITIZED_FILE_BASE_MAX_LENGTH) || `capture-${randomUUID()}`;
 }
 
@@ -402,7 +367,7 @@ async function atomicWrite(path: string, bytes: Uint8Array): Promise<void> {
 
 async function appendJsonl(path: string, rows: unknown[]): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  const text = rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
+  const text = `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
   await appendFile(path, text, "utf8");
 }
 

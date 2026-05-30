@@ -40,10 +40,7 @@ export const DEFAULT_SOURCE_NAVIGATION_EXECUTION_LIMITS: SourceNavigationExecuti
   stopOnUnsupported: true
 };
 
-export function buildSourceNavigationExecutionPlan(
-  plan: SourceNavigationPlan,
-  limits: Partial<SourceNavigationExecutionLimits> = {}
-): SourceNavigationExecutionPlan {
+export function buildSourceNavigationExecutionPlan(plan: SourceNavigationPlan, limits: Partial<SourceNavigationExecutionLimits> = {}): SourceNavigationExecutionPlan {
   const normalizedLimits = normalizeExecutionLimits(limits);
   const executableActions = plan.plannedActions.slice(0, normalizedLimits.maxActions);
   const omittedActionCount = Math.max(0, plan.plannedActions.length - executableActions.length);

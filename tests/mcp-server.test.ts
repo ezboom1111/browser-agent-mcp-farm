@@ -27,7 +27,7 @@ describe("createMcpServer", () => {
     const tool = registeredTools(server).farm_evidence_run;
     const result = await tool.handler({ url: "https://example.com/" });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("\"ok\": false");
+    expect(result.content[0].text).toContain('"ok": false');
   });
 
   it("validates farm_evidence_run input", async () => {
@@ -67,9 +67,7 @@ describe("createMcpServer", () => {
         enabled: true,
         calibrate: true,
         calibrationSelectorTimeoutMs: 1000,
-        actions: [
-          { actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }
-        ],
+        actions: [{ actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }],
         perActionTimeoutMs: 5000,
         followUpConcurrency: 2,
         fallbackFollowUps: true,
@@ -99,9 +97,7 @@ describe("createMcpServer", () => {
         enabled: true,
         calibrate: true,
         calibrationSelectorTimeoutMs: 1000,
-        actions: [
-          { actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }
-        ],
+        actions: [{ actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }],
         perActionTimeoutMs: 5000,
         followUpConcurrency: 2,
         fallbackFollowUps: true,
@@ -129,9 +125,7 @@ describe("createMcpServer", () => {
 
   it("registers the read-only evidence-loop tools", () => {
     const tools = registeredTools(createMcpServer());
-    expect(Object.keys(tools)).toEqual(
-      expect.arrayContaining(["farm_read_report", "farm_list_artifacts", "farm_run_claim_gate"])
-    );
+    expect(Object.keys(tools)).toEqual(expect.arrayContaining(["farm_read_report", "farm_list_artifacts", "farm_run_claim_gate"]));
   });
 
   it("farm_read_report reads a report file", async () => {
@@ -149,11 +143,7 @@ describe("createMcpServer", () => {
   it("farm_list_artifacts lists and filters the artifact ledger", async () => {
     const dir = await mkdtemp(join(tmpdir(), "farm-mcp-artifacts-"));
     dirs.push(dir);
-    await writeFile(
-      join(dir, "artifacts.jsonl"),
-      `${JSON.stringify({ artifact_id: "a1", evidence_kind: "page_text" })}\n${JSON.stringify({ artifact_id: "a2", evidence_kind: "frame_screenshot" })}\n`,
-      "utf8"
-    );
+    await writeFile(join(dir, "artifacts.jsonl"), `${JSON.stringify({ artifact_id: "a1", evidence_kind: "page_text" })}\n${JSON.stringify({ artifact_id: "a2", evidence_kind: "frame_screenshot" })}\n`, "utf8");
 
     const tools = registeredTools(createMcpServer());
     const all = await tools.farm_list_artifacts.handler({ runDir: dir });
@@ -214,12 +204,16 @@ describe("createMcpServer", () => {
     dirs.push(dir);
     const tools = registeredTools(createMcpServer());
 
-    const reg = JSON.parse((await tools.farm_register_evidence.handler({
-      runDir: dir,
-      text: "The store is open now and rated 4.6.",
-      evidenceKind: "page_text",
-      sourceUrl: "https://example.com/"
-    })).content[0].text) as { registered: boolean; artifactId: string };
+    const reg = JSON.parse(
+      (
+        await tools.farm_register_evidence.handler({
+          runDir: dir,
+          text: "The store is open now and rated 4.6.",
+          evidenceKind: "page_text",
+          sourceUrl: "https://example.com/"
+        })
+      ).content[0].text
+    ) as { registered: boolean; artifactId: string };
     expect(reg.registered).toBe(true);
 
     // A grounded claim passes the gate.
@@ -252,7 +246,10 @@ describe("createMcpServer", () => {
   it("farm_capabilities identifies the server with non-goals and evidence kinds", async () => {
     const tools = registeredTools(createMcpServer());
     const caps = JSON.parse((await tools.farm_capabilities.handler({})).content[0].text) as {
-      serverName: string; evidenceKinds: string[]; nonGoals: string[]; optionalDeps: { tesseractAvailable: boolean };
+      serverName: string;
+      evidenceKinds: string[];
+      nonGoals: string[];
+      optionalDeps: { tesseractAvailable: boolean };
     };
     expect(caps.serverName).toBe("browser-agent-mcp-farm");
     expect(Array.isArray(caps.evidenceKinds)).toBe(true);
@@ -279,9 +276,13 @@ describe("createMcpServer", () => {
 
   it("farm_extract_structured parses JSON-LD and Open Graph from captured HTML", async () => {
     const tools = registeredTools(createMcpServer());
-    const res = JSON.parse((await tools.farm_extract_structured.handler({
-      html: '<script type="application/ld+json">{"@type":"Place","name":"Acme"}</script><meta property="og:title" content="Acme">'
-    })).content[0].text) as { openGraph: Record<string, string>; jsonLd: unknown[] };
+    const res = JSON.parse(
+      (
+        await tools.farm_extract_structured.handler({
+          html: '<script type="application/ld+json">{"@type":"Place","name":"Acme"}</script><meta property="og:title" content="Acme">'
+        })
+      ).content[0].text
+    ) as { openGraph: Record<string, string>; jsonLd: unknown[] };
     expect(res.openGraph["og:title"]).toBe("Acme");
     expect(res.jsonLd.length).toBe(1);
   });
@@ -291,7 +292,12 @@ describe("createMcpServer", () => {
     dirs.push(dir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir: dir, sourceUrl: "https://example.com/", contextToken: "ctx", pageId: "p", captureId: "c", text: "bundle evidence"
+      runDir: dir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx",
+      pageId: "p",
+      captureId: "c",
+      text: "bundle evidence"
     });
     const textRecord = records.find((record) => record.kind === "text");
     if (!textRecord) {
@@ -318,7 +324,11 @@ describe("createMcpServer", () => {
     dirs.push(dir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir: dir, sourceUrl: "https://example.com/", contextToken: "c", pageId: "p", captureId: "x",
+      runDir: dir,
+      sourceUrl: "https://example.com/",
+      contextToken: "c",
+      pageId: "p",
+      captureId: "x",
       html: '<script type="application/ld+json">{"@type":"Place","name":"Acme"}</script>'
     });
     const htmlRecord = records.find((record) => record.evidence_kind === "page_html");
@@ -328,7 +338,8 @@ describe("createMcpServer", () => {
 
     const tools = registeredTools(createMcpServer());
     const res = JSON.parse((await tools.farm_extract_structured.handler({ runDir: dir, artifactId: htmlRecord.artifact_id })).content[0].text) as {
-      jsonLd: unknown[]; summary: { name?: string };
+      jsonLd: unknown[];
+      summary: { name?: string };
     };
     expect(res.jsonLd.length).toBe(1);
     expect(res.summary.name).toBe("Acme");

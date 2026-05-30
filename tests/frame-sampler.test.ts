@@ -42,11 +42,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("detects scene-change hit midpoints from visual fingerprints", () => {
     const hits = detectSceneChangeHits({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(10, "11111111"),
-        frameWithHash(20, "11111111")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(10, "11111111"), frameWithHash(20, "11111111")],
       minDistance: 4
     });
 
@@ -62,12 +58,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("reports scene-change distance diagnostics for threshold tuning", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(10, "00001111"),
-        frameWithHash(20, "11110000"),
-        frameWithUnavailableFingerprint(30)
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(10, "00001111"), frameWithHash(20, "11110000"), frameWithUnavailableFingerprint(30)],
       minDistance: 6,
       maxHits: 1
     });
@@ -119,11 +110,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("recommends lowering scene-change threshold when no pair currently qualifies", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(10, "00001111"),
-        frameWithHash(20, "00011111")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(10, "00001111"), frameWithHash(20, "00011111")],
       minDistance: 7
     });
 
@@ -143,12 +130,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("recommends raising scene-change threshold when candidates exceed max hits", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(10, "11111111"),
-        frameWithHash(20, "00000011"),
-        frameWithHash(30, "11110011")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(10, "11111111"), frameWithHash(20, "00000011"), frameWithHash(30, "11110011")],
       minDistance: 4,
       maxHits: 1
     });
@@ -170,13 +152,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("reports pair gaps and selected hit spacing for sparse media sampling", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(10, "11111111"),
-        frameWithHash(20, "00000000"),
-        frameWithHash(60, "11110000"),
-        frameWithHash(90, "11111111")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(10, "11111111"), frameWithHash(20, "00000000"), frameWithHash(60, "11110000"), frameWithHash(90, "11111111")],
       minDistance: 4,
       maxHits: 4
     });
@@ -197,13 +173,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("reports stable-frame distribution diagnostics for real media tuning", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(5, "00000000"),
-        frameWithHash(10, "00000001"),
-        frameWithHash(15, "00000011"),
-        frameWithHash(20, "11111111")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(5, "00000000"), frameWithHash(10, "00000001"), frameWithHash(15, "00000011"), frameWithHash(20, "11111111")],
       minDistance: 4,
       maxHits: 3
     });
@@ -232,10 +202,7 @@ describe("frame sampler timestamp planning", () => {
 
   it("reports insufficient scene-change sampling density when too few comparable pairs exist", () => {
     const result = analyzeSceneChanges({
-      frames: [
-        frameWithHash(0, "00000000"),
-        frameWithHash(15, "00001111")
-      ],
+      frames: [frameWithHash(0, "00000000"), frameWithHash(15, "00001111")],
       minDistance: 4
     });
 

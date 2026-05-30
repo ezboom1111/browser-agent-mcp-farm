@@ -3,18 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { SourceNavigationCalibrationBatchManifest } from "../src/source-navigation-calibration-batch.js";
-import type {
-  SourceNavigationActionCalibrationResult,
-  SourceNavigationCalibrationReport,
-  SourceNavigationDestinationProbeResult,
-  SourceNavigationSelectorCalibrationResult
-} from "../src/source-navigation-calibration.js";
-import {
-  parseSourceNavigationPromotionSummary,
-  promoteSourceNavigationCalibrationBatch,
-  reviewSourceNavigationPromotion,
-  type SourceNavigationPromotionSummary
-} from "../src/source-navigation-promotion.js";
+import type { SourceNavigationActionCalibrationResult, SourceNavigationCalibrationReport, SourceNavigationDestinationProbeResult, SourceNavigationSelectorCalibrationResult } from "../src/source-navigation-calibration.js";
+import { parseSourceNavigationPromotionSummary, promoteSourceNavigationCalibrationBatch, reviewSourceNavigationPromotion, type SourceNavigationPromotionSummary } from "../src/source-navigation-promotion.js";
 import { describeSourceNavigationPlan } from "../src/source-navigation.js";
 import { describeSourceNavigationRecipePlan } from "../src/source-navigation-recipes.js";
 import { describeSourceStrategy } from "../src/source-strategy.js";
@@ -32,17 +22,19 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
     runDirs.push(root);
     const firstRunDir = join(root, "google-r1");
     const secondRunDir = join(root, "google-r2");
-    const recipePlan = describeSourceNavigationRecipePlan(describeSourceNavigationPlan({
-      sourceStrategy: describeSourceStrategy("https://www.google.com/search?q=tokyo+hotel")
-    }));
-    await writeCalibrationRun(firstRunDir, calibrationReport(recipePlan, [
-      calibratedAction("result-selection", "capture", [matched("result-selection", "#result-card")], [matched("result-selection", "#result-card", "capture_scope")]),
-      calibratedAction("destination-followup", "extract_destinations", [matched("destination-followup", "#result-card")])
-    ]));
-    await writeCalibrationRun(secondRunDir, calibrationReport(recipePlan, [
-      calibratedAction("result-selection", "capture", [matched("result-selection", "#result-card")], [matched("result-selection", "#result-card", "capture_scope")]),
-      calibratedAction("destination-followup", "extract_destinations", [matched("destination-followup", "#result-card")])
-    ]));
+    const recipePlan = describeSourceNavigationRecipePlan(
+      describeSourceNavigationPlan({
+        sourceStrategy: describeSourceStrategy("https://www.google.com/search?q=tokyo+hotel")
+      })
+    );
+    await writeCalibrationRun(
+      firstRunDir,
+      calibrationReport(recipePlan, [calibratedAction("result-selection", "capture", [matched("result-selection", "#result-card")], [matched("result-selection", "#result-card", "capture_scope")]), calibratedAction("destination-followup", "extract_destinations", [matched("destination-followup", "#result-card")])])
+    );
+    await writeCalibrationRun(
+      secondRunDir,
+      calibrationReport(recipePlan, [calibratedAction("result-selection", "capture", [matched("result-selection", "#result-card")], [matched("result-selection", "#result-card", "capture_scope")]), calibratedAction("destination-followup", "extract_destinations", [matched("destination-followup", "#result-card")])])
+    );
 
     const manifest: SourceNavigationCalibrationBatchManifest = {
       schemaVersion: "1.0",
@@ -104,12 +96,9 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
       }
     });
     const actions = JSON.parse(await readFile(group?.files.actions ?? "", "utf8")) as unknown[];
-    expect(actions).toEqual([
-      expect.objectContaining({ actionKey: "result-selection", operation: "capture" }),
-      expect.objectContaining({ actionKey: "destination-followup", operation: "extract_destinations", selector: "#result-card", maxLinks: 10 })
-    ]);
+    expect(actions).toEqual([expect.objectContaining({ actionKey: "result-selection", operation: "capture" }), expect.objectContaining({ actionKey: "destination-followup", operation: "extract_destinations", selector: "#result-card", maxLinks: 10 })]);
     await expect(readFile(group?.files.catalog ?? "", "utf8")).resolves.toContain("maintained_recipe_ready");
-    await expect(readFile(group?.files.export ?? "", "utf8")).resolves.toContain("\"status\": \"ready\"");
+    await expect(readFile(group?.files.export ?? "", "utf8")).resolves.toContain('"status": "ready"');
 
     const parsedPromotion = parseSourceNavigationPromotionSummary(`\uFEFF${JSON.stringify(promotion)}`);
     const review = reviewSourceNavigationPromotion(parsedPromotion, {
@@ -206,19 +195,13 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
     const firstRunDir = join(root, "naver-r1");
     const secondRunDir = join(root, "naver-r2");
     const url = "https://map.naver.com/p/search/seongsu%20cafe";
-    const recipePlan = describeSourceNavigationRecipePlan(describeSourceNavigationPlan({
-      sourceStrategy: describeSourceStrategy(url)
-    }));
-    await writeCalibrationRun(firstRunDir, calibrationReport(recipePlan, [
-      calibratedAction("destination-followup", "extract_client_state_destinations", [
-        matched("destination-followup", "#app-root")
-      ], [], { clientStateProbe: clientStateProbe() })
-    ]));
-    await writeCalibrationRun(secondRunDir, calibrationReport(recipePlan, [
-      calibratedAction("destination-followup", "extract_client_state_destinations", [
-        matched("destination-followup", "#app-root")
-      ], [], { clientStateProbe: clientStateProbe() })
-    ]));
+    const recipePlan = describeSourceNavigationRecipePlan(
+      describeSourceNavigationPlan({
+        sourceStrategy: describeSourceStrategy(url)
+      })
+    );
+    await writeCalibrationRun(firstRunDir, calibrationReport(recipePlan, [calibratedAction("destination-followup", "extract_client_state_destinations", [matched("destination-followup", "#app-root")], [], { clientStateProbe: clientStateProbe() })]));
+    await writeCalibrationRun(secondRunDir, calibrationReport(recipePlan, [calibratedAction("destination-followup", "extract_client_state_destinations", [matched("destination-followup", "#app-root")], [], { clientStateProbe: clientStateProbe() })]));
 
     const manifest: SourceNavigationCalibrationBatchManifest = {
       schemaVersion: "1.0",
@@ -333,11 +316,7 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
       needsRepeatedCalibrationGroupCount: 1,
       manualReviewRequiredGroupCount: 1
     });
-    expect(review.groups.map((group) => group.status)).toEqual([
-      "blocked",
-      "needs_repeated_calibration",
-      "manual_review_required"
-    ]);
+    expect(review.groups.map((group) => group.status)).toEqual(["blocked", "needs_repeated_calibration", "manual_review_required"]);
     expect(review.warnings).toContain("No ready action files were found in this promotion summary.");
   });
 
@@ -346,20 +325,25 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
     runDirs.push(root);
     const firstRunDir = join(root, "google-blocked-r1");
     const secondRunDir = join(root, "google-blocked-r2");
-    const recipePlan = describeSourceNavigationRecipePlan(describeSourceNavigationPlan({
-      sourceStrategy: describeSourceStrategy("https://www.google.com/search?q=tokyo+hotel")
-    }));
+    const recipePlan = describeSourceNavigationRecipePlan(
+      describeSourceNavigationPlan({
+        sourceStrategy: describeSourceStrategy("https://www.google.com/search?q=tokyo+hotel")
+      })
+    );
     const blockedSignals = [
       { actionKey: "result-selection", signal: "captcha-delivery.com", kind: "blocked_text" as const, status: "present" as const },
       { actionKey: "result-selection", signal: "var dd=", kind: "blocked_text" as const, status: "present" as const }
     ];
     for (const runDir of [firstRunDir, secondRunDir]) {
-      await writeCalibrationRun(runDir, calibrationReport(recipePlan, [
-        calibratedAction("result-selection", "capture", [matched("result-selection", "#search")], [matched("result-selection", "#search", "capture_scope")], {
-          status: "blocked_signal_detected",
-          blockedSignals
-        })
-      ]));
+      await writeCalibrationRun(
+        runDir,
+        calibrationReport(recipePlan, [
+          calibratedAction("result-selection", "capture", [matched("result-selection", "#search")], [matched("result-selection", "#search", "capture_scope")], {
+            status: "blocked_signal_detected",
+            blockedSignals
+          })
+        ])
+      );
     }
 
     const promotion = await promoteSourceNavigationCalibrationBatch({
@@ -410,9 +394,7 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
         { signal: "captcha-delivery.com", count: 2, actionKeys: ["result-selection"] },
         { signal: "var dd=", count: 2, actionKeys: ["result-selection"] }
       ],
-      reasons: expect.arrayContaining([
-        expect.stringContaining("Blocked signal pressure: captcha-delivery.com:2")
-      ])
+      reasons: expect.arrayContaining([expect.stringContaining("Blocked signal pressure: captcha-delivery.com:2")])
     });
   });
 
@@ -438,9 +420,7 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
             maintainedDefaultReadyCount: 1,
             blockedCount: 1
           },
-          blockedSignalCounts: [
-            { signal: "captcha-delivery.com", count: 7, actionKeys: ["article-capture", "obstruction-check"] }
-          ]
+          blockedSignalCounts: [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["article-capture", "obstruction-check"] }]
         })
       ],
       warnings: []
@@ -455,13 +435,8 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
     });
     expect(review.groups[0]).toMatchObject({
       status: "blocked",
-      blockedSignalCounts: [
-        { signal: "captcha-delivery.com", count: 7, actionKeys: ["article-capture", "obstruction-check"] }
-      ],
-      reasons: expect.arrayContaining([
-        expect.stringContaining("No maintained read-only action file is ready"),
-        expect.stringContaining("Blocked signal pressure: captcha-delivery.com:7")
-      ])
+      blockedSignalCounts: [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["article-capture", "obstruction-check"] }],
+      reasons: expect.arrayContaining([expect.stringContaining("No maintained read-only action file is ready"), expect.stringContaining("Blocked signal pressure: captcha-delivery.com:7")])
     });
   });
 
@@ -496,9 +471,7 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
             discoveryPromotableCandidateCount: 2,
             discoveryNonPromotableCandidateCount: 1,
             discoverySelectorHintCount: 2,
-            discoveryWarningCounts: [
-              { warning: "login_or_account_surface", count: 1 }
-            ],
+            discoveryWarningCounts: [{ warning: "login_or_account_surface", count: 1 }],
             clientStateProbeRunCount: 0,
             clientStateProbeOkRunCount: 0,
             clientStateProbeUniqueCandidateCount: 0
@@ -518,9 +491,7 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
         discoveryNonPromotableCandidateCount: 1,
         discoverySelectorHintCount: 2
       },
-      reasons: expect.arrayContaining([
-        expect.stringContaining("Global destination discovery found 2 promotable destination target(s) and 2 selector hint")
-      ])
+      reasons: expect.arrayContaining([expect.stringContaining("Global destination discovery found 2 promotable destination target(s) and 2 selector hint")])
     });
   });
 
@@ -529,14 +500,19 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
     runDirs.push(root);
     const runDir = join(root, "naver-map-r1");
     const url = "https://map.naver.com/p/search/seongsu%20cafe";
-    const recipePlan = describeSourceNavigationRecipePlan(describeSourceNavigationPlan({
-      sourceStrategy: describeSourceStrategy(url)
-    }));
-    await writeCalibrationRun(runDir, calibrationReport(recipePlan, [
-      calibratedAction("destination-followup", "extract_destinations", [], [], {
-        destinationDiscovery: destinationDiscovery()
+    const recipePlan = describeSourceNavigationRecipePlan(
+      describeSourceNavigationPlan({
+        sourceStrategy: describeSourceStrategy(url)
       })
-    ]));
+    );
+    await writeCalibrationRun(
+      runDir,
+      calibrationReport(recipePlan, [
+        calibratedAction("destination-followup", "extract_destinations", [], [], {
+          destinationDiscovery: destinationDiscovery()
+        })
+      ])
+    );
 
     const manifest: SourceNavigationCalibrationBatchManifest = {
       schemaVersion: "1.0",
@@ -580,17 +556,14 @@ describe("promoteSourceNavigationCalibrationBatch", () => {
       }
     });
     await expect(readFile(group?.files.selectorHints ?? "", "utf8")).resolves.toContain(
-      "naver_map\tmap\tdestination-followup\t[data-place-url*=\"place.naver.com/restaurant\"]\t#root [data-place-url*=\"place.naver.com/restaurant\"]\thttps://place.naver.com/restaurant/1\tplace.naver.com\t/restaurant\tattribute\tdata-place-url\tmanual_calibration_required"
+      'naver_map\tmap\tdestination-followup\t[data-place-url*="place.naver.com/restaurant"]\t#root [data-place-url*="place.naver.com/restaurant"]\thttps://place.naver.com/restaurant/1\tplace.naver.com\t/restaurant\tattribute\tdata-place-url\tmanual_calibration_required'
     );
     const parsed = parseSourceNavigationPromotionSummary(JSON.stringify(promotion));
     expect(parsed.groups[0]?.files.selectorHints).toBe(group?.files.selectorHints);
   });
 });
 
-function calibrationReport(
-  recipePlan: ReturnType<typeof describeSourceNavigationRecipePlan>,
-  actionCalibrations: SourceNavigationActionCalibrationResult[]
-): SourceNavigationCalibrationReport {
+function calibrationReport(recipePlan: ReturnType<typeof describeSourceNavigationRecipePlan>, actionCalibrations: SourceNavigationActionCalibrationResult[]): SourceNavigationCalibrationReport {
   return {
     schemaVersion: "1.0",
     url: "https://www.google.com/search?q=tokyo+hotel",
@@ -645,9 +618,7 @@ function calibratedAction(
   };
 }
 
-function clientStateProbe(
-  overrides: Partial<NonNullable<SourceNavigationActionCalibrationResult["clientStateProbe"]>> = {}
-): NonNullable<SourceNavigationActionCalibrationResult["clientStateProbe"]> {
+function clientStateProbe(overrides: Partial<NonNullable<SourceNavigationActionCalibrationResult["clientStateProbe"]>> = {}): NonNullable<SourceNavigationActionCalibrationResult["clientStateProbe"]> {
   return {
     status: "ok",
     stateKey: "__APOLLO_STATE__",
@@ -667,12 +638,7 @@ function clientStateProbe(
   };
 }
 
-function matched(
-  actionKey: string,
-  selector: string,
-  kind: SourceNavigationSelectorCalibrationResult["kind"] = "selector",
-  source: SourceNavigationSelectorCalibrationResult["source"] = "real_site_candidate"
-): SourceNavigationSelectorCalibrationResult {
+function matched(actionKey: string, selector: string, kind: SourceNavigationSelectorCalibrationResult["kind"] = "selector", source: SourceNavigationSelectorCalibrationResult["source"] = "real_site_candidate"): SourceNavigationSelectorCalibrationResult {
   return {
     actionKey,
     selector,
@@ -715,13 +681,17 @@ function destinationDiscovery(): SourceNavigationDestinationProbeResult {
 async function writeCalibrationRun(runDir: string, report: SourceNavigationCalibrationReport): Promise<void> {
   await mkdir(join(runDir, "raw"), { recursive: true });
   await writeFile(join(runDir, "raw", "source-navigation-calibration.txt"), JSON.stringify(report, null, 2), "utf8");
-  await writeFile(join(runDir, "artifacts.jsonl"), JSON.stringify({
-    path: "raw/source-navigation-calibration.txt",
-    kind: "text",
-    format: "txt",
-    tool_name: "source_navigation_calibration",
-    evidence_kind: "source_navigation_calibration"
-  }), "utf8");
+  await writeFile(
+    join(runDir, "artifacts.jsonl"),
+    JSON.stringify({
+      path: "raw/source-navigation-calibration.txt",
+      kind: "text",
+      format: "txt",
+      tool_name: "source_navigation_calibration",
+      evidence_kind: "source_navigation_calibration"
+    }),
+    "utf8"
+  );
 }
 
 function promotionGroup(input: Partial<SourceNavigationPromotionSummary["groups"][number]>): SourceNavigationPromotionSummary["groups"][number] {

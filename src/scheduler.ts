@@ -142,9 +142,7 @@ export class EvidenceRunScheduler {
   }
 
   pruneTerminal(options: PruneTerminalJobsOptions = {}): ScheduledEvidenceRun[] {
-    const terminalJobs = [...this.jobs.values()]
-      .filter((job) => isTerminalStatus(job.status))
-      .sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
+    const terminalJobs = [...this.jobs.values()].filter((job) => isTerminalStatus(job.status)).sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
     const pruned: ScheduledEvidenceRun[] = [];
     const nowMs = Date.now();
     const olderThanMs = options.olderThanMs;
@@ -158,9 +156,7 @@ export class EvidenceRunScheduler {
 
     const maxTerminalJobs = options.maxTerminalJobs ?? this.maxTerminalJobs;
     if (maxTerminalJobs >= 0) {
-      const remaining = [...this.jobs.values()]
-        .filter((job) => isTerminalStatus(job.status))
-        .sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
+      const remaining = [...this.jobs.values()].filter((job) => isTerminalStatus(job.status)).sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt));
       while (remaining.length > maxTerminalJobs) {
         const job = remaining.shift();
         if (job === undefined) {

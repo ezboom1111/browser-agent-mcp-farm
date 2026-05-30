@@ -246,11 +246,7 @@ function resolveOutputPathString(queuePath: string, output: string, cwd: string)
   }
 
   const projectRoot = inferProjectRootFromQueuePath(queuePath);
-  const candidates = [
-    projectRoot === undefined ? undefined : resolve(projectRoot, output),
-    resolve(cwd, output),
-    resolve(dirname(queuePath), output)
-  ].filter((candidate): candidate is string => candidate !== undefined);
+  const candidates = [projectRoot === undefined ? undefined : resolve(projectRoot, output), resolve(cwd, output), resolve(dirname(queuePath), output)].filter((candidate): candidate is string => candidate !== undefined);
 
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0]!;
 }

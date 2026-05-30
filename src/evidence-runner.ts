@@ -7,23 +7,73 @@ import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifac
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
 import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
-import { buildDestinationDeepeningCandidates, buildDestinationDeepeningProposals, buildDestinationTriage, classifyDestinationChildUsefulness, selectedDestinationRequests, summarizeDestinationDeepeningProposals, summarizeDestinationTriageResult, writeDestinationCandidateArtifact, writeDestinationDeepeningProposalArtifact, writeDestinationDeepeningRunArtifact, writeDestinationTriageArtifact, type DestinationChildEvidenceSummary, type DestinationDeepeningCandidate, type DestinationDeepeningExecutionResult, type DestinationDeepeningExecutionSummary, type DestinationDeepeningProposal, type DestinationDeepeningProposalSummary, type DestinationTriageResult, type DestinationTriageSummary, type DestinationUsefulness, type DestinationVisibleLink } from "./destination-triage.js";
+import {
+  buildDestinationDeepeningCandidates,
+  buildDestinationDeepeningProposals,
+  buildDestinationTriage,
+  classifyDestinationChildUsefulness,
+  selectedDestinationRequests,
+  summarizeDestinationDeepeningProposals,
+  summarizeDestinationTriageResult,
+  writeDestinationCandidateArtifact,
+  writeDestinationDeepeningProposalArtifact,
+  writeDestinationDeepeningRunArtifact,
+  writeDestinationTriageArtifact,
+  type DestinationChildEvidenceSummary,
+  type DestinationDeepeningCandidate,
+  type DestinationDeepeningExecutionResult,
+  type DestinationDeepeningExecutionSummary,
+  type DestinationDeepeningProposal,
+  type DestinationDeepeningProposalSummary,
+  type DestinationTriageResult,
+  type DestinationTriageSummary,
+  type DestinationVisibleLink
+} from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
-import { LeaseManager, type StoragePolicy } from "./lease-manager.js";
+import { LeaseManager } from "./lease-manager.js";
 import { collectOfficialApiEvidence } from "./official-api.js";
-import { runOcrForFrameArtifacts, type OcrOptions, type OcrWorkerFactory } from "./ocr.js";
+import { runOcrForFrameArtifacts } from "./ocr.js";
 import { describePlatformCapabilities, type PlatformCapabilityMap } from "./platform-adapters/index.js";
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
-import { buildSourceNavigationExecutionPlan, type SourceNavigationExecutionLimits, type SourceNavigationExecutionPlan } from "./source-navigation-execution.js";
-import { executeSourceNavigationActions, type ExecuteSourceNavigationActionsInput, type SourceNavigationExecutableAction, type SourceNavigationExecutionRunResult, type SourceNavigationFollowUpRequest } from "./source-navigation-executor.js";
-import { calibrateSourceNavigationRecipePlan, writeSourceNavigationCalibrationArtifact, type SourceNavigationCalibrationReport, type SourceNavigationCalibrationSummary } from "./source-navigation-calibration.js";
+import { buildSourceNavigationExecutionPlan, type SourceNavigationExecutionPlan } from "./source-navigation-execution.js";
+import { executeSourceNavigationActions, type ExecuteSourceNavigationActionsInput, type SourceNavigationExecutionRunResult, type SourceNavigationFollowUpRequest } from "./source-navigation-executor.js";
+import { calibrateSourceNavigationRecipePlan, writeSourceNavigationCalibrationArtifact, type SourceNavigationCalibrationReport } from "./source-navigation-calibration.js";
 import { describeSourceNavigationRecipePlan, summarizeSourceNavigationRecipePlan, type SourceNavigationRecipePlan, type SourceNavigationRecipePlanSummary } from "./source-navigation-recipes.js";
 import { describeSourceNavigationPlan, type SourceNavigationPlan } from "./source-navigation.js";
-import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryMatch, type SourceRegistrySummary } from "./source-registry.js";
-import { describeSourceStrategy, type SourceStrategy } from "./source-strategy.js";
+import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
+import { describeSourceStrategy } from "./source-strategy.js";
 import { detectedTextScriptFamilies, destinationQueryFromUrl, hasDominantTextScriptMismatch, matchingTextTokens, normalizeEvidenceText } from "./evidence-runner-text.js";
-import type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageStatus, EvidenceWorkflowStageTiming, FrameSamplingAssessment, SourceNavigationCalibrationAssessment, SourceNavigationExecutionPlanSummary, SourceNavigationExecutionSummary, SourceNavigationFollowUpRunSummary, SourceNavigationFollowUpSummary, SourceNavigationPlanSummary } from "./evidence-runner-types.js";
-export type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageStatus, EvidenceWorkflowStageTiming, FrameSamplingAssessment, SourceNavigationCalibrationAssessment, SourceNavigationExecutionPlanSummary, SourceNavigationExecutionSummary, SourceNavigationFollowUpRunSummary, SourceNavigationFollowUpSummary, SourceNavigationPlanSummary } from "./evidence-runner-types.js";
+import type {
+  EvidenceWorkflowAssessment,
+  EvidenceWorkflowClaim,
+  EvidenceWorkflowDeps,
+  EvidenceWorkflowOptions,
+  EvidenceWorkflowResult,
+  EvidenceWorkflowStageTiming,
+  FrameSamplingAssessment,
+  SourceNavigationCalibrationAssessment,
+  SourceNavigationExecutionPlanSummary,
+  SourceNavigationExecutionSummary,
+  SourceNavigationFollowUpRunSummary,
+  SourceNavigationFollowUpSummary,
+  SourceNavigationPlanSummary
+} from "./evidence-runner-types.js";
+export type {
+  EvidenceWorkflowAssessment,
+  EvidenceWorkflowClaim,
+  EvidenceWorkflowDeps,
+  EvidenceWorkflowOptions,
+  EvidenceWorkflowResult,
+  EvidenceWorkflowStageStatus,
+  EvidenceWorkflowStageTiming,
+  FrameSamplingAssessment,
+  SourceNavigationCalibrationAssessment,
+  SourceNavigationExecutionPlanSummary,
+  SourceNavigationExecutionSummary,
+  SourceNavigationFollowUpRunSummary,
+  SourceNavigationFollowUpSummary,
+  SourceNavigationPlanSummary
+} from "./evidence-runner-types.js";
 
 type StageRunner = <T>(stage: string, work: () => Promise<T>) => Promise<T>;
 
@@ -81,75 +131,105 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     pageId: "evidence-workflow"
   };
 
-  const capabilityRecords = await runStage("platform_capability_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "platform-capabilities",
-    captureId: `${baseCaptureId}-platform-capabilities`,
-    metadata: { platformCapabilities },
-    text: JSON.stringify(platformCapabilities, null, 2),
-    captureMethod: "browser-agent-mcp-farm platform-capabilities",
-    toolName: "platform_capabilities"
-  }), options.abortSignal));
+  const capabilityRecords = await runStage("platform_capability_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "platform-capabilities",
+        captureId: `${baseCaptureId}-platform-capabilities`,
+        metadata: { platformCapabilities },
+        text: JSON.stringify(platformCapabilities, null, 2),
+        captureMethod: "browser-agent-mcp-farm platform-capabilities",
+        toolName: "platform_capabilities"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
-  const sourceStrategyRecords = await runStage("source_strategy_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "source-strategy",
-    captureId: `${baseCaptureId}-source-strategy`,
-    metadata: { sourceStrategy },
-    text: JSON.stringify(sourceStrategy, null, 2),
-    captureMethod: "browser-agent-mcp-farm source-strategy",
-    toolName: "source_strategy",
-    evidenceKind: "source_strategy"
-  }), options.abortSignal));
+  const sourceStrategyRecords = await runStage("source_strategy_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "source-strategy",
+        captureId: `${baseCaptureId}-source-strategy`,
+        metadata: { sourceStrategy },
+        text: JSON.stringify(sourceStrategy, null, 2),
+        captureMethod: "browser-agent-mcp-farm source-strategy",
+        toolName: "source_strategy",
+        evidenceKind: "source_strategy"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
-  const sourceRegistryRecords = await runStage("source_registry_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "source-registry",
-    captureId: `${baseCaptureId}-source-registry`,
-    metadata: { sourceRegistry },
-    text: JSON.stringify(sourceRegistry, null, 2),
-    captureMethod: "browser-agent-mcp-farm source-registry",
-    toolName: "source_registry",
-    evidenceKind: "source_registry"
-  }), options.abortSignal));
+  const sourceRegistryRecords = await runStage("source_registry_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "source-registry",
+        captureId: `${baseCaptureId}-source-registry`,
+        metadata: { sourceRegistry },
+        text: JSON.stringify(sourceRegistry, null, 2),
+        captureMethod: "browser-agent-mcp-farm source-registry",
+        toolName: "source_registry",
+        evidenceKind: "source_registry"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
-  const sourceNavigationPlanRecords = await runStage("source_navigation_plan_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "source-navigation-plan",
-    captureId: `${baseCaptureId}-source-navigation-plan`,
-    metadata: { sourceNavigationPlan },
-    text: JSON.stringify(sourceNavigationPlan, null, 2),
-    captureMethod: "browser-agent-mcp-farm source-navigation-plan",
-    toolName: "source_navigation_plan",
-    evidenceKind: "source_navigation_plan"
-  }), options.abortSignal));
+  const sourceNavigationPlanRecords = await runStage("source_navigation_plan_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "source-navigation-plan",
+        captureId: `${baseCaptureId}-source-navigation-plan`,
+        metadata: { sourceNavigationPlan },
+        text: JSON.stringify(sourceNavigationPlan, null, 2),
+        captureMethod: "browser-agent-mcp-farm source-navigation-plan",
+        toolName: "source_navigation_plan",
+        evidenceKind: "source_navigation_plan"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
-  const sourceNavigationExecutionPlanRecords = await runStage("source_navigation_execution_plan_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "source-navigation-execution-plan",
-    captureId: `${baseCaptureId}-source-navigation-execution-plan`,
-    metadata: { sourceNavigationExecutionPlan },
-    text: JSON.stringify(sourceNavigationExecutionPlan, null, 2),
-    captureMethod: "browser-agent-mcp-farm source-navigation-execution-plan",
-    toolName: "source_navigation_execution_plan",
-    evidenceKind: "source_navigation_execution_plan"
-  }), options.abortSignal));
+  const sourceNavigationExecutionPlanRecords = await runStage("source_navigation_execution_plan_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "source-navigation-execution-plan",
+        captureId: `${baseCaptureId}-source-navigation-execution-plan`,
+        metadata: { sourceNavigationExecutionPlan },
+        text: JSON.stringify(sourceNavigationExecutionPlan, null, 2),
+        captureMethod: "browser-agent-mcp-farm source-navigation-execution-plan",
+        toolName: "source_navigation_execution_plan",
+        evidenceKind: "source_navigation_execution_plan"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
-  const sourceNavigationRecipePlanRecords = await runStage("source_navigation_recipe_plan_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "source-navigation-recipe-plan",
-    captureId: `${baseCaptureId}-source-navigation-recipe-plan`,
-    metadata: { sourceNavigationRecipePlan },
-    text: JSON.stringify(sourceNavigationRecipePlan, null, 2),
-    captureMethod: "browser-agent-mcp-farm source-navigation-recipe-plan",
-    toolName: "source_navigation_recipe_plan",
-    evidenceKind: "source_navigation_recipe_plan"
-  }), options.abortSignal));
+  const sourceNavigationRecipePlanRecords = await runStage("source_navigation_recipe_plan_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "source-navigation-recipe-plan",
+        captureId: `${baseCaptureId}-source-navigation-recipe-plan`,
+        metadata: { sourceNavigationRecipePlan },
+        text: JSON.stringify(sourceNavigationRecipePlan, null, 2),
+        captureMethod: "browser-agent-mcp-farm source-navigation-recipe-plan",
+        toolName: "source_navigation_recipe_plan",
+        evidenceKind: "source_navigation_recipe_plan"
+      }),
+      options.abortSignal
+    )
+  );
   throwIfAborted(options.abortSignal);
 
   const browserResult = await captureBrowserEvidence({
@@ -162,30 +242,34 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     sourceNavigationPlan,
     sourceNavigationRecipePlan
   });
-  const officialApi = await runStage("official_api", () => collectOfficialApiEvidence({
-    runDir: options.runDir,
-    sourceUrl: options.url,
-    contextToken: common.contextToken,
-    pageId: "official-api",
-    baseCaptureId,
-    platformCapabilities,
-    officialApi: options.officialApi ?? { enabled: false, credentials: {} },
-    writer,
-    signal: options.abortSignal
-  }));
+  const officialApi = await runStage("official_api", () =>
+    collectOfficialApiEvidence({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      contextToken: common.contextToken,
+      pageId: "official-api",
+      baseCaptureId,
+      platformCapabilities,
+      officialApi: options.officialApi ?? { enabled: false, credentials: {} },
+      writer,
+      signal: options.abortSignal
+    })
+  );
   throwIfAborted(options.abortSignal);
 
-  const obstructionResult = await runStage("browser_obstruction_classification", () => classifyBrowserObstructionArtifacts({
-    runDir: options.runDir,
-    sourceUrl: options.url,
-    baseCaptureId,
-    platformCapabilities,
-    pageCaptureRecords: browserResult.pageCaptureRecords,
-    contextToken: common.contextToken,
-    pageId: "browser-obstructions",
-    writer,
-    signal: options.abortSignal
-  }));
+  const obstructionResult = await runStage("browser_obstruction_classification", () =>
+    classifyBrowserObstructionArtifacts({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      baseCaptureId,
+      platformCapabilities,
+      pageCaptureRecords: browserResult.pageCaptureRecords,
+      contextToken: common.contextToken,
+      pageId: "browser-obstructions",
+      writer,
+      signal: options.abortSignal
+    })
+  );
   throwIfAborted(options.abortSignal);
 
   const frameSampling = summarizeFrameSampling(browserResult.frameResult, browserResult.frameError, options.sampleFrames === false);
@@ -198,11 +282,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     sourceNavigationPlan: summarizeSourceNavigationPlan(sourceNavigationPlan),
     sourceNavigationExecutionPlan: summarizeSourceNavigationExecutionPlan(sourceNavigationExecutionPlan),
     sourceNavigationRecipePlan: summarizeSourceNavigationRecipePlan(sourceNavigationRecipePlan),
-    sourceNavigationCalibration: summarizeSourceNavigationCalibrationAssessment(
-      browserResult.sourceNavigationCalibrationReport,
-      options.sourceNavigation?.calibrate ?? false,
-      browserResult.sourceNavigationCalibrationRecords.length
-    ),
+    sourceNavigationCalibration: summarizeSourceNavigationCalibrationAssessment(browserResult.sourceNavigationCalibrationReport, options.sourceNavigation?.calibrate ?? false, browserResult.sourceNavigationCalibrationRecords.length),
     sourceNavigationExecution: summarizeSourceNavigationExecution(browserResult.sourceNavigationExecutionResult, sourceNavigationRequested, browserResult.sourceNavigationActionRecords.length),
     sourceNavigationFollowUps: summarizeSourceNavigationFollowUps(browserResult.sourceNavigationFollowUpResult),
     destinationTriage: summarizeDestinationTriageAssessment(browserResult.sourceNavigationFollowUpResult),
@@ -223,15 +303,20 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     rawVideoBytesCollected: false
   };
   const frameRecords = browserResult.frameResult?.frames.flatMap((frame) => frame.records) ?? browserResult.frameFailureRecords;
-  const assessmentRecords = await runStage("assessment_artifact", () => withAbort(writer.writeCaptureBundle({
-    ...common,
-    pageId: "run-assessment",
-    captureId: `${baseCaptureId}-run-assessment`,
-    metadata: { assessment },
-    text: JSON.stringify(assessment, null, 2),
-    captureMethod: "browser-agent-mcp-farm evidence-run assessment",
-    toolName: "evidence_run"
-  }), options.abortSignal));
+  const assessmentRecords = await runStage("assessment_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "run-assessment",
+        captureId: `${baseCaptureId}-run-assessment`,
+        metadata: { assessment },
+        text: JSON.stringify(assessment, null, 2),
+        captureMethod: "browser-agent-mcp-farm evidence-run assessment",
+        toolName: "evidence_run"
+      }),
+      options.abortSignal
+    )
+  );
 
   const claims = buildClaims({
     baseCaptureId,
@@ -248,24 +333,24 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   await runStage("claims_citations", () => withAbort(appendClaims(options.runDir, claims), options.abortSignal));
 
   const reportPath = join(options.runDir, "reports", `${baseCaptureId}-final.md`);
-  const claimGate = options.finalClaimGate === false
-    ? undefined
-    : await runStage("claim_gate", () => withAbort(runClaimGate(options.runDir, { mode: "final", minClaims: 1 }), options.abortSignal));
+  const claimGate = options.finalClaimGate === false ? undefined : await runStage("claim_gate", () => withAbort(runClaimGate(options.runDir, { mode: "final", minClaims: 1 }), options.abortSignal));
 
-  await runStage("final_report", () => withAbort(writeReport(reportPath, {
-    url: options.url,
-    runDir: options.runDir,
-    assessment,
-    claims,
-    claimGate
-  }), options.abortSignal));
+  await runStage("final_report", () =>
+    withAbort(
+      writeReport(reportPath, {
+        url: options.url,
+        runDir: options.runDir,
+        assessment,
+        claims,
+        claimGate
+      }),
+      options.abortSignal
+    )
+  );
 
   // Persist per-run stage metrics (observability / SLO input) as an operational
   // sidecar — deliberately OUTSIDE the artifact ledger/bundle, since it is not evidence.
-  await withAbort(
-    writeFile(join(options.runDir, "metrics.json"), `${JSON.stringify(summarizeStageTimings(stageTimings), null, 2)}\n`, "utf8"),
-    options.abortSignal
-  ).catch(() => undefined);
+  await withAbort(writeFile(join(options.runDir, "metrics.json"), `${JSON.stringify(summarizeStageTimings(stageTimings), null, 2)}\n`, "utf8"), options.abortSignal).catch(() => undefined);
 
   return {
     ok: claimGate?.ok ?? true,
@@ -305,16 +390,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   };
 }
 
-async function captureBrowserEvidence(input: {
-  options: EvidenceWorkflowOptions;
-  parsedUrl: URL;
-  baseCaptureId: string;
-  writer: ArtifactWriter;
-  deps: EvidenceWorkflowDeps;
-  runStage: StageRunner;
-  sourceNavigationPlan: SourceNavigationPlan;
-  sourceNavigationRecipePlan: SourceNavigationRecipePlan;
-}): Promise<{
+async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner; sourceNavigationPlan: SourceNavigationPlan; sourceNavigationRecipePlan: SourceNavigationRecipePlan }): Promise<{
   pageCaptureRecords: ArtifactRecord[];
   sourceNavigationCalibrationRecords: ArtifactRecord[];
   sourceNavigationCalibrationReport?: SourceNavigationCalibrationReport;
@@ -334,12 +410,14 @@ async function captureBrowserEvidence(input: {
   frameError?: string;
 }> {
   const leaseManager = input.deps.leaseManager ?? new LeaseManager();
-  const pool = input.deps.browserPool ?? new BrowserPool(leaseManager, {
-    navigationTimeoutMs: input.options.navigationTimeoutMs ?? 30_000,
-    launchHeadless: !(input.options.headed ?? false),
-    ...(input.options.browserChannel === undefined ? {} : { browserChannel: input.options.browserChannel }),
-    artifactWriter: input.writer
-  });
+  const pool =
+    input.deps.browserPool ??
+    new BrowserPool(leaseManager, {
+      navigationTimeoutMs: input.options.navigationTimeoutMs ?? 30_000,
+      launchHeadless: !(input.options.headed ?? false),
+      ...(input.options.browserChannel === undefined ? {} : { browserChannel: input.options.browserChannel }),
+      artifactWriter: input.writer
+    });
   const ownsPool = input.deps.browserPool === undefined;
   const agentId = "evidence-runner";
   const frameFailureRecords: ArtifactRecord[] = [];
@@ -358,17 +436,19 @@ async function captureBrowserEvidence(input: {
 
   try {
     throwIfAborted(input.options.abortSignal);
-    const lease = await input.runStage("browser_acquire_context", async () => leaseManager.acquire({
-      agentId,
-      runId: input.baseCaptureId,
-      artifactRunDir: input.options.runDir,
-      allowedDomains: [input.parsedUrl.hostname],
-      maxPages: 1,
-      ttlMs: 180_000,
-      capability: input.options.sourceNavigation?.enabled ? "read-write" : "read-only",
-      storagePolicy: input.options.storagePolicy ?? "ephemeral",
-      ...(input.options.profileName === undefined ? {} : { profileName: input.options.profileName })
-    }));
+    const lease = await input.runStage("browser_acquire_context", async () =>
+      leaseManager.acquire({
+        agentId,
+        runId: input.baseCaptureId,
+        artifactRunDir: input.options.runDir,
+        allowedDomains: [input.parsedUrl.hostname],
+        maxPages: 1,
+        ttlMs: 180_000,
+        capability: input.options.sourceNavigation?.enabled ? "read-write" : "read-only",
+        storagePolicy: input.options.storagePolicy ?? "ephemeral",
+        ...(input.options.profileName === undefined ? {} : { profileName: input.options.profileName })
+      })
+    );
     leaseToken = lease.contextToken;
     const page = await input.runStage("browser_open_page", () => pool.openPage(agentId, lease.contextToken, input.options.url, input.options.abortSignal));
     if ((input.options.waitMs ?? 3_000) > 0) {
@@ -388,16 +468,18 @@ async function captureBrowserEvidence(input: {
         return failedOverlayDismissalReport(error instanceof Error ? error.message : String(error));
       }
     });
-    const overlayDismissalRecords = await input.runStage("browser_overlay_dismissal_artifact", () => writeOverlayDismissalArtifact({
-      runDir: input.options.runDir,
-      sourceUrl: input.options.url,
-      contextToken: lease.contextToken,
-      pageId: page.pageId,
-      baseCaptureId: input.baseCaptureId,
-      report: overlayDismissal,
-      writer: input.writer,
-      signal: input.options.abortSignal
-    }));
+    const overlayDismissalRecords = await input.runStage("browser_overlay_dismissal_artifact", () =>
+      writeOverlayDismissalArtifact({
+        runDir: input.options.runDir,
+        sourceUrl: input.options.url,
+        contextToken: lease.contextToken,
+        pageId: page.pageId,
+        baseCaptureId: input.baseCaptureId,
+        report: overlayDismissal,
+        writer: input.writer,
+        signal: input.options.abortSignal
+      })
+    );
     if (input.options.sourceNavigation?.enabled) {
       const executionInput: ExecuteSourceNavigationActionsInput = {
         plan: input.sourceNavigationPlan,
@@ -420,14 +502,16 @@ async function captureBrowserEvidence(input: {
       const executionResult = await input.runStage("source_navigation_execution", () => executeSourceNavigationActions(executionInput));
       sourceNavigationExecutionResult = executionResult;
       sourceNavigationActionRecords.push(...executionResult.records);
-      sourceNavigationFollowUpResult = await input.runStage("source_navigation_followups", () => runSourceNavigationFollowUps({
-        parent: input,
-        sourceNavigationPlan: input.sourceNavigationPlan,
-        sourceNavigationActionRecords,
-        requests: executionResult.followUps,
-        leaseManager,
-        browserPool: pool
-      }));
+      sourceNavigationFollowUpResult = await input.runStage("source_navigation_followups", () =>
+        runSourceNavigationFollowUps({
+          parent: input,
+          sourceNavigationPlan: input.sourceNavigationPlan,
+          sourceNavigationActionRecords,
+          requests: executionResult.followUps,
+          leaseManager,
+          browserPool: pool
+        })
+      );
       sourceNavigationFollowUpRecords.push(...sourceNavigationFollowUpResult.records);
       destinationCandidateRecords.push(...sourceNavigationFollowUpResult.destinationCandidateRecords);
       destinationTriageRecords.push(...sourceNavigationFollowUpResult.destinationTriageRecords);
@@ -436,26 +520,30 @@ async function captureBrowserEvidence(input: {
     }
     const capture = await input.runStage("browser_page_capture", () => pool.capturePage(agentId, lease.contextToken, page.pageId, `${input.baseCaptureId}-page-capture`, input.options.abortSignal));
     if (input.options.sourceNavigation?.calibrate) {
-      const calibrationReport = await input.runStage("source_navigation_calibration", () => calibrateSourceNavigationRecipePlan({
-        recipePlan: input.sourceNavigationRecipePlan,
-        browserPool: pool,
-        agentId,
-        contextToken: lease.contextToken,
-        pageId: page.pageId,
-        url: input.options.url,
-        ...(input.options.sourceNavigation?.calibrationSelectorTimeoutMs === undefined ? {} : { selectorTimeoutMs: input.options.sourceNavigation.calibrationSelectorTimeoutMs }),
-        ...(input.options.abortSignal === undefined ? {} : { signal: input.options.abortSignal })
-      }));
+      const calibrationReport = await input.runStage("source_navigation_calibration", () =>
+        calibrateSourceNavigationRecipePlan({
+          recipePlan: input.sourceNavigationRecipePlan,
+          browserPool: pool,
+          agentId,
+          contextToken: lease.contextToken,
+          pageId: page.pageId,
+          url: input.options.url,
+          ...(input.options.sourceNavigation?.calibrationSelectorTimeoutMs === undefined ? {} : { selectorTimeoutMs: input.options.sourceNavigation.calibrationSelectorTimeoutMs }),
+          ...(input.options.abortSignal === undefined ? {} : { signal: input.options.abortSignal })
+        })
+      );
       sourceNavigationCalibrationReport = calibrationReport;
-      const records = await input.runStage("source_navigation_calibration_artifact", () => writeSourceNavigationCalibrationArtifact({
-        artifactWriter: input.writer,
-        runDir: input.options.runDir,
-        sourceUrl: input.options.url,
-        contextToken: lease.contextToken,
-        pageId: page.pageId,
-        report: calibrationReport,
-        captureId: `${input.baseCaptureId}-source-navigation-calibration`
-      }));
+      const records = await input.runStage("source_navigation_calibration_artifact", () =>
+        writeSourceNavigationCalibrationArtifact({
+          artifactWriter: input.writer,
+          runDir: input.options.runDir,
+          sourceUrl: input.options.url,
+          contextToken: lease.contextToken,
+          pageId: page.pageId,
+          report: calibrationReport,
+          captureId: `${input.baseCaptureId}-source-navigation-calibration`
+        })
+      );
       sourceNavigationCalibrationRecords.push(...records);
     }
     let frameResult: FrameSampleRunResult | undefined;
@@ -465,16 +553,18 @@ async function captureBrowserEvidence(input: {
       try {
         const selector = input.options.frameSelector ?? "video";
         await input.runStage("frame_wait_for_selector", () => pool.waitForSelector(agentId, lease.contextToken, page.pageId, selector, 10_000, input.options.abortSignal));
-        frameResult = await input.runStage("frame_sampling", () => pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
-          selector,
-          captureId: `${input.baseCaptureId}-frame-sample`,
-          timestampsSec: input.options.timestampsSec ?? [0, 10],
-          strideSec: 60,
-          maxFrames: input.options.maxFrames ?? 2,
-          seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
-          settleMs: input.options.settleMs ?? 500,
-          abortSignal: input.options.abortSignal
-        }));
+        frameResult = await input.runStage("frame_sampling", () =>
+          pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
+            selector,
+            captureId: `${input.baseCaptureId}-frame-sample`,
+            timestampsSec: input.options.timestampsSec ?? [0, 10],
+            strideSec: 60,
+            maxFrames: input.options.maxFrames ?? 2,
+            seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
+            settleMs: input.options.settleMs ?? 500,
+            abortSignal: input.options.abortSignal
+          })
+        );
         const denseSampling = input.options.denseSampling;
         if (denseSampling?.enabled) {
           throwIfAborted(input.options.abortSignal);
@@ -489,16 +579,18 @@ async function captureBrowserEvidence(input: {
               maxDenseFrames: denseSampling.maxDenseFrames
             });
             if (densePlan.denseTimestampsSec.length > 0) {
-              const denseResult = await input.runStage("dense_frame_sampling", () => pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
-                selector,
-                captureId: `${input.baseCaptureId}-dense-frame-sample`,
-                timestampsSec: densePlan.denseTimestampsSec,
-                strideSec: 60,
-                maxFrames: denseSampling.maxDenseFrames,
-                seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
-                settleMs: input.options.settleMs ?? 500,
-                abortSignal: input.options.abortSignal
-              }));
+              const denseResult = await input.runStage("dense_frame_sampling", () =>
+                pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
+                  selector,
+                  captureId: `${input.baseCaptureId}-dense-frame-sample`,
+                  timestampsSec: densePlan.denseTimestampsSec,
+                  strideSec: 60,
+                  maxFrames: denseSampling.maxDenseFrames,
+                  seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
+                  settleMs: input.options.settleMs ?? 500,
+                  abortSignal: input.options.abortSignal
+                })
+              );
               frameResult = mergeFrameSampleResults(frameResult, denseResult, densePlan, "Transcript dense sampling", {
                 source: "transcript_cue",
                 hitTimestampsSec: denseHits
@@ -524,16 +616,18 @@ async function captureBrowserEvidence(input: {
               });
               const uncapturedTimestamps = uncapturedDenseTimestamps(frameResult, densePlan.denseTimestampsSec);
               if (uncapturedTimestamps.length > 0) {
-                const denseResult = await input.runStage("scene_change_dense_frame_sampling", () => pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
-                  selector,
-                  captureId: `${input.baseCaptureId}-scene-change-dense-frame-sample`,
-                  timestampsSec: uncapturedTimestamps,
-                  strideSec: 60,
-                  maxFrames: denseSampling.maxDenseFrames,
-                  seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
-                  settleMs: input.options.settleMs ?? 500,
-                  abortSignal: input.options.abortSignal
-                }));
+                const denseResult = await input.runStage("scene_change_dense_frame_sampling", () =>
+                  pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
+                    selector,
+                    captureId: `${input.baseCaptureId}-scene-change-dense-frame-sample`,
+                    timestampsSec: uncapturedTimestamps,
+                    strideSec: 60,
+                    maxFrames: denseSampling.maxDenseFrames,
+                    seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
+                    settleMs: input.options.settleMs ?? 500,
+                    abortSignal: input.options.abortSignal
+                  })
+                );
                 frameResult = mergeFrameSampleResults(frameResult, denseResult, densePlan, "Scene-change dense sampling", {
                   source: "scene_change",
                   hitTimestampsSec: sceneChangeHits.map((hit) => hit.midpointSec),
@@ -549,33 +643,37 @@ async function captureBrowserEvidence(input: {
           throw error;
         }
         frameError = error instanceof Error ? error.message : String(error);
-        frameFailureRecords.push(...await input.writer.recordFailure({
-          runDir: input.options.runDir,
-          sourceUrl: input.options.url,
-          contextToken: lease.contextToken,
-          pageId: page.pageId,
-          captureId: `${input.baseCaptureId}-frame-sample-failed`,
-          error: frameError,
-          status: "partial",
-          metadata: { stage: "frame_sample", frameError },
-          captureMethod: "browser-agent-mcp-farm frame-sample",
-          toolName: "farm_sample_frames"
-        }));
+        frameFailureRecords.push(
+          ...(await input.writer.recordFailure({
+            runDir: input.options.runDir,
+            sourceUrl: input.options.url,
+            contextToken: lease.contextToken,
+            pageId: page.pageId,
+            captureId: `${input.baseCaptureId}-frame-sample-failed`,
+            error: frameError,
+            status: "partial",
+            metadata: { stage: "frame_sample", frameError },
+            captureMethod: "browser-agent-mcp-farm frame-sample",
+            toolName: "farm_sample_frames"
+          }))
+        );
       }
     }
     const ocrFrameRecords = frameRecordsForOcr(frameResult, frameFailureRecords);
-    const ocrResult = await input.runStage("ocr", () => runOcrForFrameArtifacts({
-      runDir: input.options.runDir,
-      sourceUrl: input.options.url,
-      contextToken: lease.contextToken,
-      pageId: "ocr",
-      baseCaptureId: input.baseCaptureId,
-      frameRecords: ocrFrameRecords,
-      options: input.options.ocr ?? { enabled: false, maxFrames: 20, timeoutMs: 10_000 },
-      writer: input.writer,
-      ...(input.deps.ocrWorkerFactory === undefined ? {} : { workerFactory: input.deps.ocrWorkerFactory }),
-      signal: input.options.abortSignal
-    }));
+    const ocrResult = await input.runStage("ocr", () =>
+      runOcrForFrameArtifacts({
+        runDir: input.options.runDir,
+        sourceUrl: input.options.url,
+        contextToken: lease.contextToken,
+        pageId: "ocr",
+        baseCaptureId: input.baseCaptureId,
+        frameRecords: ocrFrameRecords,
+        options: input.options.ocr ?? { enabled: false, maxFrames: 20, timeoutMs: 10_000 },
+        writer: input.writer,
+        ...(input.deps.ocrWorkerFactory === undefined ? {} : { workerFactory: input.deps.ocrWorkerFactory }),
+        signal: input.options.abortSignal
+      })
+    );
     ocrRecords = [...ocrResult.records];
     if (frameResult !== undefined && input.options.denseSampling?.enabled && input.options.ocr?.enabled) {
       const denseSampling = input.options.denseSampling;
@@ -592,32 +690,36 @@ async function captureBrowserEvidence(input: {
         const uncapturedTimestamps = uncapturedDenseTimestamps(frameResult, densePlan.denseTimestampsSec);
         if (uncapturedTimestamps.length > 0) {
           const selector = input.options.frameSelector ?? "video";
-          const denseResult = await input.runStage("ocr_hit_dense_frame_sampling", () => pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
-            selector,
-            captureId: `${input.baseCaptureId}-ocr-hit-dense-frame-sample`,
-            timestampsSec: uncapturedTimestamps,
-            strideSec: 60,
-            maxFrames: denseSampling.maxDenseFrames,
-            seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
-            settleMs: input.options.settleMs ?? 500,
-            abortSignal: input.options.abortSignal
-          }));
+          const denseResult = await input.runStage("ocr_hit_dense_frame_sampling", () =>
+            pool.sampleFrames(agentId, lease.contextToken, page.pageId, {
+              selector,
+              captureId: `${input.baseCaptureId}-ocr-hit-dense-frame-sample`,
+              timestampsSec: uncapturedTimestamps,
+              strideSec: 60,
+              maxFrames: denseSampling.maxDenseFrames,
+              seekTimeoutMs: input.options.seekTimeoutMs ?? 10_000,
+              settleMs: input.options.settleMs ?? 500,
+              abortSignal: input.options.abortSignal
+            })
+          );
           frameResult = mergeFrameSampleResults(frameResult, denseResult, densePlan, "OCR-hit dense sampling", {
             source: "ocr_text",
             hitTimestampsSec: ocrHitTimestamps
           });
-          const denseOcrResult = await input.runStage("ocr_dense_sampling", () => runOcrForFrameArtifacts({
-            runDir: input.options.runDir,
-            sourceUrl: input.options.url,
-            contextToken: lease.contextToken,
-            pageId: "ocr",
-            baseCaptureId: `${input.baseCaptureId}-ocr-dense`,
-            frameRecords: denseResult.frames.flatMap((frame) => frame.records),
-            options: input.options.ocr ?? { enabled: false, maxFrames: 20, timeoutMs: 10_000 },
-            writer: input.writer,
-            ...(input.deps.ocrWorkerFactory === undefined ? {} : { workerFactory: input.deps.ocrWorkerFactory }),
-            signal: input.options.abortSignal
-          }));
+          const denseOcrResult = await input.runStage("ocr_dense_sampling", () =>
+            runOcrForFrameArtifacts({
+              runDir: input.options.runDir,
+              sourceUrl: input.options.url,
+              contextToken: lease.contextToken,
+              pageId: "ocr",
+              baseCaptureId: `${input.baseCaptureId}-ocr-dense`,
+              frameRecords: denseResult.frames.flatMap((frame) => frame.records),
+              options: input.options.ocr ?? { enabled: false, maxFrames: 20, timeoutMs: 10_000 },
+              writer: input.writer,
+              ...(input.deps.ocrWorkerFactory === undefined ? {} : { workerFactory: input.deps.ocrWorkerFactory }),
+              signal: input.options.abortSignal
+            })
+          );
           ocrRecords.push(...denseOcrResult.records);
         }
       }
@@ -640,21 +742,23 @@ async function captureBrowserEvidence(input: {
             structured.crossCheck = crossCheck;
           }
         }
-        const hasStructured = structured.jsonLd.length > 0
-          || Object.keys(structured.openGraph).length > 0
-          || structured.summary.name !== undefined
-          || structured.tables.length > 0;
+        const hasStructured = structured.jsonLd.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
         if (hasStructured) {
-          await input.runStage("structured_extraction", () => withAbort(input.writer.writeCaptureBundle({
-            runDir: input.options.runDir,
-            sourceUrl: input.options.url,
-            contextToken: lease.contextToken,
-            pageId: page.pageId,
-            captureId: `${input.baseCaptureId}-structured`,
-            text: JSON.stringify(structured),
-            evidenceKind: "structured_data",
-            captureMethod: "structured-extractor"
-          }), input.options.abortSignal));
+          await input.runStage("structured_extraction", () =>
+            withAbort(
+              input.writer.writeCaptureBundle({
+                runDir: input.options.runDir,
+                sourceUrl: input.options.url,
+                contextToken: lease.contextToken,
+                pageId: page.pageId,
+                captureId: `${input.baseCaptureId}-structured`,
+                text: JSON.stringify(structured),
+                evidenceKind: "structured_data",
+                captureMethod: "structured-extractor"
+              }),
+              input.options.abortSignal
+            )
+          );
         }
       }
     } catch {
@@ -791,12 +895,14 @@ async function runSourceNavigationFollowUps(input: {
   const results = followUpRunResults.map((run) => run.result);
 
   for (const run of followUpRunResults) {
-    records.push(...await writeSourceNavigationFollowUpArtifact({
-      parent: input.parent,
-      request: run.request,
-      index: run.index,
-      result: run.result
-    }));
+    records.push(
+      ...(await writeSourceNavigationFollowUpArtifact({
+        parent: input.parent,
+        request: run.request,
+        index: run.index,
+        result: run.result
+      }))
+    );
   }
 
   const firstPassTriage = buildDestinationTriage({
@@ -829,34 +935,38 @@ async function runSourceNavigationFollowUps(input: {
   const allResults = allRunResults.map((run) => run.result);
 
   for (const run of fallbackRunResults) {
-    records.push(...await writeSourceNavigationFollowUpArtifact({
-      parent: input.parent,
-      request: run.request,
-      index: run.index,
-      result: run.result
-    }));
+    records.push(
+      ...(await writeSourceNavigationFollowUpArtifact({
+        parent: input.parent,
+        request: run.request,
+        index: run.index,
+        result: run.result
+      }))
+    );
   }
 
-  const effectiveBudgets = fallbackRunResults.length === 0
-    ? { maxFollowUps, maxFollowUpsPerDomain }
-    : expandedFallbackBudgets({
-        maxFollowUps,
-        maxFollowUpsPerDomain,
-        fallbackRunResults,
-        firstPassTriage
-      });
-  const finalTriage = fallbackRunResults.length === 0
-    ? firstPassTriage
-    : buildDestinationTriage({
-        parentUrl: input.parent.options.url,
-        platform: input.sourceNavigationPlan.platform,
-        sourceFamily: input.sourceNavigationPlan.sourceFamily,
-        requests: input.requests,
-        maxSelected: effectiveBudgets.maxFollowUps,
-        maxPerDomain: effectiveBudgets.maxFollowUpsPerDomain,
-        sourceArtifactIds: input.sourceNavigationActionRecords.map((record) => record.artifact_id),
-        childResults: allResults
-      });
+  const effectiveBudgets =
+    fallbackRunResults.length === 0
+      ? { maxFollowUps, maxFollowUpsPerDomain }
+      : expandedFallbackBudgets({
+          maxFollowUps,
+          maxFollowUpsPerDomain,
+          fallbackRunResults,
+          firstPassTriage
+        });
+  const finalTriage =
+    fallbackRunResults.length === 0
+      ? firstPassTriage
+      : buildDestinationTriage({
+          parentUrl: input.parent.options.url,
+          platform: input.sourceNavigationPlan.platform,
+          sourceFamily: input.sourceNavigationPlan.sourceFamily,
+          requests: input.requests,
+          maxSelected: effectiveBudgets.maxFollowUps,
+          maxPerDomain: effectiveBudgets.maxFollowUpsPerDomain,
+          sourceArtifactIds: input.sourceNavigationActionRecords.map((record) => record.artifact_id),
+          childResults: allResults
+        });
   const destinationTriageRecords = await writeDestinationTriageArtifact({
     writer: input.parent.writer,
     runDir: input.parent.options.runDir,
@@ -936,23 +1046,14 @@ async function runSourceNavigationFollowUps(input: {
   };
 }
 
-function selectFallbackFollowUpRequests(input: {
-  requests: SourceNavigationFollowUpRequest[];
-  selectedRequests: SourceNavigationFollowUpRequest[];
-  triage: DestinationTriageResult;
-  maxFallbackFollowUps: number;
-}): SourceNavigationFollowUpRequest[] {
+function selectFallbackFollowUpRequests(input: { requests: SourceNavigationFollowUpRequest[]; selectedRequests: SourceNavigationFollowUpRequest[]; triage: DestinationTriageResult; maxFallbackFollowUps: number }): SourceNavigationFollowUpRequest[] {
   if (input.maxFallbackFollowUps <= 0 || input.triage.summary.fallbackCandidates.length === 0) {
     return [];
   }
   const attempted = new Set(input.selectedRequests.map(sourceNavigationFollowUpRequestKey));
   const fallbackRequests: SourceNavigationFollowUpRequest[] = [];
   for (const candidate of input.triage.summary.fallbackCandidates) {
-    const request = input.requests.find((item) =>
-      item.actionKey === candidate.actionKey &&
-      item.url === candidate.url &&
-      !attempted.has(sourceNavigationFollowUpRequestKey(item))
-    );
+    const request = input.requests.find((item) => item.actionKey === candidate.actionKey && item.url === candidate.url && !attempted.has(sourceNavigationFollowUpRequestKey(item)));
     if (request === undefined) {
       continue;
     }
@@ -969,15 +1070,9 @@ function sourceNavigationFollowUpRequestKey(request: SourceNavigationFollowUpReq
   return `${request.actionKey}\n${request.url}`;
 }
 
-function expandedFallbackBudgets(input: {
-  maxFollowUps: number;
-  maxFollowUpsPerDomain: number;
-  fallbackRunResults: SourceNavigationFollowUpChildRun[];
-  firstPassTriage: DestinationTriageResult;
-}): { maxFollowUps: number; maxFollowUpsPerDomain: number } {
+function expandedFallbackBudgets(input: { maxFollowUps: number; maxFollowUpsPerDomain: number; fallbackRunResults: SourceNavigationFollowUpChildRun[]; firstPassTriage: DestinationTriageResult }): { maxFollowUps: number; maxFollowUpsPerDomain: number } {
   const fallbackUrls = new Set(input.fallbackRunResults.map((run) => run.request.url));
-  const attemptedFallbackCandidates = input.firstPassTriage.summary.fallbackCandidates
-    .filter((candidate) => fallbackUrls.has(candidate.url));
+  const attemptedFallbackCandidates = input.firstPassTriage.summary.fallbackCandidates.filter((candidate) => fallbackUrls.has(candidate.url));
   const topKBudgetCount = attemptedFallbackCandidates.filter((candidate) => candidate.budgetReason === "top_k_budget").length;
   const domainBudgetCount = attemptedFallbackCandidates.filter((candidate) => candidate.budgetReason === "domain_budget").length;
   return {
@@ -1014,13 +1109,17 @@ async function runSelectedSourceNavigationFollowUps(input: {
   for (let offset = 0; offset < input.selectedRequests.length; offset += concurrency) {
     throwIfAborted(input.parent.options.abortSignal);
     const batch = input.selectedRequests.slice(offset, offset + concurrency);
-    const batchRuns = await Promise.all(batch.map((request, batchIndex) => runSingleSourceNavigationFollowUp({
-      parent: input.parent,
-      request,
-      index: startIndex + offset + batchIndex,
-      leaseManager: input.leaseManager,
-      browserPool: input.browserPool
-    })));
+    const batchRuns = await Promise.all(
+      batch.map((request, batchIndex) =>
+        runSingleSourceNavigationFollowUp({
+          parent: input.parent,
+          request,
+          index: startIndex + offset + batchIndex,
+          leaseManager: input.leaseManager,
+          browserPool: input.browserPool
+        })
+      )
+    );
     runs.push(...batchRuns);
   }
   return runs;
@@ -1042,34 +1141,37 @@ async function runSingleSourceNavigationFollowUp(input: {
   const childRunDir = followUpRunDir(input.parent.options.runDir, input.index, input.request);
   const captureId = input.request.captureId ?? `${input.parent.baseCaptureId}-followup-${input.index + 1}`;
   try {
-    const childResult = await runEvidenceWorkflow({
-      url: input.request.url,
-      runDir: childRunDir,
-      captureId,
-      frameSelector: input.parent.options.frameSelector,
-      timestampsSec: input.parent.options.timestampsSec,
-      maxFrames: input.parent.options.maxFrames,
-      waitMs: input.parent.options.waitMs,
-      navigationTimeoutMs: input.parent.options.navigationTimeoutMs,
-      seekTimeoutMs: input.parent.options.seekTimeoutMs,
-      settleMs: input.parent.options.settleMs,
-      sampleFrames: input.parent.options.sampleFrames,
-      finalClaimGate: input.parent.options.finalClaimGate,
-      ...childEvidenceStorageOptions(input.parent.options),
-      headed: input.parent.options.headed,
-      browserChannel: input.parent.options.browserChannel,
-      overlayDismissal: input.parent.options.overlayDismissal,
-      ocr: input.parent.options.ocr,
-      denseSampling: input.parent.options.denseSampling,
-      officialApi: input.parent.options.officialApi,
-      sourceNavigation: { enabled: false, actions: [], maxFollowUps: 0, maxFollowUpsPerDomain: 0, followUpConcurrency: 1 },
-      abortSignal: input.parent.options.abortSignal
-    }, {
-      leaseManager: input.leaseManager,
-      browserPool: input.browserPool,
-      artifactWriter: input.parent.writer,
-      ...(input.parent.deps.ocrWorkerFactory === undefined ? {} : { ocrWorkerFactory: input.parent.deps.ocrWorkerFactory })
-    });
+    const childResult = await runEvidenceWorkflow(
+      {
+        url: input.request.url,
+        runDir: childRunDir,
+        captureId,
+        frameSelector: input.parent.options.frameSelector,
+        timestampsSec: input.parent.options.timestampsSec,
+        maxFrames: input.parent.options.maxFrames,
+        waitMs: input.parent.options.waitMs,
+        navigationTimeoutMs: input.parent.options.navigationTimeoutMs,
+        seekTimeoutMs: input.parent.options.seekTimeoutMs,
+        settleMs: input.parent.options.settleMs,
+        sampleFrames: input.parent.options.sampleFrames,
+        finalClaimGate: input.parent.options.finalClaimGate,
+        ...childEvidenceStorageOptions(input.parent.options),
+        headed: input.parent.options.headed,
+        browserChannel: input.parent.options.browserChannel,
+        overlayDismissal: input.parent.options.overlayDismissal,
+        ocr: input.parent.options.ocr,
+        denseSampling: input.parent.options.denseSampling,
+        officialApi: input.parent.options.officialApi,
+        sourceNavigation: { enabled: false, actions: [], maxFollowUps: 0, maxFollowUpsPerDomain: 0, followUpConcurrency: 1 },
+        abortSignal: input.parent.options.abortSignal
+      },
+      {
+        leaseManager: input.leaseManager,
+        browserPool: input.browserPool,
+        artifactWriter: input.parent.writer,
+        ...(input.parent.deps.ocrWorkerFactory === undefined ? {} : { ocrWorkerFactory: input.parent.deps.ocrWorkerFactory })
+      }
+    );
     const result: SourceNavigationFollowUpRunSummary = {
       actionKey: input.request.actionKey,
       url: input.request.url,
@@ -1197,15 +1299,21 @@ async function runSelectedDestinationDeepeningCandidates(input: {
   for (let offset = 0; offset < input.selected.length; offset += concurrency) {
     throwIfAborted(input.parent.options.abortSignal);
     const batch = input.selected.slice(offset, offset + concurrency);
-    results.push(...await Promise.all(batch.map((selectedCandidate, batchIndex) => runSingleDestinationDeepeningCandidate({
-      parent: input.parent,
-      selectedCandidate,
-      index: offset + batchIndex,
-      budget: input.budget,
-      parentQuery: input.parentQuery,
-      leaseManager: input.leaseManager,
-      browserPool: input.browserPool
-    }))));
+    results.push(
+      ...(await Promise.all(
+        batch.map((selectedCandidate, batchIndex) =>
+          runSingleDestinationDeepeningCandidate({
+            parent: input.parent,
+            selectedCandidate,
+            index: offset + batchIndex,
+            budget: input.budget,
+            parentQuery: input.parentQuery,
+            leaseManager: input.leaseManager,
+            browserPool: input.browserPool
+          })
+        )
+      ))
+    );
   }
   return results;
 }
@@ -1228,41 +1336,40 @@ async function runSingleDestinationDeepeningCandidate(input: {
   const { proposal, candidate, candidateIndex } = input.selectedCandidate;
   const childRunDir = deepeningRunDir(input.parent.options.runDir, input.index, candidate);
   const captureId = `${input.parent.baseCaptureId}-deepening-${input.index + 1}`;
-  const childAbort = createTimedChildAbortSignal(
-    input.parent.options.abortSignal,
-    input.budget.timeoutMs,
-    `depth-2 evidence run timed out after ${input.budget.timeoutMs}ms`
-  );
+  const childAbort = createTimedChildAbortSignal(input.parent.options.abortSignal, input.budget.timeoutMs, `depth-2 evidence run timed out after ${input.budget.timeoutMs}ms`);
   const startedAtMs = Date.now();
   try {
-    const childResult = await runEvidenceWorkflow({
-      url: candidate.url,
-      runDir: childRunDir,
-      captureId,
-      frameSelector: input.parent.options.frameSelector,
-      timestampsSec: input.parent.options.timestampsSec,
-      maxFrames: input.parent.options.maxFrames,
-      waitMs: input.parent.options.waitMs,
-      navigationTimeoutMs: input.budget.timeoutMs,
-      seekTimeoutMs: input.parent.options.seekTimeoutMs,
-      settleMs: input.parent.options.settleMs,
-      sampleFrames: input.parent.options.sampleFrames,
-      finalClaimGate: input.parent.options.finalClaimGate,
-      ...childEvidenceStorageOptions(input.parent.options),
-      headed: input.parent.options.headed,
-      browserChannel: input.parent.options.browserChannel,
-      overlayDismissal: input.parent.options.overlayDismissal,
-      ocr: input.parent.options.ocr,
-      denseSampling: input.parent.options.denseSampling,
-      officialApi: input.parent.options.officialApi,
-      sourceNavigation: { enabled: false, actions: [], maxFollowUps: 0, maxFollowUpsPerDomain: 0, maxDepth: 1 },
-      abortSignal: childAbort.signal
-    }, {
-      leaseManager: input.leaseManager,
-      browserPool: input.browserPool,
-      artifactWriter: input.parent.writer,
-      ...(input.parent.deps.ocrWorkerFactory === undefined ? {} : { ocrWorkerFactory: input.parent.deps.ocrWorkerFactory })
-    });
+    const childResult = await runEvidenceWorkflow(
+      {
+        url: candidate.url,
+        runDir: childRunDir,
+        captureId,
+        frameSelector: input.parent.options.frameSelector,
+        timestampsSec: input.parent.options.timestampsSec,
+        maxFrames: input.parent.options.maxFrames,
+        waitMs: input.parent.options.waitMs,
+        navigationTimeoutMs: input.budget.timeoutMs,
+        seekTimeoutMs: input.parent.options.seekTimeoutMs,
+        settleMs: input.parent.options.settleMs,
+        sampleFrames: input.parent.options.sampleFrames,
+        finalClaimGate: input.parent.options.finalClaimGate,
+        ...childEvidenceStorageOptions(input.parent.options),
+        headed: input.parent.options.headed,
+        browserChannel: input.parent.options.browserChannel,
+        overlayDismissal: input.parent.options.overlayDismissal,
+        ocr: input.parent.options.ocr,
+        denseSampling: input.parent.options.denseSampling,
+        officialApi: input.parent.options.officialApi,
+        sourceNavigation: { enabled: false, actions: [], maxFollowUps: 0, maxFollowUpsPerDomain: 0, maxDepth: 1 },
+        abortSignal: childAbort.signal
+      },
+      {
+        leaseManager: input.leaseManager,
+        browserPool: input.browserPool,
+        artifactWriter: input.parent.writer,
+        ...(input.parent.deps.ocrWorkerFactory === undefined ? {} : { ocrWorkerFactory: input.parent.deps.ocrWorkerFactory })
+      }
+    );
     const childEvidence = await summarizeDestinationChildEvidence({
       parentUrl: proposal.childUrl,
       childResult,
@@ -1296,9 +1403,7 @@ async function runSingleDestinationDeepeningCandidate(input: {
       runDir: childResult.runDir,
       reportPath: childResult.reportPath,
       childEvidence,
-      ...(artifactBudgetExceeded
-        ? { error: `depth-2 evidence run exceeded artifact budget of ${input.budget.maxArtifacts}` }
-        : childResult.ok ? {} : { error: "depth-2 evidence run failed final claim gate" })
+      ...(artifactBudgetExceeded ? { error: `depth-2 evidence run exceeded artifact budget of ${input.budget.maxArtifacts}` } : childResult.ok ? {} : { error: "depth-2 evidence run failed final claim gate" })
     };
   } catch (error) {
     if (isAbortError(error) && input.parent.options.abortSignal?.aborted) {
@@ -1348,11 +1453,7 @@ interface DestinationDeepeningBudget {
   maxArtifacts: number;
 }
 
-function selectDestinationDeepeningExecutionCandidates(input: {
-  proposals: DestinationDeepeningProposal[];
-  maxRuns: number;
-  maxPerDomain: number;
-}): SelectedDestinationDeepeningExecutionCandidate[] {
+function selectDestinationDeepeningExecutionCandidates(input: { proposals: DestinationDeepeningProposal[]; maxRuns: number; maxPerDomain: number }): SelectedDestinationDeepeningExecutionCandidate[] {
   const maxRuns = Math.max(0, Math.min(5, Math.trunc(input.maxRuns)));
   const maxPerDomain = Math.max(0, Math.min(5, Math.trunc(input.maxPerDomain)));
   const selected: SelectedDestinationDeepeningExecutionCandidate[] = [];
@@ -1495,30 +1596,21 @@ function normalizeSourceNavigationMaxFallbackFollowUps(value: number | undefined
   return Math.max(0, Math.min(5, Math.trunc(value ?? 1)));
 }
 
-function normalizeDestinationDeepeningBudget(input: {
-  sourceNavigation: EvidenceWorkflowOptions["sourceNavigation"];
-  parentMaxFollowUps: number;
-  parentMaxFollowUpsPerDomain: number;
-  parentNavigationTimeoutMs?: number | undefined;
-}): DestinationDeepeningBudget {
-  const maxRuns = Math.max(0, Math.min(5, Math.trunc(
-    input.sourceNavigation?.maxDeepeningRuns ?? Math.min(1, Math.max(0, input.parentMaxFollowUps))
-  )));
-  const maxPerDomain = Math.max(0, Math.min(5, Math.trunc(
-    input.sourceNavigation?.maxDeepeningRunsPerDomain ?? Math.min(1, maxRuns, Math.max(0, input.parentMaxFollowUpsPerDomain))
-  )));
-  const concurrency = maxRuns <= 0
-    ? 0
-    : Math.max(1, Math.min(5, maxRuns, Math.trunc(input.sourceNavigation?.deepeningConcurrency ?? 1)));
+function normalizeDestinationDeepeningBudget(input: { sourceNavigation: EvidenceWorkflowOptions["sourceNavigation"]; parentMaxFollowUps: number; parentMaxFollowUpsPerDomain: number; parentNavigationTimeoutMs?: number | undefined }): DestinationDeepeningBudget {
+  const maxRuns = Math.max(0, Math.min(5, Math.trunc(input.sourceNavigation?.maxDeepeningRuns ?? Math.min(1, Math.max(0, input.parentMaxFollowUps)))));
+  const maxPerDomain = Math.max(0, Math.min(5, Math.trunc(input.sourceNavigation?.maxDeepeningRunsPerDomain ?? Math.min(1, maxRuns, Math.max(0, input.parentMaxFollowUpsPerDomain)))));
+  const concurrency = maxRuns <= 0 ? 0 : Math.max(1, Math.min(5, maxRuns, Math.trunc(input.sourceNavigation?.deepeningConcurrency ?? 1)));
   const parentTimeoutMs = input.parentNavigationTimeoutMs ?? 30_000;
-  const timeoutMs = Math.max(1, Math.min(120_000, Math.trunc(
-    input.sourceNavigation?.deepeningTimeoutMs ?? Math.min(parentTimeoutMs, 15_000)
-  )));
+  const timeoutMs = Math.max(1, Math.min(120_000, Math.trunc(input.sourceNavigation?.deepeningTimeoutMs ?? Math.min(parentTimeoutMs, 15_000))));
   const maxArtifacts = Math.max(1, Math.min(1_000, Math.trunc(input.sourceNavigation?.maxDeepeningArtifacts ?? 100)));
   return { maxRuns, maxPerDomain, concurrency, timeoutMs, maxArtifacts };
 }
 
-function createTimedChildAbortSignal(parentSignal: AbortSignal | undefined, timeoutMs: number, reason: string): {
+function createTimedChildAbortSignal(
+  parentSignal: AbortSignal | undefined,
+  timeoutMs: number,
+  reason: string
+): {
   signal: AbortSignal;
   timedOut: () => boolean;
   cleanup: () => void;
@@ -1549,24 +1641,16 @@ function createTimedChildAbortSignal(parentSignal: AbortSignal | undefined, time
   };
 }
 
-async function summarizeDestinationChildEvidence(input: {
-  parentUrl: string;
-  childResult: EvidenceWorkflowResult;
-  signal?: AbortSignal | undefined;
-}): Promise<DestinationChildEvidenceSummary> {
+async function summarizeDestinationChildEvidence(input: { parentUrl: string; childResult: EvidenceWorkflowResult; signal?: AbortSignal | undefined }): Promise<DestinationChildEvidenceSummary> {
   const captureText = await pageCaptureTextFromRecords(input.childResult.runDir, input.childResult.pageCaptureRecords, input.signal);
   const text = normalizeEvidenceText(captureText.text);
   const browserCaptureOkRecords = input.childResult.pageCaptureRecords.filter(isSuccessfulPageCaptureRecord);
   const browserCaptureFailedRecords = input.childResult.pageCaptureRecords.filter(isFailedPageCaptureRecord);
   const query = destinationQueryFromUrl(input.parentUrl) ?? destinationQueryFromUrl(input.childResult.url);
-  const matchedQueryTokens = query === undefined
-    ? []
-    : matchingTextTokens(query, `${captureText.title ?? ""} ${captureText.finalUrl ?? ""} ${text}`);
+  const matchedQueryTokens = query === undefined ? [] : matchingTextTokens(query, `${captureText.title ?? ""} ${captureText.finalUrl ?? ""} ${text}`);
   const queryScriptFamilies = query === undefined ? [] : detectedTextScriptFamilies(query);
   const evidenceScriptFamilies = detectedTextScriptFamilies(`${captureText.title ?? ""} ${text}`);
-  const queryEvidenceScriptMismatch = query !== undefined &&
-    matchedQueryTokens.length === 0 &&
-    hasDominantTextScriptMismatch(query, `${captureText.title ?? ""} ${text}`);
+  const queryEvidenceScriptMismatch = query !== undefined && matchedQueryTokens.length === 0 && hasDominantTextScriptMismatch(query, `${captureText.title ?? ""} ${text}`);
   const deeperCandidates = buildDestinationDeepeningCandidates({
     childUrl: captureText.finalUrl ?? input.childResult.url,
     links: captureText.visibleLinks ?? [],
@@ -1653,14 +1737,7 @@ function evidenceRunArtifactCount(result: EvidenceWorkflowResult): number {
   ].reduce((count, records) => count + records.length, 0);
 }
 
-function destinationChildEvidenceSignals(input: {
-  childResult: EvidenceWorkflowResult;
-  browserCaptureOkRecords: number;
-  browserCaptureFailedRecords: number;
-  pageTextLength: number;
-  matchedQueryTokens: string[];
-  deeperCandidateCount: number;
-}): string[] {
+function destinationChildEvidenceSignals(input: { childResult: EvidenceWorkflowResult; browserCaptureOkRecords: number; browserCaptureFailedRecords: number; pageTextLength: number; matchedQueryTokens: string[]; deeperCandidateCount: number }): string[] {
   const signals: string[] = [];
   if (input.childResult.ok) {
     signals.push("claim_gate_ok");
@@ -1695,15 +1772,7 @@ function destinationChildEvidenceSignals(input: {
   return signals;
 }
 
-function destinationChildEvidenceWarnings(input: {
-  childResult: EvidenceWorkflowResult;
-  browserCaptureOkRecords: number;
-  browserCaptureFailedRecords: number;
-  pageTextLength: number;
-  query?: string | undefined;
-  matchedQueryTokens: string[];
-  queryEvidenceScriptMismatch: boolean;
-}): string[] {
+function destinationChildEvidenceWarnings(input: { childResult: EvidenceWorkflowResult; browserCaptureOkRecords: number; browserCaptureFailedRecords: number; pageTextLength: number; query?: string | undefined; matchedQueryTokens: string[]; queryEvidenceScriptMismatch: boolean }): string[] {
   const warnings: string[] = [];
   if (!input.childResult.ok) {
     warnings.push("claim_gate_failed");
@@ -1732,33 +1801,27 @@ function destinationChildEvidenceWarnings(input: {
   return warnings;
 }
 
-async function writeOverlayDismissalArtifact(input: {
-  runDir: string;
-  sourceUrl: string;
-  contextToken: string;
-  pageId: string;
-  baseCaptureId: string;
-  report: BrowserOverlayDismissalReport;
-  writer: ArtifactWriter;
-  signal?: AbortSignal | undefined;
-}): Promise<ArtifactRecord[]> {
+async function writeOverlayDismissalArtifact(input: { runDir: string; sourceUrl: string; contextToken: string; pageId: string; baseCaptureId: string; report: BrowserOverlayDismissalReport; writer: ArtifactWriter; signal?: AbortSignal | undefined }): Promise<ArtifactRecord[]> {
   if (input.report.status === "clear" && input.report.warnings.length === 0) {
     return [];
   }
-  return withAbort(input.writer.writeCaptureBundle({
-    runDir: input.runDir,
-    sourceUrl: input.sourceUrl,
-    contextToken: input.contextToken,
-    pageId: input.pageId,
-    captureId: `${input.baseCaptureId}-browser-overlay-dismissal`,
-    status: input.report.status === "dismissed" ? "ok" : "partial",
-    metadata: { browserOverlayDismissal: input.report },
-    text: JSON.stringify(input.report, null, 2),
-    captureMethod: "browser-agent-mcp-farm browser-overlay-dismissal",
-    toolName: "evidence_run_overlay_dismissal",
-    evidenceKind: "browser_overlay_dismissal",
-    note: `browser overlay dismissal: ${input.report.status}, dismissed=${input.report.dismissedCount}, skipped=${input.report.skippedCount}`
-  }), input.signal);
+  return withAbort(
+    input.writer.writeCaptureBundle({
+      runDir: input.runDir,
+      sourceUrl: input.sourceUrl,
+      contextToken: input.contextToken,
+      pageId: input.pageId,
+      captureId: `${input.baseCaptureId}-browser-overlay-dismissal`,
+      status: input.report.status === "dismissed" ? "ok" : "partial",
+      metadata: { browserOverlayDismissal: input.report },
+      text: JSON.stringify(input.report, null, 2),
+      captureMethod: "browser-agent-mcp-farm browser-overlay-dismissal",
+      toolName: "evidence_run_overlay_dismissal",
+      evidenceKind: "browser_overlay_dismissal",
+      note: `browser overlay dismissal: ${input.report.status}, dismissed=${input.report.dismissedCount}, skipped=${input.report.skippedCount}`
+    }),
+    input.signal
+  );
 }
 
 function failedOverlayDismissalReport(reason: string): BrowserOverlayDismissalReport {
@@ -1830,11 +1893,7 @@ async function classifyBrowserObstructionArtifacts(input: {
   return { report, records };
 }
 
-async function pageCaptureTextFromRecords(
-  runDir: string,
-  records: ArtifactRecord[],
-  signal: AbortSignal | undefined
-): Promise<{ text?: string; html?: string; finalUrl?: string; title?: string; visibleLinks?: DestinationVisibleLink[] }> {
+async function pageCaptureTextFromRecords(runDir: string, records: ArtifactRecord[], signal: AbortSignal | undefined): Promise<{ text?: string; html?: string; finalUrl?: string; title?: string; visibleLinks?: DestinationVisibleLink[] }> {
   let text: string | undefined;
   let html: string | undefined;
   let finalUrl: string | undefined;
@@ -1904,11 +1963,13 @@ function parseVisibleLinks(values: unknown[]): DestinationVisibleLink[] {
     if (typeof record.url !== "string" || record.url.length === 0) {
       return [];
     }
-    return [{
-      index: typeof record.index === "number" && Number.isFinite(record.index) ? record.index : fallbackIndex,
-      url: record.url,
-      text: typeof record.text === "string" ? record.text : ""
-    }];
+    return [
+      {
+        index: typeof record.index === "number" && Number.isFinite(record.index) ? record.index : fallbackIndex,
+        url: record.url,
+        text: typeof record.text === "string" ? record.text : ""
+      }
+    ];
   });
 }
 
@@ -1926,12 +1987,7 @@ function collectDenseHitTimestamps(frameResult: FrameSampleRunResult, query: str
   return hits;
 }
 
-async function collectOcrHitTimestamps(
-  runDir: string,
-  ocrRecords: ArtifactRecord[],
-  query: string | undefined,
-  signal: AbortSignal | undefined
-): Promise<number[]> {
+async function collectOcrHitTimestamps(runDir: string, ocrRecords: ArtifactRecord[], query: string | undefined, signal: AbortSignal | undefined): Promise<number[]> {
   const textByCaptureBase = new Map<string, string>();
   for (const record of ocrRecords) {
     if (record.kind !== "text" || record.evidence_kind !== "ocr_text" || record.status !== "ok") {
@@ -1941,7 +1997,7 @@ async function collectOcrHitTimestamps(
     if (captureBase === undefined) {
       continue;
     }
-    textByCaptureBase.set(captureBase, await readOptionalText(join(runDir, record.path), signal) ?? "");
+    textByCaptureBase.set(captureBase, (await readOptionalText(join(runDir, record.path), signal)) ?? "");
   }
 
   const hits = new Set<number>();
@@ -1985,21 +2041,18 @@ function mergeFrameSampleResults(
   additional: FrameSampleRunResult,
   densePlan: DenseTimestampPlan,
   label: string,
-  eventInput?: {
-    source: DenseSamplingSource;
-    hitTimestampsSec: number[];
-    sceneChangeHits?: SceneChangeHit[] | undefined;
-    sceneChangeDiagnostics?: SceneChangeDetectionDiagnostics | undefined;
-  } | undefined
+  eventInput?:
+    | {
+        source: DenseSamplingSource;
+        hitTimestampsSec: number[];
+        sceneChangeHits?: SceneChangeHit[] | undefined;
+        sceneChangeDiagnostics?: SceneChangeDetectionDiagnostics | undefined;
+      }
+    | undefined
 ): FrameSampleRunResult {
-  const denseEvent = eventInput === undefined
-    ? undefined
-    : buildDenseSamplingEvent(eventInput, densePlan, additional);
+  const denseEvent = eventInput === undefined ? undefined : buildDenseSamplingEvent(eventInput, densePlan, additional);
   const sceneChangeHits = eventInput?.sceneChangeHits ?? [];
-  const sceneChangeDiagnostics = [
-    ...(base.sceneChangeDiagnostics ?? []),
-    ...(additional.sceneChangeDiagnostics ?? [])
-  ];
+  const sceneChangeDiagnostics = [...(base.sceneChangeDiagnostics ?? []), ...(additional.sceneChangeDiagnostics ?? [])];
   return {
     ...base,
     ok: base.ok && additional.ok,
@@ -2013,17 +2066,8 @@ function mergeFrameSampleResults(
     },
     frames: [...base.frames, ...additional.frames].sort((left, right) => left.timestampSec - right.timestampSec),
     records: [...base.records, ...additional.records],
-    warnings: [
-      ...base.warnings,
-      ...additional.warnings,
-      ...sceneChangeHits.map((hit) => `scene_change:${hit.fromTimestampSec}-${hit.toTimestampSec}:distance=${hit.distance}`),
-      ...(densePlan.capped ? [`${label} omitted ${densePlan.omittedCount} planned frames due to maxDenseFrames.`] : [])
-    ],
-    denseSamplingEvents: [
-      ...(base.denseSamplingEvents ?? []),
-      ...(additional.denseSamplingEvents ?? []),
-      ...(denseEvent === undefined ? [] : [denseEvent])
-    ],
+    warnings: [...base.warnings, ...additional.warnings, ...sceneChangeHits.map((hit) => `scene_change:${hit.fromTimestampSec}-${hit.toTimestampSec}:distance=${hit.distance}`), ...(densePlan.capped ? [`${label} omitted ${densePlan.omittedCount} planned frames due to maxDenseFrames.`] : [])],
+    denseSamplingEvents: [...(base.denseSamplingEvents ?? []), ...(additional.denseSamplingEvents ?? []), ...(denseEvent === undefined ? [] : [denseEvent])],
     ...(sceneChangeDiagnostics.length === 0 ? {} : { sceneChangeDiagnostics })
   };
 }
@@ -2055,16 +2099,10 @@ function buildDenseSamplingEvent(
   return event;
 }
 
-function appendSceneChangeDiagnostics(
-  frameResult: FrameSampleRunResult,
-  diagnostics: SceneChangeDetectionDiagnostics
-): FrameSampleRunResult {
+function appendSceneChangeDiagnostics(frameResult: FrameSampleRunResult, diagnostics: SceneChangeDetectionDiagnostics): FrameSampleRunResult {
   return {
     ...frameResult,
-    sceneChangeDiagnostics: [
-      ...(frameResult.sceneChangeDiagnostics ?? []),
-      diagnostics
-    ]
+    sceneChangeDiagnostics: [...(frameResult.sceneChangeDiagnostics ?? []), diagnostics]
   };
 }
 
@@ -2078,11 +2116,7 @@ function uncapturedDenseTimestamps(frameResult: FrameSampleRunResult, timestamps
 }
 
 function normalizeTimestampValues(timestampsSec: number[]): number[] {
-  return [...new Set(
-    timestampsSec
-      .filter((timestampSec) => Number.isFinite(timestampSec) && timestampSec >= 0)
-      .map((timestampSec) => Math.round(timestampSec * 1000) / 1000)
-  )].sort((left, right) => left - right);
+  return [...new Set(timestampsSec.filter((timestampSec) => Number.isFinite(timestampSec) && timestampSec >= 0).map((timestampSec) => Math.round(timestampSec * 1000) / 1000))].sort((left, right) => left - right);
 }
 
 function normalizeTimestampKey(timestampSec: number): string {
@@ -2123,11 +2157,7 @@ function ocrCaptureBase(path: string): string | undefined {
   return undefined;
 }
 
-function summarizeFrameSampling(
-  frameResult: FrameSampleRunResult | undefined,
-  frameError: string | undefined,
-  skipped: boolean
-): FrameSamplingAssessment {
+function summarizeFrameSampling(frameResult: FrameSampleRunResult | undefined, frameError: string | undefined, skipped: boolean): FrameSamplingAssessment {
   if (skipped) {
     return { status: "skipped", reason: "sampleFrames disabled for this run" };
   }
@@ -2280,11 +2310,7 @@ function formatDestinationQueryIntentCounts(counts: DestinationTriageSummary["qu
     .join(", ");
 }
 
-function summarizeSourceNavigationCalibrationAssessment(
-  report: SourceNavigationCalibrationReport | undefined,
-  requested: boolean,
-  calibrationArtifactRecords: number
-): SourceNavigationCalibrationAssessment {
+function summarizeSourceNavigationCalibrationAssessment(report: SourceNavigationCalibrationReport | undefined, requested: boolean, calibrationArtifactRecords: number): SourceNavigationCalibrationAssessment {
   if (!requested || report === undefined) {
     return {
       enabled: requested,
@@ -2300,11 +2326,7 @@ function summarizeSourceNavigationCalibrationAssessment(
   };
 }
 
-function summarizeSourceNavigationExecution(
-  result: SourceNavigationExecutionRunResult | undefined,
-  requested: boolean,
-  actionArtifactRecords: number
-): SourceNavigationExecutionSummary {
+function summarizeSourceNavigationExecution(result: SourceNavigationExecutionRunResult | undefined, requested: boolean, actionArtifactRecords: number): SourceNavigationExecutionSummary {
   if (!requested || result === undefined) {
     return {
       enabled: requested,
@@ -2407,10 +2429,7 @@ function summarizeDestinationDeepeningProposalAssessment(result: SourceNavigatio
       records: 0
     };
   }
-  return summarizeDestinationDeepeningProposals(
-    result.destinationDeepeningProposals,
-    result.destinationDeepeningProposalRecords.length
-  );
+  return summarizeDestinationDeepeningProposals(result.destinationDeepeningProposals, result.destinationDeepeningProposalRecords.length);
 }
 
 function summarizeDestinationDeepeningExecution(result: SourceNavigationFollowUpRunResult | undefined): DestinationDeepeningExecutionSummary {
@@ -2481,22 +2500,22 @@ function buildClaims(input: {
     }),
     input.frameSampling.status === "ok"
       ? claimFromRecord({
-        baseCaptureId: input.baseCaptureId,
-        ordinal: 3,
-        claimType: "visual",
-        claim: "Timestamped visual frame sampling produced registered frame screenshot evidence.",
-        record: frameEvidence,
-        verificationLevel: "browser_visible",
-        timestampSec: firstSampleTimestamp(input.frameSampling)
-      })
+          baseCaptureId: input.baseCaptureId,
+          ordinal: 3,
+          claimType: "visual",
+          claim: "Timestamped visual frame sampling produced registered frame screenshot evidence.",
+          record: frameEvidence,
+          verificationLevel: "browser_visible",
+          timestampSec: firstSampleTimestamp(input.frameSampling)
+        })
       : claimFromRecord({
-        baseCaptureId: input.baseCaptureId,
-        ordinal: 3,
-        claimType: "inference",
-        claim: `Timestamped visual frame sampling is ${input.frameSampling.status} and is represented by registered partial/assessment evidence.`,
-        record: fallbackFrameEvidence,
-        verificationLevel: "inferred"
-      }),
+          baseCaptureId: input.baseCaptureId,
+          ordinal: 3,
+          claimType: "inference",
+          claim: `Timestamped visual frame sampling is ${input.frameSampling.status} and is represented by registered partial/assessment evidence.`,
+          record: fallbackFrameEvidence,
+          verificationLevel: "inferred"
+        }),
     claimFromRecord({
       baseCaptureId: input.baseCaptureId,
       ordinal: 4,
@@ -2515,21 +2534,21 @@ function buildClaims(input: {
     }),
     ocrTextEvidence === undefined
       ? claimFromRecord({
-        baseCaptureId: input.baseCaptureId,
-        ordinal: 6,
-        claimType: "inference",
-        claim: "OCR over sampled frames did not produce verified text evidence; the run only recorded OCR status.",
-        record: ocrStatusEvidence,
-        verificationLevel: "unverified"
-      })
+          baseCaptureId: input.baseCaptureId,
+          ordinal: 6,
+          claimType: "inference",
+          claim: "OCR over sampled frames did not produce verified text evidence; the run only recorded OCR status.",
+          record: ocrStatusEvidence,
+          verificationLevel: "unverified"
+        })
       : claimFromRecord({
-        baseCaptureId: input.baseCaptureId,
-        ordinal: 6,
-        claimType: "text",
-        claim: "OCR over sampled frames produced registered visible text evidence.",
-        record: ocrTextEvidence,
-        verificationLevel: "ocr_extracted"
-      }),
+          baseCaptureId: input.baseCaptureId,
+          ordinal: 6,
+          claimType: "text",
+          claim: "OCR over sampled frames produced registered visible text evidence.",
+          record: ocrTextEvidence,
+          verificationLevel: "ocr_extracted"
+        }),
     claimFromRecord({
       baseCaptureId: input.baseCaptureId,
       ordinal: 7,
@@ -2542,15 +2561,7 @@ function buildClaims(input: {
   return claims.filter((claim): claim is EvidenceWorkflowClaim => claim !== undefined);
 }
 
-function claimFromRecord(input: {
-  baseCaptureId: string;
-  ordinal: number;
-  claimType: ClaimType;
-  claim: string;
-  record: ArtifactRecord | undefined;
-  verificationLevel: VerificationLevel;
-  timestampSec?: number | undefined;
-}): EvidenceWorkflowClaim | undefined {
+function claimFromRecord(input: { baseCaptureId: string; ordinal: number; claimType: ClaimType; claim: string; record: ArtifactRecord | undefined; verificationLevel: VerificationLevel; timestampSec?: number | undefined }): EvidenceWorkflowClaim | undefined {
   if (input.record === undefined) {
     return undefined;
   }
@@ -2568,18 +2579,20 @@ function claimFromRecord(input: {
 }
 
 function selectEvidenceRecord(records: ArtifactRecord[], kind?: ArtifactRecord["kind"], evidenceKind?: EvidenceKind, status?: ArtifactRecord["status"]): ArtifactRecord | undefined {
-  return records.find((item) => {
-    if (kind !== undefined && item.kind !== kind) {
-      return false;
-    }
-    if (evidenceKind !== undefined && item.evidence_kind !== evidenceKind) {
-      return false;
-    }
-    if (status !== undefined && item.status !== status) {
-      return false;
-    }
-    return true;
-  }) ?? (kind === undefined && evidenceKind === undefined && status === undefined ? records[0] : undefined);
+  return (
+    records.find((item) => {
+      if (kind !== undefined && item.kind !== kind) {
+        return false;
+      }
+      if (evidenceKind !== undefined && item.evidence_kind !== evidenceKind) {
+        return false;
+      }
+      if (status !== undefined && item.status !== status) {
+        return false;
+      }
+      return true;
+    }) ?? (kind === undefined && evidenceKind === undefined && status === undefined ? records[0] : undefined)
+  );
 }
 
 function firstSampleTimestamp(frameSampling: FrameSamplingAssessment): number | undefined {
@@ -2593,13 +2606,16 @@ async function appendClaims(runDir: string, claims: EvidenceWorkflowClaim[]): Pr
   }
 }
 
-async function writeReport(path: string, input: {
-  url: string;
-  runDir: string;
-  assessment: EvidenceWorkflowAssessment;
-  claims: EvidenceWorkflowClaim[];
-  claimGate?: ClaimGateResult | undefined;
-}): Promise<void> {
+async function writeReport(
+  path: string,
+  input: {
+    url: string;
+    runDir: string;
+    assessment: EvidenceWorkflowAssessment;
+    claims: EvidenceWorkflowClaim[];
+    claimGate?: ClaimGateResult | undefined;
+  }
+): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const report = [
     "# Evidence Run",
@@ -2639,9 +2655,7 @@ async function writeReport(path: string, input: {
     ...denseSamplingReportLines(input.assessment.frameSampling),
     `- Browser overlay dismissal: ${input.assessment.browserOverlayDismissal.status} (${input.assessment.browserOverlayDismissal.dismissedCount} dismissed, ${input.assessment.browserOverlayDismissal.skippedCount} skipped)`,
     `- Browser obstructions: ${input.assessment.browserObstructions.status}`,
-    ...(input.assessment.browserObstructions.status === "detected"
-      ? [`- Browser obstruction detections: ${input.assessment.browserObstructions.detections.map((detection) => `${detection.kind}:${detection.confidence}`).join(", ")}`]
-      : []),
+    ...(input.assessment.browserObstructions.status === "detected" ? [`- Browser obstruction detections: ${input.assessment.browserObstructions.detections.map((detection) => `${detection.kind}:${detection.confidence}`).join(", ")}`] : []),
     `- Audio verified: ${input.assessment.audioVerified}`,
     `- Raw video bytes collected: ${input.assessment.rawVideoBytesCollected}`,
     `- Transcript verified in this run: ${input.assessment.transcript.verifiedInThisRun}`,
@@ -2659,10 +2673,7 @@ function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): strin
   const lines: string[] = [];
   if ("denseSampling" in frameSampling && frameSampling.denseSampling !== undefined) {
     const sources = [...new Set(frameSampling.denseSampling.events.map((event) => event.source))].join(", ");
-    lines.push(
-      `- Dense sampling events: ${frameSampling.denseSampling.totalEvents} (${sources})`,
-      `- Dense sampling captured timestamps: ${frameSampling.denseSampling.capturedTimestampsSec.join(", ")}`
-    );
+    lines.push(`- Dense sampling events: ${frameSampling.denseSampling.totalEvents} (${sources})`, `- Dense sampling captured timestamps: ${frameSampling.denseSampling.capturedTimestampsSec.join(", ")}`);
     const sceneHits = frameSampling.denseSampling.events.flatMap((event) => event.sceneChangeHits ?? []);
     if (sceneHits.length > 0) {
       lines.push(`- Scene-change hits: ${sceneHits.map((hit) => `${hit.fromTimestampSec}-${hit.toTimestampSec}:distance=${hit.distance}`).join(", ")}`);
@@ -2674,10 +2685,10 @@ function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): strin
       const maxDistance = latest.maxObservedDistance === undefined ? "n/a" : String(latest.maxObservedDistance);
       const p90Distance = latest.distanceP90 === undefined ? "n/a" : String(latest.distanceP90);
       const maxPairGap = latest.pairGapMaxSec === undefined ? "n/a" : String(latest.pairGapMaxSec);
-      const recommendation = "thresholdRecommendation" in latest
-        ? `${latest.thresholdRecommendation}${latest.recommendedThreshold === undefined ? "" : `:${latest.recommendedThreshold}`}`
-        : "n/a";
-      lines.push(`- Scene-change diagnostics: threshold=${latest.threshold}, pairs=${latest.comparablePairCount}, pairGapMaxSec=${maxPairGap}, sampling=${latest.samplingDensityStatus}, unique=${latest.uniqueFingerprintCount}, zeroPairs=${latest.zeroDistancePairCount}, maxDistance=${maxDistance}, p90=${p90Distance}, nearBelow=${latest.nearThresholdBelowCount}, nearAbove=${latest.nearThresholdAboveCount}, selected=${latest.selectedHitCount}, recommendation=${recommendation}`);
+      const recommendation = "thresholdRecommendation" in latest ? `${latest.thresholdRecommendation}${latest.recommendedThreshold === undefined ? "" : `:${latest.recommendedThreshold}`}` : "n/a";
+      lines.push(
+        `- Scene-change diagnostics: threshold=${latest.threshold}, pairs=${latest.comparablePairCount}, pairGapMaxSec=${maxPairGap}, sampling=${latest.samplingDensityStatus}, unique=${latest.uniqueFingerprintCount}, zeroPairs=${latest.zeroDistancePairCount}, maxDistance=${maxDistance}, p90=${p90Distance}, nearBelow=${latest.nearThresholdBelowCount}, nearAbove=${latest.nearThresholdAboveCount}, selected=${latest.selectedHitCount}, recommendation=${recommendation}`
+      );
     }
   }
   return lines;

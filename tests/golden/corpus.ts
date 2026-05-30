@@ -16,13 +16,7 @@
 
 import type { GoldenCase } from "../../src/structured-benchmark.js";
 
-function page(opts: {
-  title?: string;
-  canonical?: string;
-  og?: Record<string, string>;
-  jsonLd?: unknown;
-  bodyHtml?: string;
-}): string {
+function page(opts: { title?: string; canonical?: string; og?: Record<string, string>; jsonLd?: unknown; bodyHtml?: string }): string {
   const head: string[] = ['<meta charset="utf-8">'];
   if (opts.title !== undefined) {
     head.push(`<title>${opts.title}</title>`);
@@ -240,7 +234,7 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
         name: "Travel Mug",
         offers: { "@type": "Offer", price: "19.99", priceCurrency: "USD" }
       },
-      bodyHtml: "<main><h1>Travel Mug</h1><p class=\"price\">Now $24.99</p></main>"
+      bodyHtml: '<main><h1>Travel Mug</h1><p class="price">Now $24.99</p></main>'
     }),
     expected: {
       type: "Product",

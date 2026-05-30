@@ -1,64 +1,20 @@
-import { ArtifactWriter, type ArtifactRecord, type ArtifactStatus } from "./artifact-writer.js";
+import type { ArtifactWriter, ArtifactRecord, ArtifactStatus } from "./artifact-writer.js";
 import { safeUrl } from "./util/url.js";
 import { resolveDestinationUrl, type DestinationUrlResolutionMethod } from "./destination-url.js";
 import type { SourceNavigationFollowUpRequest } from "./source-navigation-executor.js";
 import type { SourceFamily, SourcePlatform } from "./source-strategy.js";
 
-export type DestinationCandidateKind =
-  | "news"
-  | "blog"
-  | "official"
-  | "map_place"
-  | "review"
-  | "community"
-  | "commerce"
-  | "media"
-  | "generic";
+export type DestinationCandidateKind = "news" | "blog" | "official" | "map_place" | "review" | "community" | "commerce" | "media" | "generic";
 
-export type DestinationUsefulness =
-  | "useful"
-  | "low_value"
-  | "duplicate"
-  | "off_topic"
-  | "budget_limited"
-  | "blocked"
-  | "paywalled"
-  | "private"
-  | "unsupported";
+export type DestinationUsefulness = "useful" | "low_value" | "duplicate" | "off_topic" | "budget_limited" | "blocked" | "paywalled" | "private" | "unsupported";
 
-export type DestinationScoringProfileName =
-  | "search_general"
-  | "map_local"
-  | "blog_content"
-  | "portal_news"
-  | "travel_booking"
-  | "commerce"
-  | "video_social"
-  | "generic_web";
+export type DestinationScoringProfileName = "search_general" | "map_local" | "blog_content" | "portal_news" | "travel_booking" | "commerce" | "video_social" | "generic_web";
 
-export type DestinationQueryIntent =
-  | "general"
-  | "fresh_news"
-  | "official_fact"
-  | "experience_review"
-  | "local_place"
-  | "commerce_offer"
-  | "media_content";
+export type DestinationQueryIntent = "general" | "fresh_news" | "official_fact" | "experience_review" | "local_place" | "commerce_offer" | "media_content";
 
-export type DestinationDeepeningReason =
-  | "child_page_has_relevant_official_link"
-  | "child_page_has_source_document"
-  | "child_page_has_related_review_or_map_link"
-  | "child_page_has_primary_media_link"
-  | "manual_review_required";
+export type DestinationDeepeningReason = "child_page_has_relevant_official_link" | "child_page_has_source_document" | "child_page_has_related_review_or_map_link" | "child_page_has_primary_media_link" | "manual_review_required";
 
-export type DestinationTextScriptFamily =
-  | "latin"
-  | "hangul"
-  | "hiragana"
-  | "katakana"
-  | "han"
-  | "digit";
+export type DestinationTextScriptFamily = "latin" | "hangul" | "hiragana" | "katakana" | "han" | "digit";
 
 export type DestinationDecisionReasonCode =
   | "query_overlap"
@@ -423,15 +379,9 @@ export interface DestinationBlockedChildRecoveryCommandStep {
   powershellCommand: string;
 }
 
-export type DestinationRetryAdviceReason =
-  | "increase_max_followups"
-  | "increase_max_followups_per_domain"
-  | "narrow_destination_selectors";
+export type DestinationRetryAdviceReason = "increase_max_followups" | "increase_max_followups_per_domain" | "narrow_destination_selectors";
 
-export type DestinationBlockedChildRecoveryAdviceReason =
-  | "blocked_child_exposes_deeper_candidates"
-  | "profile_headed_review_required"
-  | "default_depth_2_execution_disabled";
+export type DestinationBlockedChildRecoveryAdviceReason = "blocked_child_exposes_deeper_candidates" | "profile_headed_review_required" | "default_depth_2_execution_disabled";
 
 export interface BuildDestinationTriageInput {
   parentUrl: string;
@@ -449,15 +399,17 @@ export function buildDestinationTriage(input: BuildDestinationTriageInput): Dest
   const query = normalizedQuery(input.query ?? queryFromUrl(input.parentUrl));
   const maxSelected = normalizeMaxSelected(input.maxSelected);
   const maxPerDomain = normalizeMaxPerDomain(input.maxPerDomain, maxSelected);
-  const candidates = input.requests.map((request, index) => buildCandidate({
-    parentUrl: input.parentUrl,
-    platform: input.platform,
-    sourceFamily: input.sourceFamily,
-    request,
-    index,
-    query,
-    sourceArtifactIds: input.sourceArtifactIds ?? []
-  }));
+  const candidates = input.requests.map((request, index) =>
+    buildCandidate({
+      parentUrl: input.parentUrl,
+      platform: input.platform,
+      sourceFamily: input.sourceFamily,
+      request,
+      index,
+      query,
+      sourceArtifactIds: input.sourceArtifactIds ?? []
+    })
+  );
   const childResultByKeyUrl = new Map((input.childResults ?? []).map((result) => [childResultKey(result.actionKey, result.url), result]));
   const seen = new Set<string>();
   const preRejected: DestinationRejectedCandidate[] = [];
@@ -485,9 +437,9 @@ export function buildDestinationTriage(input: BuildDestinationTriageInput): Dest
   const selectedIds = new Set(selectedBase.map((candidate) => candidate.candidateId));
   const budgetRejected = sorted
     .filter((candidate) => !selectedIds.has(candidate.candidateId))
-    .map((candidate) => domainLimitedIds.has(candidate.candidateId)
-      ? rejectCandidate(candidate, "budget_limited", `Candidate was outside the per-domain destination budget of ${maxPerDomain}.`, "domain_budget")
-      : rejectCandidate(candidate, "budget_limited", "Candidate was outside the bounded top-K destination budget.", "top_k_budget"));
+    .map((candidate) =>
+      domainLimitedIds.has(candidate.candidateId) ? rejectCandidate(candidate, "budget_limited", `Candidate was outside the per-domain destination budget of ${maxPerDomain}.`, "domain_budget") : rejectCandidate(candidate, "budget_limited", "Candidate was outside the bounded top-K destination budget.", "top_k_budget")
+    );
   const selected = selectedBase.map((candidate): DestinationSelectedCandidate => {
     const childResult = childResultByKeyUrl.get(childResultKey(candidate.actionKey, candidate.url));
     const usefulness = classifyDestinationChildUsefulness(childResult, input.query ?? query, {
@@ -533,12 +485,7 @@ export function buildDestinationTriage(input: BuildDestinationTriageInput): Dest
   };
 }
 
-export function buildDestinationDeepeningCandidates(input: {
-  childUrl: string;
-  links: DestinationVisibleLink[];
-  query?: string | undefined;
-  maxCandidates?: number | undefined;
-}): DestinationDeepeningCandidate[] {
+export function buildDestinationDeepeningCandidates(input: { childUrl: string; links: DestinationVisibleLink[]; query?: string | undefined; maxCandidates?: number | undefined }): DestinationDeepeningCandidate[] {
   const maxCandidates = Math.max(0, Math.min(10, Math.trunc(input.maxCandidates ?? 5)));
   const seen = new Set<string>();
   const candidates: DestinationDeepeningCandidate[] = [];
@@ -591,10 +538,7 @@ export function buildDestinationDeepeningCandidates(input: {
   return candidates;
 }
 
-export function buildDestinationDeepeningProposals(input: {
-  triage: DestinationTriageResult;
-  maxDepth?: number | undefined;
-}): DestinationDeepeningProposal[] {
+export function buildDestinationDeepeningProposals(input: { triage: DestinationTriageResult; maxDepth?: number | undefined }): DestinationDeepeningProposal[] {
   const maxDepth = Math.max(1, Math.min(2, Math.trunc(input.maxDepth ?? 1)));
   const proposals: DestinationDeepeningProposal[] = [];
   for (const candidate of input.triage.selected) {
@@ -620,10 +564,7 @@ export function buildDestinationDeepeningProposals(input: {
   return proposals;
 }
 
-export function summarizeDestinationDeepeningProposals(
-  proposals: DestinationDeepeningProposal[],
-  records: number
-): DestinationDeepeningProposalSummary {
+export function summarizeDestinationDeepeningProposals(proposals: DestinationDeepeningProposal[], records: number): DestinationDeepeningProposalSummary {
   return {
     status: proposals.length === 0 ? "no_proposals" : "proposed",
     proposalCount: proposals.length,
@@ -632,10 +573,7 @@ export function summarizeDestinationDeepeningProposals(
   };
 }
 
-export function selectedDestinationRequests(
-  triage: DestinationTriageResult,
-  requests: SourceNavigationFollowUpRequest[]
-): SourceNavigationFollowUpRequest[] {
+export function selectedDestinationRequests(triage: DestinationTriageResult, requests: SourceNavigationFollowUpRequest[]): SourceNavigationFollowUpRequest[] {
   return triage.selected
     .map((candidate) => {
       const request = requests[candidate.requestIndex];
@@ -652,33 +590,18 @@ export function selectedDestinationRequests(
     .filter((request): request is SourceNavigationFollowUpRequest => request !== undefined);
 }
 
-export function summarizeDestinationTriageResult(input: {
-  selected: DestinationSelectedCandidate[];
-  rejected: DestinationRejectedCandidate[];
-  candidateCount: number;
-  maxSelected: number;
-  maxPerDomain?: number | undefined;
-  records: number;
-}): DestinationTriageSummary {
+export function summarizeDestinationTriageResult(input: { selected: DestinationSelectedCandidate[]; rejected: DestinationRejectedCandidate[]; candidateCount: number; maxSelected: number; maxPerDomain?: number | undefined; records: number }): DestinationTriageSummary {
   const rejected = input.rejected;
   const selected = input.selected;
-  const blockedCount = selected.filter((item) => ["blocked", "paywalled", "private"].includes(item.usefulness)).length +
-    rejected.filter((item) => item.usefulness === "blocked" || item.usefulness === "paywalled" || item.usefulness === "private").length;
-  const lowValueCount = selected.filter((item) => item.usefulness === "low_value").length +
-    rejected.filter((item) => item.usefulness === "low_value").length;
+  const blockedCount = selected.filter((item) => ["blocked", "paywalled", "private"].includes(item.usefulness)).length + rejected.filter((item) => item.usefulness === "blocked" || item.usefulness === "paywalled" || item.usefulness === "private").length;
+  const lowValueCount = selected.filter((item) => item.usefulness === "low_value").length + rejected.filter((item) => item.usefulness === "low_value").length;
   const duplicateCount = rejected.filter((item) => item.usefulness === "duplicate").length;
-  const offTopicCount = selected.filter((item) => item.usefulness === "off_topic").length +
-    rejected.filter((item) => item.usefulness === "off_topic").length;
+  const offTopicCount = selected.filter((item) => item.usefulness === "off_topic").length + rejected.filter((item) => item.usefulness === "off_topic").length;
   const budgetLimitedCount = rejected.filter((item) => item.usefulness === "budget_limited").length;
-  const unsupportedCount = selected.filter((item) => item.usefulness === "unsupported").length +
-    rejected.filter((item) => item.usefulness === "unsupported").length;
+  const unsupportedCount = selected.filter((item) => item.usefulness === "unsupported").length + rejected.filter((item) => item.usefulness === "unsupported").length;
   const usefulCount = selected.filter((item) => item.usefulness === "useful").length;
   const selectedDowngradedCount = selected.filter((item) => item.usefulness !== "useful").length;
-  const fallbackCandidates = selectedDowngradedCount > 0
-    ? rejected
-        .filter((item) => item.usefulness === "budget_limited" && fallbackBudgetReason(item) !== undefined)
-        .map(fallbackCandidateSummary)
-    : [];
+  const fallbackCandidates = selectedDowngradedCount > 0 ? rejected.filter((item) => item.usefulness === "budget_limited" && fallbackBudgetReason(item) !== undefined).map(fallbackCandidateSummary) : [];
   const blockedChildRecoveryCandidates = blockedChildRecoveryCandidateSummaries(selected);
   const blockedChildRecoveryAdvice = destinationBlockedChildRecoveryAdvice(blockedChildRecoveryCandidates);
   const maxPerDomain = input.maxPerDomain ?? normalizeMaxPerDomain(undefined, normalizeMaxSelected(input.maxSelected));
@@ -694,11 +617,7 @@ export function summarizeDestinationTriageResult(input: {
   const usefulKindCounts = summarizeDestinationCandidateKinds(selected.filter((candidate) => candidate.usefulness === "useful"));
   const rejectedKindCounts = summarizeDestinationCandidateKinds(rejected);
   const queryIntentCounts = summarizeDestinationQueryIntents([...selected, ...rejected]);
-  const status = input.candidateCount === 0
-    ? "no_candidates"
-    : blockedCount > 0 || selected.length === 0 || usefulCount < selected.length
-      ? "partial"
-      : "selected";
+  const status = input.candidateCount === 0 ? "no_candidates" : blockedCount > 0 || selected.length === 0 || usefulCount < selected.length ? "partial" : "selected";
 
   return {
     status,
@@ -733,9 +652,7 @@ export function summarizeDestinationTriageResult(input: {
   };
 }
 
-function blockedChildRecoveryCandidateSummaries(
-  selected: DestinationSelectedCandidate[]
-): { totalCount: number; samples: DestinationBlockedChildRecoveryCandidateSummary[] } {
+function blockedChildRecoveryCandidateSummaries(selected: DestinationSelectedCandidate[]): { totalCount: number; samples: DestinationBlockedChildRecoveryCandidateSummary[] } {
   const summaries: DestinationBlockedChildRecoveryCandidateSummary[] = [];
   let totalCount = 0;
   for (const candidate of selected) {
@@ -765,9 +682,7 @@ function blockedChildRecoveryCandidateSummaries(
   return { totalCount, samples: summaries };
 }
 
-function destinationBlockedChildRecoveryAdvice(
-  candidates: { totalCount: number; samples: DestinationBlockedChildRecoveryCandidateSummary[] }
-): DestinationBlockedChildRecoveryAdvice | undefined {
+function destinationBlockedChildRecoveryAdvice(candidates: { totalCount: number; samples: DestinationBlockedChildRecoveryCandidateSummary[] }): DestinationBlockedChildRecoveryAdvice | undefined {
   if (candidates.totalCount === 0) {
     return undefined;
   }
@@ -777,38 +692,8 @@ function destinationBlockedChildRecoveryAdvice(
     return undefined;
   }
   const profileName = `${safeProfileName(first.domain)}-recovery-profile`;
-  const profileSetupArgv = [
-    "node",
-    ".\\dist\\cli.js",
-    "auth-login",
-    "--profile",
-    profileName,
-    "--url",
-    first.childUrl,
-    "--wait-ms",
-    "120000",
-    "--browser-channel",
-    "chrome",
-    "--persistent-profile"
-  ];
-  const evidenceRunArgv = [
-    "node",
-    ".\\dist\\cli.js",
-    "evidence-run",
-    "--url",
-    first.url,
-    "--wait-ms",
-    "3000",
-    "--timeout-ms",
-    "30000",
-    "--headed",
-    "--browser-channel",
-    "chrome",
-    "--profile",
-    profileName,
-    "--persistent-profile",
-    "--no-frames"
-  ];
+  const profileSetupArgv = ["node", ".\\dist\\cli.js", "auth-login", "--profile", profileName, "--url", first.childUrl, "--wait-ms", "120000", "--browser-channel", "chrome", "--persistent-profile"];
+  const evidenceRunArgv = ["node", ".\\dist\\cli.js", "evidence-run", "--url", first.url, "--wait-ms", "3000", "--timeout-ms", "30000", "--headed", "--browser-channel", "chrome", "--profile", profileName, "--persistent-profile", "--no-frames"];
   const profileSetupPowerShellCommand = profileSetupArgv.map(quotePowershellArgument).join(" ");
   const evidenceRunPowerShellCommand = evidenceRunArgv.map(quotePowershellArgument).join(" ");
   const steps: DestinationBlockedChildRecoveryCommandStep[] = [
@@ -840,27 +725,15 @@ function destinationBlockedChildRecoveryAdvice(
     evidenceRunArgv,
     evidenceRunPowerShellCommand,
     commandHints: steps.map((step) => step.powershellCommand),
-    reasons: [
-      "blocked_child_exposes_deeper_candidates",
-      "profile_headed_review_required",
-      "default_depth_2_execution_disabled"
-    ]
+    reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
   };
 }
 
-function isBlockedChildCandidate(
-  candidate: DestinationSelectedCandidate,
-  evidence: DestinationChildEvidenceSummary | undefined
-): boolean {
-  return candidate.usefulness === "blocked" ||
-    candidate.usefulness === "paywalled" ||
-    candidate.usefulness === "private" ||
-    (evidence?.evidenceWarnings.includes("browser_obstruction_detected") ?? false);
+function isBlockedChildCandidate(candidate: DestinationSelectedCandidate, evidence: DestinationChildEvidenceSummary | undefined): boolean {
+  return candidate.usefulness === "blocked" || candidate.usefulness === "paywalled" || candidate.usefulness === "private" || (evidence?.evidenceWarnings.includes("browser_obstruction_detected") ?? false);
 }
 
-function summarizeDestinationQueryIntents(
-  candidates: Array<{ queryIntent: DestinationQueryIntent }>
-): DestinationQueryIntentCount[] {
+function summarizeDestinationQueryIntents(candidates: Array<{ queryIntent: DestinationQueryIntent }>): DestinationQueryIntentCount[] {
   const counts = new Map<DestinationQueryIntent, number>();
   for (const candidate of candidates) {
     counts.set(candidate.queryIntent, (counts.get(candidate.queryIntent) ?? 0) + 1);
@@ -873,9 +746,7 @@ function summarizeDestinationQueryIntents(
     .map(([queryIntent, count]) => ({ queryIntent, count }));
 }
 
-function summarizeDestinationCandidateKinds(
-  candidates: Array<{ candidateKind: DestinationCandidateKind }>
-): DestinationCandidateKindCount[] {
+function summarizeDestinationCandidateKinds(candidates: Array<{ candidateKind: DestinationCandidateKind }>): DestinationCandidateKindCount[] {
   const counts = new Map<DestinationCandidateKind, number>();
   for (const candidate of candidates) {
     counts.set(candidate.candidateKind, (counts.get(candidate.candidateKind) ?? 0) + 1);
@@ -888,9 +759,7 @@ function summarizeDestinationCandidateKinds(
     .map(([candidateKind, count]) => ({ candidateKind, count }));
 }
 
-function summarizeDestinationVisibleMetadata(
-  candidates: Array<{ visibleMetadata?: DestinationVisibleMetadata | undefined }>
-): DestinationVisibleMetadataSummary {
+function summarizeDestinationVisibleMetadata(candidates: Array<{ visibleMetadata?: DestinationVisibleMetadata | undefined }>): DestinationVisibleMetadataSummary {
   return {
     candidateCount: candidates.length,
     textSnippetCount: candidates.filter((candidate) => candidate.visibleMetadata?.textSnippet !== undefined).length,
@@ -933,22 +802,14 @@ function fallbackBudgetReason(candidate: DestinationRejectedCandidate): Destinat
   return undefined;
 }
 
-function destinationRetryAdvice(input: {
-  fallbackCandidates: DestinationFallbackCandidateSummary[];
-  maxSelected: number;
-  maxPerDomain: number;
-}): DestinationRetryAdvice | undefined {
+function destinationRetryAdvice(input: { fallbackCandidates: DestinationFallbackCandidateSummary[]; maxSelected: number; maxPerDomain: number }): DestinationRetryAdvice | undefined {
   if (input.fallbackCandidates.length === 0) {
     return undefined;
   }
   const topKBudgetMisses = input.fallbackCandidates.filter((candidate) => candidate.budgetReason === "top_k_budget").length;
   const domainBudgetMisses = input.fallbackCandidates.filter((candidate) => candidate.budgetReason === "domain_budget").length;
-  const recommendedMaxSelected = topKBudgetMisses > 0
-    ? Math.min(5, input.maxSelected + topKBudgetMisses)
-    : input.maxSelected;
-  const recommendedMaxPerDomain = domainBudgetMisses > 0
-    ? Math.min(recommendedMaxSelected, input.maxPerDomain + domainBudgetMisses)
-    : input.maxPerDomain;
+  const recommendedMaxSelected = topKBudgetMisses > 0 ? Math.min(5, input.maxSelected + topKBudgetMisses) : input.maxSelected;
+  const recommendedMaxPerDomain = domainBudgetMisses > 0 ? Math.min(recommendedMaxSelected, input.maxPerDomain + domainBudgetMisses) : input.maxPerDomain;
   const reasons: DestinationRetryAdviceReason[] = [];
   if (topKBudgetMisses > 0 && recommendedMaxSelected > input.maxSelected) {
     reasons.push("increase_max_followups");
@@ -962,12 +823,7 @@ function destinationRetryAdvice(input: {
   return {
     recommendedMaxSelected,
     recommendedMaxPerDomain,
-    cliFlags: [
-      "--source-navigation-max-followups",
-      String(recommendedMaxSelected),
-      "--source-navigation-max-followups-per-domain",
-      String(recommendedMaxPerDomain)
-    ],
+    cliFlags: ["--source-navigation-max-followups", String(recommendedMaxSelected), "--source-navigation-max-followups-per-domain", String(recommendedMaxPerDomain)],
     reasons
   };
 }
@@ -977,18 +833,15 @@ function quotePowershellArgument(value: string): string {
 }
 
 function safeProfileName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "destination";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "destination"
+  );
 }
 
-export async function writeDestinationCandidateArtifact(input: {
-  writer: ArtifactWriter;
-  runDir: string;
-  parentUrl: string;
-  contextToken: string;
-  baseCaptureId: string;
-  triage: DestinationTriageResult;
-  signal?: AbortSignal | undefined;
-}): Promise<ArtifactRecord[]> {
+export async function writeDestinationCandidateArtifact(input: { writer: ArtifactWriter; runDir: string; parentUrl: string; contextToken: string; baseCaptureId: string; triage: DestinationTriageResult; signal?: AbortSignal | undefined }): Promise<ArtifactRecord[]> {
   if (input.triage.candidateCount === 0) {
     return [];
   }
@@ -999,11 +852,15 @@ export async function writeDestinationCandidateArtifact(input: {
     pageId: "destination-candidates",
     captureId: `${input.baseCaptureId}-destination-candidates`,
     metadata: { destinationCandidates: [...input.triage.selected, ...input.triage.rejected] },
-    text: `${JSON.stringify({
-      schemaVersion: "1.0",
-      parentUrl: input.parentUrl,
-      candidates: [...input.triage.selected, ...input.triage.rejected]
-    }, null, 2)}\n`,
+    text: `${JSON.stringify(
+      {
+        schemaVersion: "1.0",
+        parentUrl: input.parentUrl,
+        candidates: [...input.triage.selected, ...input.triage.rejected]
+      },
+      null,
+      2
+    )}\n`,
     captureMethod: "browser-agent-mcp-farm destination-candidate",
     toolName: "destination_candidate",
     evidenceKind: "destination_candidate",
@@ -1011,16 +868,7 @@ export async function writeDestinationCandidateArtifact(input: {
   });
 }
 
-export async function writeDestinationTriageArtifact(input: {
-  writer: ArtifactWriter;
-  runDir: string;
-  parentUrl: string;
-  contextToken: string;
-  baseCaptureId: string;
-  triage: DestinationTriageResult;
-  records: number;
-  signal?: AbortSignal | undefined;
-}): Promise<ArtifactRecord[]> {
+export async function writeDestinationTriageArtifact(input: { writer: ArtifactWriter; runDir: string; parentUrl: string; contextToken: string; baseCaptureId: string; triage: DestinationTriageResult; records: number; signal?: AbortSignal | undefined }): Promise<ArtifactRecord[]> {
   if (input.triage.candidateCount === 0) {
     return [];
   }
@@ -1047,15 +895,7 @@ export async function writeDestinationTriageArtifact(input: {
   });
 }
 
-export async function writeDestinationDeepeningProposalArtifact(input: {
-  writer: ArtifactWriter;
-  runDir: string;
-  parentUrl: string;
-  contextToken: string;
-  baseCaptureId: string;
-  proposals: DestinationDeepeningProposal[];
-  signal?: AbortSignal | undefined;
-}): Promise<ArtifactRecord[]> {
+export async function writeDestinationDeepeningProposalArtifact(input: { writer: ArtifactWriter; runDir: string; parentUrl: string; contextToken: string; baseCaptureId: string; proposals: DestinationDeepeningProposal[]; signal?: AbortSignal | undefined }): Promise<ArtifactRecord[]> {
   if (input.proposals.length === 0) {
     return [];
   }
@@ -1066,11 +906,15 @@ export async function writeDestinationDeepeningProposalArtifact(input: {
     pageId: "destination-deepening-proposals",
     captureId: `${input.baseCaptureId}-destination-deepening-proposals`,
     metadata: { destinationDeepeningProposals: input.proposals },
-    text: `${JSON.stringify({
-      schemaVersion: "1.0",
-      parentUrl: input.parentUrl,
-      proposals: input.proposals
-    }, null, 2)}\n`,
+    text: `${JSON.stringify(
+      {
+        schemaVersion: "1.0",
+        parentUrl: input.parentUrl,
+        proposals: input.proposals
+      },
+      null,
+      2
+    )}\n`,
     captureMethod: "browser-agent-mcp-farm destination-deepening-proposal",
     toolName: "destination_deepening_proposal",
     evidenceKind: "destination_deepening_proposal",
@@ -1078,15 +922,7 @@ export async function writeDestinationDeepeningProposalArtifact(input: {
   });
 }
 
-export async function writeDestinationDeepeningRunArtifact(input: {
-  writer: ArtifactWriter;
-  runDir: string;
-  parentUrl: string;
-  contextToken: string;
-  baseCaptureId: string;
-  summary: DestinationDeepeningExecutionSummary;
-  signal?: AbortSignal | undefined;
-}): Promise<ArtifactRecord[]> {
+export async function writeDestinationDeepeningRunArtifact(input: { writer: ArtifactWriter; runDir: string; parentUrl: string; contextToken: string; baseCaptureId: string; summary: DestinationDeepeningExecutionSummary; signal?: AbortSignal | undefined }): Promise<ArtifactRecord[]> {
   if (input.summary.status === "not_requested" || input.summary.status === "not_enabled") {
     return [];
   }
@@ -1098,11 +934,15 @@ export async function writeDestinationDeepeningRunArtifact(input: {
     captureId: `${input.baseCaptureId}-destination-deepening-run`,
     status: artifactStatusForDestinationDeepeningExecution(input.summary),
     metadata: { destinationDeepeningExecution: input.summary },
-    text: `${JSON.stringify({
-      schemaVersion: "1.0",
-      parentUrl: input.parentUrl,
-      execution: input.summary
-    }, null, 2)}\n`,
+    text: `${JSON.stringify(
+      {
+        schemaVersion: "1.0",
+        parentUrl: input.parentUrl,
+        execution: input.summary
+      },
+      null,
+      2
+    )}\n`,
     captureMethod: "browser-agent-mcp-farm destination-deepening-run",
     toolName: "destination_deepening_run",
     evidenceKind: "destination_deepening_run",
@@ -1110,15 +950,7 @@ export async function writeDestinationDeepeningRunArtifact(input: {
   });
 }
 
-function buildCandidate(input: {
-  parentUrl: string;
-  platform: SourcePlatform;
-  sourceFamily: SourceFamily;
-  request: SourceNavigationFollowUpRequest;
-  index: number;
-  query?: string | undefined;
-  sourceArtifactIds: string[];
-}): DestinationCandidate {
+function buildCandidate(input: { parentUrl: string; platform: SourcePlatform; sourceFamily: SourceFamily; request: SourceNavigationFollowUpRequest; index: number; query?: string | undefined; sourceArtifactIds: string[] }): DestinationCandidate {
   const rawUrl = absoluteUrl(input.request.url, input.parentUrl);
   const resolution = resolveDestinationUrl(rawUrl);
   const url = resolution.url;
@@ -1193,16 +1025,7 @@ function buildCandidate(input: {
   };
 }
 
-function candidateSignals(input: {
-  parentUrl: string;
-  url: string;
-  domain: string;
-  sourceFamily: SourceFamily;
-  candidateKind: DestinationCandidateKind;
-  queryIntent: DestinationQueryIntent;
-  request: SourceNavigationFollowUpRequest;
-  query?: string | undefined;
-}): string[] {
+function candidateSignals(input: { parentUrl: string; url: string; domain: string; sourceFamily: SourceFamily; candidateKind: DestinationCandidateKind; queryIntent: DestinationQueryIntent; request: SourceNavigationFollowUpRequest; query?: string | undefined }): string[] {
   const signals: string[] = [input.candidateKind];
   const parentHost = safeUrl(input.parentUrl)?.hostname.toLowerCase();
   if (parentHost !== undefined && parentHost !== input.domain) {
@@ -1245,13 +1068,7 @@ function candidateSignals(input: {
   return [...new Set(signals)];
 }
 
-function candidateWarnings(input: {
-  parentUrl: string;
-  sourceFamily: SourceFamily;
-  candidateKind: DestinationCandidateKind;
-  url: string;
-  request: SourceNavigationFollowUpRequest;
-}): string[] {
+function candidateWarnings(input: { parentUrl: string; sourceFamily: SourceFamily; candidateKind: DestinationCandidateKind; url: string; request: SourceNavigationFollowUpRequest }): string[] {
   const warnings: string[] = [];
   const parentHost = safeUrl(input.parentUrl)?.hostname.toLowerCase();
   const childHost = safeUrl(input.url)?.hostname.toLowerCase();
@@ -1276,13 +1093,7 @@ function candidateWarnings(input: {
   return warnings;
 }
 
-function candidateDecisionReasons(input: {
-  url: string;
-  candidateKind: DestinationCandidateKind;
-  signals: string[];
-  warnings: string[];
-  request: SourceNavigationFollowUpRequest;
-}): DestinationDecisionReasons {
+function candidateDecisionReasons(input: { url: string; candidateKind: DestinationCandidateKind; signals: string[]; warnings: string[]; request: SourceNavigationFollowUpRequest }): DestinationDecisionReasons {
   const positive: DestinationDecisionReasonCode[] = [];
   const negative: DestinationDecisionReasonCode[] = [];
   const haystack = `${input.url} ${input.request.linkText ?? ""}`;
@@ -1290,28 +1101,16 @@ function candidateDecisionReasons(input: {
   if (input.signals.includes("query_overlap")) {
     positive.push("query_overlap");
   }
-  if (
-    input.candidateKind === "official" ||
-    input.signals.includes("official_authority_hint") ||
-    input.signals.includes("institutional_authority_hint")
-  ) {
+  if (input.candidateKind === "official" || input.signals.includes("official_authority_hint") || input.signals.includes("institutional_authority_hint")) {
     positive.push("official_domain_match");
   }
-  if (
-    input.candidateKind === "news" &&
-    input.signals.includes("freshness_recent_hint") &&
-    (input.signals.includes("publisher_authority_hint") || input.signals.includes("authority_hint"))
-  ) {
+  if (input.candidateKind === "news" && input.signals.includes("freshness_recent_hint") && (input.signals.includes("publisher_authority_hint") || input.signals.includes("authority_hint"))) {
     positive.push("fresh_publisher_article");
   }
   if (input.candidateKind === "map_place" || input.signals.includes("local_authority_hint")) {
     positive.push("local_place_match");
   }
-  if (
-    input.candidateKind === "commerce" ||
-    input.signals.includes("price_or_offer_hint") ||
-    commerceEvidencePattern().test(haystack)
-  ) {
+  if (input.candidateKind === "commerce" || input.signals.includes("price_or_offer_hint") || commerceEvidencePattern().test(haystack)) {
     positive.push("price_or_offer_visible");
   }
   if (input.signals.includes("source_family_fit")) {
@@ -1340,10 +1139,7 @@ function candidateDecisionReasons(input: {
   };
 }
 
-function childDecisionReasons(
-  result: DestinationChildRunResult | undefined,
-  usefulness: DestinationUsefulness
-): DestinationDecisionReasons {
+function childDecisionReasons(result: DestinationChildRunResult | undefined, usefulness: DestinationUsefulness): DestinationDecisionReasons {
   const positive: DestinationDecisionReasonCode[] = [];
   const negative: DestinationDecisionReasonCode[] = [];
   const evidence = result?.childEvidence;
@@ -1352,21 +1148,13 @@ function childDecisionReasons(
     if (evidence.queryOverlapTokenCount > 0 || evidence.evidenceSignals.includes("query_overlap")) {
       positive.push("query_overlap");
     }
-    if (
-      evidence.evidenceSignals.includes("ocr_evidence") ||
-      evidence.evidenceSignals.includes("transcript_evidence") ||
-      evidence.evidenceSignals.includes("transcript_cue")
-    ) {
+    if (evidence.evidenceSignals.includes("ocr_evidence") || evidence.evidenceSignals.includes("transcript_evidence") || evidence.evidenceSignals.includes("transcript_cue")) {
       positive.push("transcript_or_ocr_hit");
     }
     if (commerceEvidencePattern().test(`${evidence.title ?? ""} ${evidence.finalUrl ?? ""} ${evidence.textSnippet ?? ""}`.toLowerCase())) {
       positive.push("price_or_offer_visible");
     }
-    if (
-      evidence.evidenceWarnings.includes("empty_visible_text") ||
-      evidence.evidenceWarnings.includes("missing_browser_capture") ||
-      evidence.evidenceWarnings.includes("missing_claims")
-    ) {
+    if (evidence.evidenceWarnings.includes("empty_visible_text") || evidence.evidenceWarnings.includes("missing_browser_capture") || evidence.evidenceWarnings.includes("missing_claims")) {
       negative.push("thin_content");
     }
     if (evidence.evidenceWarnings.includes("browser_obstruction_detected")) {
@@ -1415,10 +1203,7 @@ function childDecisionReasons(
   };
 }
 
-function rejectionDecisionReasonCodes(
-  usefulness: DestinationUsefulness,
-  rejectionReason: string
-): DestinationDecisionReasonCode[] {
+function rejectionDecisionReasonCodes(usefulness: DestinationUsefulness, rejectionReason: string): DestinationDecisionReasonCode[] {
   if (usefulness === "duplicate") {
     return ["duplicate"];
   }
@@ -1446,10 +1231,7 @@ function rejectionDecisionReasonCodes(
   return [];
 }
 
-function mergeDecisionReasons(
-  base: DestinationDecisionReasons,
-  next: DestinationDecisionReasons
-): DestinationDecisionReasons {
+function mergeDecisionReasons(base: DestinationDecisionReasons, next: DestinationDecisionReasons): DestinationDecisionReasons {
   return {
     positive: uniqueDecisionReasonCodes([...base.positive, ...next.positive]),
     negative: uniqueDecisionReasonCodes([...base.negative, ...next.negative])
@@ -1460,9 +1242,7 @@ function uniqueDecisionReasonCodes(codes: DestinationDecisionReasonCode[]): Dest
   return [...new Set(codes)];
 }
 
-function summarizeDestinationReasonCodes(
-  candidates: Array<{ reasonCodes: DestinationDecisionReasons }>
-): { positive: DestinationReasonCodeCount[]; negative: DestinationReasonCodeCount[] } {
+function summarizeDestinationReasonCodes(candidates: Array<{ reasonCodes: DestinationDecisionReasons }>): { positive: DestinationReasonCodeCount[]; negative: DestinationReasonCodeCount[] } {
   return {
     positive: countDestinationReasonCodes(candidates.flatMap((candidate) => candidate.reasonCodes.positive)),
     negative: countDestinationReasonCodes(candidates.flatMap((candidate) => candidate.reasonCodes.negative))
@@ -1543,23 +1323,11 @@ function queryIntentScore(intent: DestinationQueryIntent, candidateKind: Destina
   }
 }
 
-function scoreCandidate(input: {
-  rank: number;
-  candidateKind: DestinationCandidateKind;
-  queryIntent: DestinationQueryIntent;
-  signals: string[];
-  warnings: string[];
-  sourceFamily: SourceFamily;
-  platform: SourcePlatform;
-}): DestinationCandidateScoreBreakdown {
+function scoreCandidate(input: { rank: number; candidateKind: DestinationCandidateKind; queryIntent: DestinationQueryIntent; signals: string[]; warnings: string[]; sourceFamily: SourceFamily; platform: SourcePlatform }): DestinationCandidateScoreBreakdown {
   const profile = scoringProfileFor(input.sourceFamily, input.platform);
   const base = 50;
   const rank = Math.round(Math.max(0, 12 - input.rank) * profile.rankMultiplier);
-  const kind = ["official", "news", "blog", "community", "review"].includes(input.candidateKind)
-    ? 12
-    : ["commerce", "map_place", "media"].includes(input.candidateKind)
-      ? 8
-      : 0;
+  const kind = ["official", "news", "blog", "community", "review"].includes(input.candidateKind) ? 12 : ["commerce", "map_place", "media"].includes(input.candidateKind) ? 8 : 0;
   const query = Math.round((input.signals.includes("query_overlap") ? 14 : 0) * profile.queryMultiplier);
   const authority = Math.round(authorityScore(input.signals) * profile.authorityMultiplier);
   const freshness = Math.round(freshnessScore(input.signals, input.warnings) * profile.freshnessMultiplier);
@@ -1878,16 +1646,16 @@ function staleYearHint(value: string): boolean {
 }
 
 function yearHints(value: string): number[] {
-  return [...value.matchAll(/\b(20\d{2})\b/g)]
-    .map((match) => Number(match[1]))
-    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2099);
+  return [...value.matchAll(/\b(20\d{2})\b/g)].map((match) => Number(match[1])).filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2099);
 }
 
-function hardRejectionFor(candidate: DestinationCandidate): {
-  usefulness: DestinationUsefulness;
-  reason: string;
-  reasonCode: DestinationDecisionReasonCode;
-} | undefined {
+function hardRejectionFor(candidate: DestinationCandidate):
+  | {
+      usefulness: DestinationUsefulness;
+      reason: string;
+      reasonCode: DestinationDecisionReasonCode;
+    }
+  | undefined {
   const haystack = `${candidate.url} ${candidate.linkText ?? ""}`;
   if (loginOrAccountSurface(haystack)) {
     return {
@@ -1913,12 +1681,7 @@ function hardRejectionFor(candidate: DestinationCandidate): {
   return undefined;
 }
 
-function rejectCandidate(
-  candidate: DestinationCandidate,
-  usefulness: DestinationUsefulness,
-  rejectionReason: string,
-  reasonCode?: DestinationDecisionReasonCode | undefined
-): DestinationRejectedCandidate {
+function rejectCandidate(candidate: DestinationCandidate, usefulness: DestinationUsefulness, rejectionReason: string, reasonCode?: DestinationDecisionReasonCode | undefined): DestinationRejectedCandidate {
   return {
     ...candidate,
     selectionStatus: "rejected",
@@ -1931,11 +1694,7 @@ function rejectCandidate(
   };
 }
 
-export function classifyDestinationChildUsefulness(
-  result: DestinationChildRunResult | undefined,
-  query: string | undefined,
-  context?: DestinationChildUsefulnessContext | undefined
-): DestinationUsefulness {
+export function classifyDestinationChildUsefulness(result: DestinationChildRunResult | undefined, query: string | undefined, context?: DestinationChildUsefulnessContext | undefined): DestinationUsefulness {
   if (result === undefined) {
     return "useful";
   }
@@ -1953,12 +1712,7 @@ export function classifyDestinationChildUsefulness(
     if (query !== undefined && evidence.queryOverlapTokenCount === 0) {
       return "off_topic";
     }
-    if (
-      context !== undefined &&
-      context.queryIntent !== "general" &&
-      !queryIntentFitsCandidateKind(context.queryIntent, context.candidateKind) &&
-      !childEvidenceSupportsQueryIntent(evidence, context.queryIntent)
-    ) {
+    if (context !== undefined && context.queryIntent !== "general" && !queryIntentFitsCandidateKind(context.queryIntent, context.candidateKind) && !childEvidenceSupportsQueryIntent(evidence, context.queryIntent)) {
       return "off_topic";
     }
     return "useful";
@@ -1993,12 +1747,7 @@ function childEvidenceSupportsQueryIntent(evidence: DestinationChildEvidenceSumm
   }
 }
 
-export function classifyDestinationProbeCandidate(input: {
-  parentUrl: string;
-  sourceFamily: SourceFamily;
-  url: string;
-  linkText?: string | undefined;
-}): DestinationProbeCandidateClassification {
+export function classifyDestinationProbeCandidate(input: { parentUrl: string; sourceFamily: SourceFamily; url: string; linkText?: string | undefined }): DestinationProbeCandidateClassification {
   const warnings: string[] = [];
   const url = resolveDestinationUrl(input.url, input.parentUrl).url;
   const haystack = `${url} ${input.url} ${input.linkText ?? ""}`;
@@ -2016,11 +1765,7 @@ export function classifyDestinationProbeCandidate(input: {
   if (!sourceFamilyFits(input.sourceFamily, candidateKind)) {
     warnings.push("source_family_weak_fit");
   }
-  const hardWarnings = new Set([
-    "unsupported_destination",
-    "low_value_navigation_surface",
-    "login_or_account_surface"
-  ]);
+  const hardWarnings = new Set(["unsupported_destination", "low_value_navigation_surface", "login_or_account_surface"]);
   return {
     promotable: warnings.every((warning) => !hardWarnings.has(warning)),
     warnings
@@ -2031,18 +1776,10 @@ function artifactStatusForDestinationDeepeningExecution(summary: DestinationDeep
   return summary.status === "partial" ? "partial" : "ok";
 }
 
-function destinationTriageWarnings(
-  input: BuildDestinationTriageInput,
-  candidates: DestinationCandidate[],
-  selected: DestinationSelectedCandidate[],
-  rejected: DestinationRejectedCandidate[]
-): string[] {
+function destinationTriageWarnings(input: BuildDestinationTriageInput, candidates: DestinationCandidate[], selected: DestinationSelectedCandidate[], rejected: DestinationRejectedCandidate[]): string[] {
   const maxSelected = normalizeMaxSelected(input.maxSelected);
   const maxPerDomain = normalizeMaxPerDomain(input.maxPerDomain, maxSelected);
-  const warnings = [
-    "Destination triage is bounded evidence selection, not autonomous crawling.",
-    "Portal result evidence and destination content evidence must remain separately cited."
-  ];
+  const warnings = ["Destination triage is bounded evidence selection, not autonomous crawling.", "Portal result evidence and destination content evidence must remain separately cited."];
   if (candidates.length > selected.length) {
     warnings.push("Some destination candidates were rejected or omitted by the top-K budget.");
   }
@@ -2058,20 +1795,13 @@ function destinationTriageWarnings(
   if (selected.some((candidate) => candidate.usefulness !== "useful")) {
     warnings.push("At least one selected child destination was downgraded after browser-visible child evidence review.");
   }
-  if (
-    selected.some((candidate) => candidate.usefulness !== "useful") &&
-    rejected.some((candidate) => candidate.usefulness === "budget_limited" && candidate.reasonCodes.negative.includes("top_k_budget"))
-  ) {
+  if (selected.some((candidate) => candidate.usefulness !== "useful") && rejected.some((candidate) => candidate.usefulness === "budget_limited" && candidate.reasonCodes.negative.includes("top_k_budget"))) {
     warnings.push("Selected child evidence was downgraded while unattempted fallback candidates remain; rerun with a higher maxFollowUps value or narrower destination selectors to test additional sources.");
   }
   return warnings;
 }
 
-function selectWithinBudgets(
-  sorted: DestinationCandidate[],
-  maxSelected: number,
-  maxPerDomain: number
-): { selectedBase: DestinationCandidate[]; domainLimitedIds: Set<string> } {
+function selectWithinBudgets(sorted: DestinationCandidate[], maxSelected: number, maxPerDomain: number): { selectedBase: DestinationCandidate[]; domainLimitedIds: Set<string> } {
   const selectedBase: DestinationCandidate[] = [];
   const domainCounts = new Map<string, number>();
   const domainLimitedIds = new Set<string>();
@@ -2196,10 +1926,7 @@ function queryFromUrl(url: string): string | undefined {
 }
 
 function queryFromKnownSearchPath(parsed: URL): string | undefined {
-  const patterns = [
-    /\/maps\/search\/([^/?#]+)/i,
-    /\/p\/search\/([^/?#]+)/i
-  ];
+  const patterns = [/\/maps\/search\/([^/?#]+)/i, /\/p\/search\/([^/?#]+)/i];
   for (const pattern of patterns) {
     const match = parsed.pathname.match(pattern);
     const raw = match?.[1];
@@ -2279,7 +2006,10 @@ function buildCrossScriptQueryAliasMap(): ReadonlyMap<string, readonly string[]>
   for (const group of CROSS_SCRIPT_QUERY_ALIAS_GROUPS) {
     const normalized = group.map((token) => token.toLowerCase());
     for (const token of normalized) {
-      map.set(token, normalized.filter((candidate) => candidate !== token));
+      map.set(
+        token,
+        normalized.filter((candidate) => candidate !== token)
+      );
     }
   }
   return map;
@@ -2412,13 +2142,7 @@ function providerBoilerplateSurface(parentUrl: string, destinationUrl: string, l
   }
 
   if (isBingSearchHost(parentHost)) {
-    if (
-      destinationHost === "www.bing.com" &&
-      (destinationPath.startsWith("/news/search") ||
-        destinationPath.startsWith("/images/search") ||
-        destinationPath.startsWith("/videos/search") ||
-        destinationPath.startsWith("/maps"))
-    ) {
+    if (destinationHost === "www.bing.com" && (destinationPath.startsWith("/news/search") || destinationPath.startsWith("/images/search") || destinationPath.startsWith("/videos/search") || destinationPath.startsWith("/maps"))) {
       return true;
     }
   }
@@ -2445,11 +2169,7 @@ function providerBoilerplateSurface(parentUrl: string, destinationUrl: string, l
 
   if (isYahooJapanSearchHost(parentHost)) {
     if (
-      (destinationHost === "search.yahoo.co.jp" && (
-        destinationPath.startsWith("/search") ||
-        destinationPath.startsWith("/image/search") ||
-        destinationPath.startsWith("/video/search")
-      )) ||
+      (destinationHost === "search.yahoo.co.jp" && (destinationPath.startsWith("/search") || destinationPath.startsWith("/image/search") || destinationPath.startsWith("/video/search"))) ||
       (destinationHost === "news.yahoo.co.jp" && destinationPath.startsWith("/search")) ||
       (destinationHost === "map.yahoo.co.jp" && destinationPath.startsWith("/search")) ||
       (destinationHost === "shopping.yahoo.co.jp" && destinationPath.startsWith("/search")) ||
@@ -2547,28 +2267,7 @@ function isReutersArticlePath(path: string): boolean {
   if (segments.length === 0) {
     return false;
   }
-  if ([
-    "site-search",
-    "world",
-    "business",
-    "markets",
-    "technology",
-    "legal",
-    "breakingviews",
-    "lifestyle",
-    "sports",
-    "latest",
-    "pictures",
-    "video",
-    "fact-check",
-    "about",
-    "contact-us",
-    "journalists",
-    "careers",
-    "newsletters",
-    "podcasts",
-    "sitemap"
-  ].includes(normalized.slice(1))) {
+  if (["site-search", "world", "business", "markets", "technology", "legal", "breakingviews", "lifestyle", "sports", "latest", "pictures", "video", "fact-check", "about", "contact-us", "journalists", "careers", "newsletters", "podcasts", "sitemap"].includes(normalized.slice(1))) {
     return false;
   }
   if (/-\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -2599,25 +2298,14 @@ function isYahooSearchHost(host: string): boolean {
 }
 
 function isYahooJapanSearchHost(host: string): boolean {
-  return host === "search.yahoo.co.jp" ||
-    host === "news.yahoo.co.jp" ||
-    host === "map.yahoo.co.jp" ||
-    host === "shopping.yahoo.co.jp" ||
-    host === "chiebukuro.yahoo.co.jp";
+  return host === "search.yahoo.co.jp" || host === "news.yahoo.co.jp" || host === "map.yahoo.co.jp" || host === "shopping.yahoo.co.jp" || host === "chiebukuro.yahoo.co.jp";
 }
 
 function loginOrAccountSurface(value: string): boolean {
   return /(^|[^a-z0-9])(login|log-in|signin|sign-in|signup|sign-up|account|accounts|auth|oauth|private)(?=$|[^a-z0-9])/i.test(value);
 }
 
-function destinationDeepeningSignals(input: {
-  childUrl: string;
-  url: string;
-  domain: string;
-  candidateKind: DestinationCandidateKind;
-  linkText: string;
-  query?: string | undefined;
-}): string[] {
+function destinationDeepeningSignals(input: { childUrl: string; url: string; domain: string; candidateKind: DestinationCandidateKind; linkText: string; query?: string | undefined }): string[] {
   const signals: string[] = [input.candidateKind, "depth_2_proposal"];
   const childHost = safeUrl(input.childUrl)?.hostname.toLowerCase();
   if (childHost !== undefined && childHost !== input.domain) {
@@ -2634,11 +2322,7 @@ function destinationDeepeningSignals(input: {
   return [...new Set(signals)];
 }
 
-function destinationDeepeningWarnings(input: {
-  childUrl: string;
-  url: string;
-  linkText: string;
-}): string[] {
+function destinationDeepeningWarnings(input: { childUrl: string; url: string; linkText: string }): string[] {
   const warnings: string[] = ["proposal_only_not_executed"];
   const childHost = safeUrl(input.childUrl)?.hostname.toLowerCase();
   const targetHost = safeUrl(input.url)?.hostname.toLowerCase();

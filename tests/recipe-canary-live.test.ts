@@ -18,7 +18,13 @@ afterEach(async () => {
 });
 
 async function chromiumAvailable(): Promise<boolean> {
-  return chromium.launch({ headless: true }).then(async (b) => { await b.close(); return true; }).catch(() => false);
+  return chromium
+    .launch({ headless: true })
+    .then(async (b) => {
+      await b.close();
+      return true;
+    })
+    .catch(() => false);
 }
 
 async function startFixture(html: string): Promise<string> {

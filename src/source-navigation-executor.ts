@@ -1,28 +1,13 @@
 import { createHash } from "node:crypto";
 import { throwIfAborted } from "./abort.js";
-import { ArtifactWriter, SANITIZED_FILE_BASE_MAX_LENGTH, sanitizeFileBase, type ArtifactRecord, type ArtifactStatus } from "./artifact-writer.js";
+import { type ArtifactWriter, SANITIZED_FILE_BASE_MAX_LENGTH, sanitizeFileBase, type ArtifactRecord, type ArtifactStatus } from "./artifact-writer.js";
 import type { BrowserClientStateResult, BrowserPool } from "./browser-pool.js";
 import { extractClientStateDestinationCandidates } from "./client-state-destinations.js";
-import {
-  buildSourceNavigationExecutionPlan,
-  type SourceNavigationExecutionLimits,
-  type SourceNavigationExecutionPlan,
-  type SourceNavigationExecutionStep
-} from "./source-navigation-execution.js";
+import { buildSourceNavigationExecutionPlan, type SourceNavigationExecutionLimits, type SourceNavigationExecutionPlan, type SourceNavigationExecutionStep } from "./source-navigation-execution.js";
 import type { SourceNavigationAction, SourceNavigationActionKind, SourceNavigationPlan } from "./source-navigation.js";
 import type { DestinationUrlResolutionMethod } from "./destination-url.js";
 
-export type SourceNavigationExecutableOperation =
-  | "click"
-  | "fill"
-  | "select"
-  | "press"
-  | "scroll"
-  | "wait_for_selector"
-  | "capture"
-  | "follow_up"
-  | "extract_destinations"
-  | "extract_client_state_destinations";
+export type SourceNavigationExecutableOperation = "click" | "fill" | "select" | "press" | "scroll" | "wait_for_selector" | "capture" | "follow_up" | "extract_destinations" | "extract_client_state_destinations";
 
 interface ExecutableActionBase {
   actionKey: string;
@@ -73,20 +58,16 @@ export type SourceNavigationExecutableAction =
   | (ExecutableActionBase & { operation: "follow_up"; selector?: string | undefined; url?: string | undefined; captureId?: string | undefined })
   | (ExecutableActionBase & { operation: "extract_destinations"; selector: string; maxLinks?: number | undefined; captureId?: string | undefined })
   | (ExecutableActionBase & {
-    operation: "extract_client_state_destinations";
-    selector?: string | undefined;
-    stateKey?: string | undefined;
-    extractor?: "naver_place_apollo" | undefined;
-    destinationPath?: string | undefined;
-    maxLinks?: number | undefined;
-    captureId?: string | undefined;
-  });
+      operation: "extract_client_state_destinations";
+      selector?: string | undefined;
+      stateKey?: string | undefined;
+      extractor?: "naver_place_apollo" | undefined;
+      destinationPath?: string | undefined;
+      maxLinks?: number | undefined;
+      captureId?: string | undefined;
+    });
 
-export type SourceNavigationActionExecutionStatus =
-  | "ok"
-  | "skipped"
-  | "unsupported"
-  | "error";
+export type SourceNavigationActionExecutionStatus = "ok" | "skipped" | "unsupported" | "error";
 
 export interface SourceNavigationActionExecutionResult {
   actionKey: string;
@@ -134,9 +115,7 @@ export interface SourceNavigationExecutionRunResult {
   failedActionCount: number;
 }
 
-export async function executeSourceNavigationActions(
-  input: ExecuteSourceNavigationActionsInput
-): Promise<SourceNavigationExecutionRunResult> {
+export async function executeSourceNavigationActions(input: ExecuteSourceNavigationActionsInput): Promise<SourceNavigationExecutionRunResult> {
   throwIfAborted(input.signal);
   const executionPlan = buildSourceNavigationExecutionPlan(input.plan, input.limits);
   const executableActions = normalizeExecutableActions(input.executableActions ?? []);
@@ -148,9 +127,7 @@ export async function executeSourceNavigationActions(
     throwIfAborted(input.signal);
     const action = step.actionKey === undefined ? undefined : actionByKey.get(step.actionKey);
     const instruction = step.actionKey === undefined ? undefined : executableActions.get(step.actionKey);
-    const result = instruction === undefined
-      ? await recordSkippedAction(input, step, action, records)
-      : await executeConfiguredAction(input, step, action, instruction, records);
+    const result = instruction === undefined ? await recordSkippedAction(input, step, action, records) : await executeConfiguredAction(input, step, action, instruction, records);
     actionResults.push(result);
   }
 
@@ -179,13 +156,7 @@ export async function executeSourceNavigationActions(
   };
 }
 
-async function executeConfiguredAction(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  action: SourceNavigationAction | undefined,
-  instruction: SourceNavigationExecutableAction,
-  records: ArtifactRecord[]
-): Promise<SourceNavigationActionExecutionResult> {
+async function executeConfiguredAction(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, action: SourceNavigationAction | undefined, instruction: SourceNavigationExecutableAction, records: ArtifactRecord[]): Promise<SourceNavigationActionExecutionResult> {
   const startedAt = Date.now();
   const captureRecords: ArtifactRecord[] = [];
   let finalUrl: string | undefined;
@@ -198,8 +169,8 @@ async function executeConfiguredAction(
 
   try {
     if (instruction.operation === "capture") {
-      captureRecords.push(...await captureNavigationState(input, step, "capture"));
-      captureRecords.push(...await captureInstructionScopes(input, step, instruction, "after"));
+      captureRecords.push(...(await captureNavigationState(input, step, "capture")));
+      captureRecords.push(...(await captureInstructionScopes(input, step, instruction, "after")));
       finalUrl = captureRecords.at(0)?.source_url;
       operationDetails = { capturedArtifactCount: captureRecords.length };
       assertionResults = await runExpectedStates(input, instruction, step.timeoutMs);
@@ -210,15 +181,15 @@ async function executeConfiguredAction(
       }
     } else {
       if (step.captureBefore) {
-        captureRecords.push(...await captureNavigationState(input, step, "before"));
+        captureRecords.push(...(await captureNavigationState(input, step, "before")));
       }
-      captureRecords.push(...await captureInstructionScopes(input, step, instruction, "before"));
+      captureRecords.push(...(await captureInstructionScopes(input, step, instruction, "before")));
       const operationResult = await runExecutableOperation(input, instruction, step.timeoutMs);
       finalUrl = operationResult.finalUrl;
       operationDetails = operationResult.details;
       followUp = operationResult.followUp;
       followUps = operationResult.followUps;
-      captureRecords.push(...await captureInstructionScopes(input, step, instruction, "after"));
+      captureRecords.push(...(await captureInstructionScopes(input, step, instruction, "after")));
       assertionResults = await runExpectedStates(input, instruction, step.timeoutMs);
       const assertionError = firstAssertionError(assertionResults);
       if (assertionError !== undefined) {
@@ -226,7 +197,7 @@ async function executeConfiguredAction(
         error = assertionError;
       }
       if (step.captureAfter) {
-        captureRecords.push(...await captureNavigationState(input, step, "after"));
+        captureRecords.push(...(await captureNavigationState(input, step, "after")));
       }
     }
   } catch (caught) {
@@ -291,9 +262,7 @@ async function executeConfiguredAction(
   if (followUps !== undefined) {
     result.followUps = followUps;
   }
-  const scopedCaptureArtifactIds = captureRecords
-    .filter((record) => record.tool_name === "farm_capture_scope")
-    .map((record) => record.artifact_id);
+  const scopedCaptureArtifactIds = captureRecords.filter((record) => record.tool_name === "farm_capture_scope").map((record) => record.artifact_id);
   if (assertionResults.length > 0) {
     result.assertionResults = assertionResults;
   }
@@ -306,12 +275,7 @@ async function executeConfiguredAction(
   return result;
 }
 
-async function recordSkippedAction(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  action: SourceNavigationAction | undefined,
-  records: ArtifactRecord[]
-): Promise<SourceNavigationActionExecutionResult> {
+async function recordSkippedAction(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, action: SourceNavigationAction | undefined, records: ArtifactRecord[]): Promise<SourceNavigationActionExecutionResult> {
   const metadataInput: RecordActionMetadataInput = {
     step,
     status: "skipped",
@@ -338,11 +302,7 @@ async function recordSkippedAction(
   return result;
 }
 
-async function recordUnsupportedAction(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  records: ArtifactRecord[]
-): Promise<SourceNavigationActionExecutionResult> {
+async function recordUnsupportedAction(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, records: ArtifactRecord[]): Promise<SourceNavigationActionExecutionResult> {
   const actionRecords = await recordActionMetadata(input, {
     step,
     status: "unsupported",
@@ -384,14 +344,7 @@ async function runExecutableOperation(
       return { finalUrl: result.url };
     }
     case "scroll": {
-      const result = await input.browserPool.scroll(
-        input.agentId,
-        input.contextToken,
-        input.pageId,
-        instruction.direction ?? "down",
-        instruction.pixels ?? 800,
-        input.signal
-      );
+      const result = await input.browserPool.scroll(input.agentId, input.contextToken, input.pageId, instruction.direction ?? "down", instruction.pixels ?? 800, input.signal);
       return { finalUrl: result.url, details: { scrollY: result.scrollY } };
     }
     case "wait_for_selector": {
@@ -452,9 +405,7 @@ async function runExecutableOperation(
           requestedMaxLinks: instruction.maxLinks ?? 10,
           extractedDestinationCount: requests.length,
           extractedDestinationUrls: requests.map((request) => request.url),
-          extractedOriginalDestinationUrls: requests
-            .map((request) => request.originalUrl)
-            .filter((url): url is string => url !== undefined),
+          extractedOriginalDestinationUrls: requests.map((request) => request.originalUrl).filter((url): url is string => url !== undefined),
           clientStateFrameCount: extraction.state.frameCount,
           clientStateMatchedFrameCount: extraction.state.matchedFrameCount,
           clientStateParsedFrameCount: extraction.parsedFrameCount,
@@ -467,11 +418,7 @@ async function runExecutableOperation(
   }
 }
 
-async function buildFollowUpRequest(
-  input: ExecuteSourceNavigationActionsInput,
-  instruction: Extract<SourceNavigationExecutableAction, { operation: "follow_up" }>,
-  timeoutMs: number
-): Promise<SourceNavigationFollowUpRequest> {
+async function buildFollowUpRequest(input: ExecuteSourceNavigationActionsInput, instruction: Extract<SourceNavigationExecutableAction, { operation: "follow_up" }>, timeoutMs: number): Promise<SourceNavigationFollowUpRequest> {
   const request: SourceNavigationFollowUpRequest = {
     actionKey: instruction.actionKey,
     url: "",
@@ -593,22 +540,13 @@ async function buildClientStateDestinationRequests(
   };
 }
 
-async function captureNavigationState(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  phase: "before" | "after" | "capture"
-): Promise<ArtifactRecord[]> {
+async function captureNavigationState(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, phase: "before" | "after" | "capture"): Promise<ArtifactRecord[]> {
   const key = actionCaptureKey(input, step, phase);
   const capture = await input.browserPool.capturePage(input.agentId, input.contextToken, input.pageId, key, input.signal);
   return capture.records;
 }
 
-async function captureInstructionScopes(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  instruction: SourceNavigationExecutableAction,
-  phase: "before" | "after"
-): Promise<ArtifactRecord[]> {
+async function captureInstructionScopes(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, instruction: SourceNavigationExecutableAction, phase: "before" | "after"): Promise<ArtifactRecord[]> {
   const records: ArtifactRecord[] = [];
   for (const [scopeIndex, scope] of (instruction.captureScopes ?? []).entries()) {
     if ((scope.phase ?? "after") !== phase) {
@@ -621,11 +559,7 @@ async function captureInstructionScopes(
   return records;
 }
 
-async function runExpectedStates(
-  input: ExecuteSourceNavigationActionsInput,
-  instruction: SourceNavigationExecutableAction,
-  stepTimeoutMs: number
-): Promise<SourceNavigationExpectedStateResult[]> {
+async function runExpectedStates(input: ExecuteSourceNavigationActionsInput, instruction: SourceNavigationExecutableAction, stepTimeoutMs: number): Promise<SourceNavigationExpectedStateResult[]> {
   const results: SourceNavigationExpectedStateResult[] = [];
   for (const expectation of instruction.expectedStates ?? []) {
     try {
@@ -634,25 +568,31 @@ async function runExpectedStates(
       const read = await input.browserPool.readVisibleText(input.agentId, input.contextToken, input.pageId, selector, timeoutMs, input.signal);
       const observedTextSnippet = read.text.slice(0, 500);
       if (expectation.textIncludes !== undefined && !includesText(read.text, expectation.textIncludes, expectation.caseSensitive ?? false)) {
-        results.push(withExpectationOptionals({
-          ...expectation,
-          status: "error",
-          observedTextSnippet,
-          error: `Expected visible text to include ${JSON.stringify(expectation.textIncludes)}`
-        }));
+        results.push(
+          withExpectationOptionals({
+            ...expectation,
+            status: "error",
+            observedTextSnippet,
+            error: `Expected visible text to include ${JSON.stringify(expectation.textIncludes)}`
+          })
+        );
         continue;
       }
-      results.push(withExpectationOptionals({
-        ...expectation,
-        status: "ok",
-        observedTextSnippet
-      }));
+      results.push(
+        withExpectationOptionals({
+          ...expectation,
+          status: "ok",
+          observedTextSnippet
+        })
+      );
     } catch (caught) {
-      results.push(withExpectationOptionals({
-        ...expectation,
-        status: "error",
-        error: caught instanceof Error ? caught.message : String(caught)
-      }));
+      results.push(
+        withExpectationOptionals({
+          ...expectation,
+          status: "error",
+          error: caught instanceof Error ? caught.message : String(caught)
+        })
+      );
     }
   }
   return results;
@@ -683,10 +623,7 @@ interface RecordActionMetadataInput {
   error?: string;
 }
 
-async function recordActionMetadata(
-  input: ExecuteSourceNavigationActionsInput,
-  metadataInput: RecordActionMetadataInput
-): Promise<ArtifactRecord[]> {
+async function recordActionMetadata(input: ExecuteSourceNavigationActionsInput, metadataInput: RecordActionMetadataInput): Promise<ArtifactRecord[]> {
   const captureId = actionCaptureKey(input, metadataInput.step, "action");
   const status = artifactStatusFor(metadataInput.status);
   const metadata: Record<string, unknown> = {
@@ -837,11 +774,7 @@ function validateExecutableAction(action: SourceNavigationExecutableAction): voi
   }
 }
 
-function actionCaptureKey(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  suffix: string
-): string {
+function actionCaptureKey(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, suffix: string): string {
   const base = input.captureIdBase ?? "source-navigation";
   const actionKey = step.actionKey ?? step.key;
   const raw = `${base}-${actionKey}-${suffix}`;
@@ -852,13 +785,7 @@ function actionCaptureKey(
   ]);
 }
 
-function scopedCaptureKey(
-  input: ExecuteSourceNavigationActionsInput,
-  step: SourceNavigationExecutionStep,
-  scope: SourceNavigationCaptureScope,
-  phase: "before" | "after",
-  scopeIndex: number
-): string {
+function scopedCaptureKey(input: ExecuteSourceNavigationActionsInput, step: SourceNavigationExecutionStep, scope: SourceNavigationCaptureScope, phase: "before" | "after", scopeIndex: number): string {
   const base = input.captureIdBase ?? "source-navigation";
   const actionKey = step.actionKey ?? step.key;
   const raw = `${base}-${actionKey}-scope-${scope.key}-${phase}`;
@@ -877,14 +804,21 @@ function sanitizeWithHashFallback(raw: string, compactSegments: Array<{ value: s
   }
 
   const compact = compactSegments
-    .map((segment) => sanitizeFileBase(segment.value).slice(0, segment.maxLength).replace(/^-+|-+$/g, ""))
+    .map((segment) =>
+      sanitizeFileBase(segment.value)
+        .slice(0, segment.maxLength)
+        .replace(/^-+|-+$/g, "")
+    )
     .filter((segment) => segment.length > 0)
     .join("-");
   return sanitizeFileBase(`${compact}-${shortHash(raw)}`);
 }
 
 function normalizedFileBase(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function shortHash(value: string): string {

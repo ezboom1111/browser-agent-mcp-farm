@@ -47,11 +47,7 @@ describe("critique runner", () => {
       ]
     });
     await mkdir(join(fixture.rootDir, ".gstack", "projects", "test", "rounds"), { recursive: true });
-    await writeFile(
-      join(fixture.rootDir, ".gstack", "projects", "test", "rounds", "round-01.md"),
-      "## Required Output\n\nWrite findings to:\n\n`.gstack/projects/test/rounds/round-01-output.md`\n",
-      "utf8"
-    );
+    await writeFile(join(fixture.rootDir, ".gstack", "projects", "test", "rounds", "round-01.md"), "## Required Output\n\nWrite findings to:\n\n`.gstack/projects/test/rounds/round-01-output.md`\n", "utf8");
 
     const result = await getNextCritiqueTask(fixture.queuePath, fixture.rootDir);
 

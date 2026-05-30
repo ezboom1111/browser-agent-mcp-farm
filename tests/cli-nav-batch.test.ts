@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runCli, trackTempDirs } from "./helpers/cli-harness.js";
 
-const { dirs, cleanup, makeTempDir } = trackTempDirs();
+const { cleanup, makeTempDir } = trackTempDirs();
 
 afterEach(cleanup);
 
@@ -85,13 +85,7 @@ describe("cli source-navigation-calibrate-batch (offline guards)", () => {
     const dir = await makeTempDir();
     const targets = join(dir, "targets.txt");
     await writeFile(targets, "https://example.com/one\n", "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-calibrate-batch",
-      "--urls-file",
-      targets,
-      "--calibration-concurrency",
-      "6"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-calibrate-batch", "--urls-file", targets, "--calibration-concurrency", "6"]);
     expect(out).toContain("--calibration-concurrency must be an integer between 1 and 5");
     expect(exitCode).toBe(1);
   });
@@ -100,16 +94,7 @@ describe("cli source-navigation-calibrate-batch (offline guards)", () => {
     const dir = await makeTempDir();
     const targets = join(dir, "targets.txt");
     await writeFile(targets, "https://example.com/one\n", "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-calibrate-batch",
-      "--urls-file",
-      targets,
-      "--profile",
-      "calib-profile",
-      "--persistent-profile",
-      "--calibration-concurrency",
-      "2"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-calibrate-batch", "--urls-file", targets, "--profile", "calib-profile", "--persistent-profile", "--calibration-concurrency", "2"]);
     expect(out).toContain("--calibration-concurrency must be 1 when --persistent-profile is used");
     expect(exitCode).toBe(1);
   });
@@ -136,13 +121,7 @@ describe("cli source-navigation-promote-batch (offline empty-catalogHints branch
     const manifest = join(dir, "manifest.json");
     const outputDir = join(dir, "promotion");
     await writeFile(manifest, emptyCatalogHintsManifest(dir), "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-promote-batch",
-      "--calibration-batch-manifest",
-      manifest,
-      "--output-dir",
-      outputDir
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-promote-batch", "--calibration-batch-manifest", manifest, "--output-dir", outputDir]);
     expect(out).toContain('"ok": true');
     expect(out).toContain('"promotionPath":');
     expect(out).toContain('"groupCount": 0');
@@ -162,9 +141,7 @@ describe("cli source-navigation-promote-batch (offline empty-catalogHints branch
 describe("cli source-navigation-promotion-review (offline empty-groups branch)", () => {
   it("requires --promotion-summary or --promotion-dir (arg-validation throw, exit 1)", async () => {
     const { out, exitCode } = await runCli(["source-navigation-promotion-review"]);
-    expect(out).toContain(
-      "source-navigation-promotion-review requires --promotion-summary <path> or --promotion-dir <path>"
-    );
+    expect(out).toContain("source-navigation-promotion-review requires --promotion-summary <path> or --promotion-dir <path>");
     expect(exitCode).toBe(1);
   });
 
@@ -178,9 +155,7 @@ describe("cli source-navigation-promotion-review (offline empty-groups branch)",
     expect(out).toContain('"readyGroupCount": 0');
     expect(out).toContain('"readyActionFileCount": 0');
     expect(out).toContain("No ready action files were found in this promotion summary.");
-    expect(out).toContain(
-      "Run the generated evidence-run commands only after reviewing the matching catalog/export files."
-    );
+    expect(out).toContain("Run the generated evidence-run commands only after reviewing the matching catalog/export files.");
     expect(exitCode).toBeFalsy();
   });
 
@@ -188,13 +163,7 @@ describe("cli source-navigation-promotion-review (offline empty-groups branch)",
     const dir = await makeTempDir();
     const summary = join(dir, "promotion-summary.json");
     await writeFile(summary, emptyGroupsPromotionSummary(dir), "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-promotion-review",
-      "--promotion-summary",
-      summary,
-      "--format",
-      "commands"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-promotion-review", "--promotion-summary", summary, "--format", "commands"]);
     expect(out).toBe("# No ready source-navigation action files found.");
     expect(exitCode).toBeFalsy();
   });
@@ -203,12 +172,7 @@ describe("cli source-navigation-promotion-review (offline empty-groups branch)",
     const dir = await makeTempDir();
     const summary = join(dir, "promotion-summary.json");
     await writeFile(summary, emptyGroupsPromotionSummary(dir), "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-promotion-review",
-      "--promotion-summary",
-      summary,
-      "--fail-no-ready"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-promotion-review", "--promotion-summary", summary, "--fail-no-ready"]);
     expect(out).toContain('"ok": false');
     expect(exitCode).toBe(1);
   });
@@ -217,13 +181,7 @@ describe("cli source-navigation-promotion-review (offline empty-groups branch)",
     const dir = await makeTempDir();
     const summary = join(dir, "promotion-summary.json");
     await writeFile(summary, emptyGroupsPromotionSummary(dir), "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-promotion-review",
-      "--promotion-summary",
-      summary,
-      "--format",
-      "xml"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-promotion-review", "--promotion-summary", summary, "--format", "xml"]);
     expect(out).toContain("--format must be json or commands");
     expect(exitCode).toBe(1);
   });
@@ -232,13 +190,7 @@ describe("cli source-navigation-promotion-review (offline empty-groups branch)",
     const dir = await makeTempDir();
     const summary = join(dir, "promotion-summary.json");
     await writeFile(summary, emptyGroupsPromotionSummary(dir), "utf8");
-    const { out, exitCode } = await runCli([
-      "source-navigation-promotion-review",
-      "--promotion-summary",
-      summary,
-      "--source-navigation-max-followups",
-      "9"
-    ]);
+    const { out, exitCode } = await runCli(["source-navigation-promotion-review", "--promotion-summary", summary, "--source-navigation-max-followups", "9"]);
     expect(out).toContain("--source-navigation-max-followups must be an integer between 0 and 5");
     expect(exitCode).toBe(1);
   });

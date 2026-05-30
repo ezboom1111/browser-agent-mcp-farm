@@ -1,12 +1,6 @@
 import type { PlatformCapabilityMap } from "./platform-adapters/index.js";
 
-export type BrowserObstructionKind =
-  | "login_wall"
-  | "app_interstitial"
-  | "bot_block"
-  | "region_gate"
-  | "age_gate"
-  | "media_unavailable";
+export type BrowserObstructionKind = "login_wall" | "app_interstitial" | "bot_block" | "region_gate" | "age_gate" | "media_unavailable";
 
 export type BrowserObstructionConfidence = "low" | "medium" | "high";
 
@@ -50,29 +44,13 @@ const WEAK_MEDIA_UNAVAILABLE_SIGNALS = new Set(["couldn't load", "could not load
 const OBSTRUCTION_RULES: ObstructionRule[] = [
   {
     kind: "login_wall",
-    signals: [
-      "log in to continue",
-      "login required",
-      "sign in to continue",
-      "sign in to view",
-      "sign up to view",
-      "create an account to view",
-      "continue with facebook",
-      "continue with google"
-    ],
+    signals: ["log in to continue", "login required", "sign in to continue", "sign in to view", "sign up to view", "create an account to view", "continue with facebook", "continue with google"],
     note: "The visible page appears to require login, account creation, or identity continuation before evidence can be viewed.",
     socialPlatformBoost: true
   },
   {
     kind: "app_interstitial",
-    signals: [
-      "open app to continue",
-      "open the app",
-      "open the app to continue",
-      "continue in the app",
-      "download the app",
-      "get the app"
-    ],
+    signals: ["open app to continue", "open the app", "open the app to continue", "continue in the app", "download the app", "get the app"],
     note: "The visible page appears to be an app-install or app-open interstitial rather than the target media.",
     socialPlatformBoost: true
   },
@@ -145,53 +123,24 @@ const OBSTRUCTION_RULES: ObstructionRule[] = [
   },
   {
     kind: "region_gate",
-    signals: [
-      "not available in your region",
-      "not available in this region",
-      "not available in your country",
-      "not available in this country",
-      "not available in your area"
-    ],
+    signals: ["not available in your region", "not available in this region", "not available in your country", "not available in this country", "not available in your area"],
     note: "The visible page appears to restrict the target content by region or country."
   },
   {
     kind: "age_gate",
-    signals: [
-      "age-restricted",
-      "confirm your age",
-      "verify your age",
-      "18+",
-      "sensitive content"
-    ],
+    signals: ["age-restricted", "confirm your age", "verify your age", "18+", "sensitive content"],
     note: "The visible page appears to require age confirmation or sensitive-content acknowledgement."
   },
   {
     kind: "media_unavailable",
-    signals: [
-      "video unavailable",
-      "this video is unavailable",
-      "content isn't available",
-      "content is not available",
-      "post unavailable",
-      "something went wrong",
-      "something wrong with the server",
-      "couldn't load",
-      "could not load"
-    ],
+    signals: ["video unavailable", "this video is unavailable", "content isn't available", "content is not available", "post unavailable", "something went wrong", "something wrong with the server", "couldn't load", "could not load"],
     note: "The visible page says the target media or post is unavailable."
   }
 ];
 
 export function classifyBrowserObstructions(input: BrowserObstructionInput): BrowserObstructionReport {
-  const haystack = normalizeText([
-    input.title,
-    input.finalUrl,
-    input.url,
-    input.text
-  ].filter((value): value is string => value !== undefined).join("\n"));
-  const detections = OBSTRUCTION_RULES
-    .map((rule) => matchRule(rule, haystack, input.platform))
-    .filter((detection): detection is BrowserObstructionDetection => detection !== undefined);
+  const haystack = normalizeText([input.title, input.finalUrl, input.url, input.text].filter((value): value is string => value !== undefined).join("\n"));
+  const detections = OBSTRUCTION_RULES.map((rule) => matchRule(rule, haystack, input.platform)).filter((detection): detection is BrowserObstructionDetection => detection !== undefined);
   const warnings = detections.map((detection) => `${detection.kind}:${detection.confidence}`);
 
   return {
@@ -222,11 +171,7 @@ function matchRule(rule: ObstructionRule, haystack: string, platform: PlatformCa
   };
 }
 
-function filterWeakSignals(
-  rule: ObstructionRule,
-  matchedSignals: string[],
-  platform: PlatformCapabilityMap["platform"]
-): string[] {
+function filterWeakSignals(rule: ObstructionRule, matchedSignals: string[], platform: PlatformCapabilityMap["platform"]): string[] {
   if (SOCIAL_PLATFORMS.has(platform)) {
     return matchedSignals;
   }

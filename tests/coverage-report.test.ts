@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildCoverageReport,
-  formatCoverageReportAsLines,
-  formatCoverageReportAsMarkdown,
-  type CoverageReportInput,
-  type CoverageReportSource
-} from "../src/coverage-report.js";
+import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, type CoverageReportInput, type CoverageReportSource } from "../src/coverage-report.js";
 import type { RecipeCanaryResult } from "../src/recipe-canary.js";
 
 const NOW = "2026-05-30T00:00:00.000Z";
@@ -109,12 +103,7 @@ describe("buildCoverageReport classification", () => {
 
   it("aggregates per-class counts and the maintenance budget", () => {
     const r = report({
-      sources: [
-        source({ platform: "youtube" }),
-        source({ platform: "google_search" }),
-        source({ platform: "blocked_site", readinessStatus: "blocked" }),
-        source({ platform: "blog" })
-      ],
+      sources: [source({ platform: "youtube" }), source({ platform: "google_search" }), source({ platform: "blocked_site", readinessStatus: "blocked" }), source({ platform: "blog" })],
       maintenanceSet: ["youtube", "google_search"],
       apiBackedPlatforms: ["youtube"],
       canaryLedger: [canary("google_search", "pass", "2026-05-29T00:00:00.000Z")]

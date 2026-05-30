@@ -30,9 +30,7 @@ export async function withAbort<T>(work: Promise<T>, signal: AbortSignal | undef
 }
 
 export function isAbortError(error: unknown): boolean {
-  return error instanceof EvidenceRunAbortError
-    || error instanceof DOMException && error.name === "AbortError"
-    || typeof error === "object" && error !== null && "name" in error && (error as { name?: unknown }).name === "AbortError";
+  return error instanceof EvidenceRunAbortError || (error instanceof DOMException && error.name === "AbortError") || (typeof error === "object" && error !== null && "name" in error && (error as { name?: unknown }).name === "AbortError");
 }
 
 function abortError(signal: AbortSignal): EvidenceRunAbortError {

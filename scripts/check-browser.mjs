@@ -18,9 +18,7 @@ try {
   console.log("Browser guard OK: Playwright Chromium launches.");
 } catch (error) {
   console.error("Browser guard FAILED: Playwright Chromium could not launch.");
-  console.error(
-    "Browser-backed tests (~26% of the suite) would silently skip and report a",
-  );
+  console.error("Browser-backed tests (~26% of the suite) would silently skip and report a");
   console.error("false-green PASS. Fix: npx playwright install --with-deps chromium");
   console.error(`\nUnderlying error: ${error?.message ?? error}`);
   process.exit(1);

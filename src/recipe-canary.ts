@@ -46,36 +46,23 @@ export interface RecipeCanaryResult {
  * slot to `needs_recalibration` (the QA target: a broken-selector fixture flips ready→
  * needs_recalibration).
  */
-export function evaluateRecipeCanary(
-  golden: RecipeCanaryGolden,
-  observation: RecipeCanaryObservation,
-  verifiedAt: string
-): RecipeCanaryResult {
+export function evaluateRecipeCanary(golden: RecipeCanaryGolden, observation: RecipeCanaryObservation, verifiedAt: string): RecipeCanaryResult {
   const present = new Set(observation.presentSelectors);
   const missingSelectors = golden.requiredSelectors.filter((selector) => !present.has(selector));
   const forbidden = new Set(golden.forbiddenObstructions ?? []);
   const unexpectedObstructions = observation.obstructionSignals.filter((signal) => forbidden.has(signal));
-  const verdict: RecipeCanaryVerdict =
-    missingSelectors.length === 0 && unexpectedObstructions.length === 0 ? "pass" : "needs_recalibration";
+  const verdict: RecipeCanaryVerdict = missingSelectors.length === 0 && unexpectedObstructions.length === 0 ? "pass" : "needs_recalibration";
   return { recipeKey: golden.recipeKey, verdict, verifiedAt, missingSelectors, unexpectedObstructions };
 }
 
 /** A page-observing probe. Injected so the canary core never imports the browser pool. */
-export type RecipeCanaryProbe = (
-  url: string,
-  requiredSelectors: string[]
-) => Promise<RecipeCanaryObservation>;
+export type RecipeCanaryProbe = (url: string, requiredSelectors: string[]) => Promise<RecipeCanaryObservation>;
 
 /**
  * Run one canary end-to-end: observe the live page via the injected probe, then evaluate
  * against the golden. Quota/rate concerns are the caller's (the CLI rate-caps invocations).
  */
-export async function runRecipeCanary(
-  golden: RecipeCanaryGolden,
-  url: string,
-  probe: RecipeCanaryProbe,
-  verifiedAt: string
-): Promise<RecipeCanaryResult> {
+export async function runRecipeCanary(golden: RecipeCanaryGolden, url: string, probe: RecipeCanaryProbe, verifiedAt: string): Promise<RecipeCanaryResult> {
   const observation = await probe(url, golden.requiredSelectors);
   return evaluateRecipeCanary(golden, observation, verifiedAt);
 }

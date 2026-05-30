@@ -9,12 +9,7 @@ import {
   type SourceCoverageReadinessRetryPlanCheckOptions
 } from "./source-coverage-readiness.js";
 import type { SourceNavigationCalibrationBatchManifest, SourceNavigationCalibrationBatchTarget, SourceNavigationCalibrationRuntime } from "./source-navigation-calibration-batch.js";
-import {
-  annotateSourceNavigationCalibrationTargets,
-  expandSearchCalibrationTargetVariants,
-  summarizeSourceNavigationCalibrationTargetDetections,
-  type SourceNavigationCalibrationTargetDetectionSummary
-} from "./source-navigation-calibration-targets.js";
+import { annotateSourceNavigationCalibrationTargets, expandSearchCalibrationTargetVariants, summarizeSourceNavigationCalibrationTargetDetections, type SourceNavigationCalibrationTargetDetectionSummary } from "./source-navigation-calibration-targets.js";
 import type { SourceNavigationBlockedSignalCount, SourceNavigationPromotionEvidenceRunOptions, SourceNavigationPromotionReview, SourceNavigationPromotionSummary } from "./source-navigation-promotion.js";
 
 export interface SourceCoverageCalibrationLoopPlanInput extends SourceCoverageReadinessAuditInput {
@@ -70,10 +65,12 @@ export interface SourceCoverageCalibrationLoopReportInput {
 
 export function buildSourceCoverageCalibrationLoopPlan(input: SourceCoverageCalibrationLoopPlanInput): SourceCoverageCalibrationLoopPlan {
   const audit = buildSourceCoverageReadinessAudit(input);
-  const targets = annotateSourceNavigationCalibrationTargets(expandSearchCalibrationTargetVariants(sourceCoverageReadinessCalibrationTargets(audit), {
-    query: audit.query,
-    includeSearchVariants: input.includeSearchVariants
-  }));
+  const targets = annotateSourceNavigationCalibrationTargets(
+    expandSearchCalibrationTargetVariants(sourceCoverageReadinessCalibrationTargets(audit), {
+      query: audit.query,
+      includeSearchVariants: input.includeSearchVariants
+    })
+  );
   const targetDetectionSummary = summarizeSourceNavigationCalibrationTargetDetections(targets);
   const targetFile = resolve(input.targetFile);
   const runRoot = resolve(input.runRoot);
@@ -158,10 +155,7 @@ export function sourceCoverageCalibrationLoopOutputPaths(runRoot: string): {
 export function formatSourceCoverageCalibrationLoopReport(input: SourceCoverageCalibrationLoopReportInput): string {
   const finalAudit = input.finalAudit;
   const effectiveAudit = finalAudit ?? input.plan.audit;
-  const retryPlanCheck = checkSourceCoverageReadinessRetryPlan(
-    buildSourceCoverageReadinessRetryPlan(effectiveAudit),
-    input.retryPlanCheckOptions
-  );
+  const retryPlanCheck = checkSourceCoverageReadinessRetryPlan(buildSourceCoverageReadinessRetryPlan(effectiveAudit), input.retryPlanCheckOptions);
   const lines = [
     "# Source Coverage Calibration Report",
     "",
@@ -258,9 +252,10 @@ function targetLines(plan: SourceCoverageCalibrationLoopPlan): string[] {
     return ["- No actionable calibration targets."];
   }
   return plan.targets.map((target) => {
-    const detected = target.detectedPlatform === undefined || target.detectedSourceFamily === undefined
-      ? ""
-      : ` (detected ${target.detectedPlatform}/${target.detectedSourceFamily}${target.parentPlatform === undefined ? "" : `; parent ${target.parentPlatform}`}${target.variantId === undefined ? "" : `; variant ${target.variantId}`})`;
+    const detected =
+      target.detectedPlatform === undefined || target.detectedSourceFamily === undefined
+        ? ""
+        : ` (detected ${target.detectedPlatform}/${target.detectedSourceFamily}${target.parentPlatform === undefined ? "" : `; parent ${target.parentPlatform}`}${target.variantId === undefined ? "" : `; variant ${target.variantId}`})`;
     return `- ${target.id}: ${target.url}${detected}`;
   });
 }
@@ -278,15 +273,9 @@ function readinessLines(audit: SourceCoverageReadinessAudit): string[] {
   }
   return audit.items.map((item) => {
     const destination = item.destinationExtraction;
-    const readyKeys = destination.readyActionKeys.length === 0
-      ? ""
-      : `; keys: ${destination.readyActionKeys.join(", ")}`;
-    const blockedSignals = item.blockedSignalCounts.length === 0
-      ? ""
-      : `; blocked signals: ${formatBlockedSignalCounts(item.blockedSignalCounts)}`;
-    const clientStateProbe = destination.clientStateProbeRunCount <= 0
-      ? ""
-      : `; client-state probes: ${destination.clientStateProbeOkRunCount}/${destination.clientStateProbeRunCount} ok, ${destination.clientStateProbeUniqueCandidateCount} unique`;
+    const readyKeys = destination.readyActionKeys.length === 0 ? "" : `; keys: ${destination.readyActionKeys.join(", ")}`;
+    const blockedSignals = item.blockedSignalCounts.length === 0 ? "" : `; blocked signals: ${formatBlockedSignalCounts(item.blockedSignalCounts)}`;
+    const clientStateProbe = destination.clientStateProbeRunCount <= 0 ? "" : `; client-state probes: ${destination.clientStateProbeOkRunCount}/${destination.clientStateProbeRunCount} ok, ${destination.clientStateProbeUniqueCandidateCount} unique`;
     return `- ${item.platform}: ${item.status}; destination extraction: ${destination.status} (${destination.readyActionCount}/${destination.candidateCount} ready${readyKeys}${clientStateProbe})${blockedSignals} (${item.reasons[0] ?? "no reason recorded"})`;
   });
 }
@@ -298,9 +287,7 @@ function profileHeadedRetryLines(audit: SourceCoverageReadinessAudit): string[] 
   }
   return retryPlan.items.map((item) => {
     const setup = item.profileSetupPowerShellCommand ?? "not required";
-    const selectorHints = item.selectorHintFiles.length === 0
-      ? "none"
-      : item.selectorHintFiles.join(", ");
+    const selectorHints = item.selectorHintFiles.length === 0 ? "none" : item.selectorHintFiles.join(", ");
     return `- ${item.order}. ${item.platform}: priority=${item.priority}${item.matchedTopRank === undefined ? "" : `; top-slot rank=${item.matchedTopRank}`}; profile=${item.profileName}; selector hints=${selectorHints}; blocked signals=${formatBlockedSignalCounts(item.blockedSignalCounts)}; setup=${setup}; retry=${item.powershellCommand}`;
   });
 }
@@ -320,15 +307,13 @@ function formatBlockedSignalCounts(counts: SourceNavigationBlockedSignalCount[])
   if (counts.length === 0) {
     return "none recorded";
   }
-  return counts.slice(0, 8).map((entry) =>
-    `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`
-  ).join(", ");
+  return counts
+    .slice(0, 8)
+    .map((entry) => `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`)
+    .join(", ");
 }
 
-function promotionLines(
-  promotion: SourceNavigationPromotionSummary | undefined,
-  promotionReview: SourceNavigationPromotionReview | undefined
-): string[] {
+function promotionLines(promotion: SourceNavigationPromotionSummary | undefined, promotionReview: SourceNavigationPromotionReview | undefined): string[] {
   if (promotion === undefined) {
     return ["- Promotion has not run yet."];
   }
@@ -342,11 +327,7 @@ function promotionLines(
 }
 
 function selectorHintLines(audit: SourceCoverageReadinessAudit): string[] {
-  const lines = audit.items.flatMap((item) =>
-    item.destinationExtraction.selectorHintFiles.map((file) =>
-      `- ${item.platform}: ${file} (${item.destinationExtraction.discoverySelectorHintCount} hint(s))`
-    )
-  );
+  const lines = audit.items.flatMap((item) => item.destinationExtraction.selectorHintFiles.map((file) => `- ${item.platform}: ${file} (${item.destinationExtraction.discoverySelectorHintCount} hint(s))`));
   if (lines.length === 0) {
     return ["- No selector hint files were reported by matching promotion groups."];
   }
@@ -355,13 +336,7 @@ function selectorHintLines(audit: SourceCoverageReadinessAudit): string[] {
 
 function destinationExtractionStatusCountsLine(audit: SourceCoverageReadinessAudit): string {
   const counts = audit.destinationExtractionStatusCounts;
-  return [
-    `ready=${counts.ready}`,
-    `blocked=${counts.blocked}`,
-    `needs_repeated_calibration=${counts.needs_repeated_calibration}`,
-    `not_promoted=${counts.not_promoted}`,
-    `not_applicable=${counts.not_applicable}`
-  ].join(", ");
+  return [`ready=${counts.ready}`, `blocked=${counts.blocked}`, `needs_repeated_calibration=${counts.needs_repeated_calibration}`, `not_promoted=${counts.not_promoted}`, `not_applicable=${counts.not_applicable}`].join(", ");
 }
 
 function detectionPlatformCountsLine(summary: SourceNavigationCalibrationTargetDetectionSummary): string {
@@ -385,26 +360,16 @@ function crossPlatformVariantLine(summary: SourceNavigationCalibrationTargetDete
   return `${summary.crossPlatformVariantCount} (${summary.crossPlatformVariantTargets.join(", ")})`;
 }
 
-function promotionDestinationExtractionCandidateCount(
-  promotionReview: SourceNavigationPromotionReview | undefined
-): number {
+function promotionDestinationExtractionCandidateCount(promotionReview: SourceNavigationPromotionReview | undefined): number {
   return promotionReview?.groups.reduce((sum, group) => sum + group.destinationExtraction.candidateCount, 0) ?? 0;
 }
 
-function promotionDestinationExtractionReadyActionCount(
-  promotionReview: SourceNavigationPromotionReview | undefined
-): number {
+function promotionDestinationExtractionReadyActionCount(promotionReview: SourceNavigationPromotionReview | undefined): number {
   return promotionReview?.groups.reduce((sum, group) => sum + group.destinationExtraction.readyActionCount, 0) ?? 0;
 }
 
 function warningLines(input: SourceCoverageCalibrationLoopReportInput): string[] {
-  const warnings = [
-    ...input.plan.warnings,
-    ...input.plan.audit.warnings,
-    ...(input.finalAudit?.warnings ?? []),
-    ...(input.promotion?.warnings ?? []),
-    ...(input.promotionReview?.warnings ?? [])
-  ];
+  const warnings = [...input.plan.warnings, ...input.plan.audit.warnings, ...(input.finalAudit?.warnings ?? []), ...(input.promotion?.warnings ?? []), ...(input.promotionReview?.warnings ?? [])];
   const uniqueWarnings = [...new Set(warnings)];
   if (uniqueWarnings.length === 0) {
     return ["- None."];

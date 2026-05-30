@@ -124,9 +124,7 @@ function summarizeJsonLd(jsonLd: unknown[]): StructuredSummary {
     if (summary.rating === undefined) {
       // Prefer an aggregateRating (Product/Place); fall back to a single Review's
       // reviewRating so a standalone review's score is captured too.
-      const ratingSource = isRecord(record.aggregateRating)
-        ? record.aggregateRating
-        : (isRecord(record.reviewRating) ? record.reviewRating : undefined);
+      const ratingSource = isRecord(record.aggregateRating) ? record.aggregateRating : isRecord(record.reviewRating) ? record.reviewRating : undefined;
       if (ratingSource !== undefined && ratingSource.ratingValue !== undefined) {
         summary.rating = { value: String(ratingSource.ratingValue) };
         if (ratingSource.bestRating !== undefined) {
@@ -266,7 +264,7 @@ export function extractTables(html: string): StructuredTable[] {
       continue;
     }
     const headerRow = parsedRows[0];
-    const hasHeader = headerRow !== undefined && headerRow.isHeader;
+    const hasHeader = headerRow?.isHeader;
     const table: StructuredTable = {
       headers: hasHeader ? headerRow.cells : [],
       rows: (hasHeader ? parsedRows.slice(1) : parsedRows).map((row) => row.cells)

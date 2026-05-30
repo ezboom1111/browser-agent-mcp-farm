@@ -2,17 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  buildDestinationRecoveryPlanFromRunDir,
-  checkDestinationRecoveryPlan,
-  filterDestinationRecoveryPlanByCheck,
-  formatDestinationRecoveryPlanCommandsAsLines,
-  formatDestinationRecoveryPlanMarkdown
-} from "../src/destination-recovery-plan.js";
-import type {
-  DestinationRecoveryPlan,
-  DestinationRecoveryPlanItem
-} from "../src/destination-recovery-plan.js";
+import { buildDestinationRecoveryPlanFromRunDir, checkDestinationRecoveryPlan, filterDestinationRecoveryPlanByCheck, formatDestinationRecoveryPlanCommandsAsLines, formatDestinationRecoveryPlanMarkdown } from "../src/destination-recovery-plan.js";
+import type { DestinationRecoveryPlan, DestinationRecoveryPlanItem } from "../src/destination-recovery-plan.js";
 import type { DestinationBlockedChildRecoveryAdvice } from "../src/destination-triage.js";
 import { runCli, trackTempDirs } from "./helpers/cli-harness.js";
 
@@ -24,10 +15,8 @@ afterEach(cleanup);
 // ---------------------------------------------------------------------------
 
 function recoveryAdvice(): DestinationBlockedChildRecoveryAdvice {
-  const profileSetupPowerShellCommand =
-    "'node' '.\\dist\\cli.js' 'auth-login' '--profile' 'pcmap.place.naver.com-recovery-profile' '--url' 'https://map.naver.com/p/entry/place/1790076538' '--wait-ms' '120000' '--browser-channel' 'chrome' '--persistent-profile'";
-  const evidenceRunPowerShellCommand =
-    "'node' '.\\dist\\cli.js' 'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home' '--wait-ms' '3000' '--timeout-ms' '30000' '--headed' '--browser-channel' 'chrome' '--profile' 'pcmap.place.naver.com-recovery-profile' '--persistent-profile' '--no-frames'";
+  const profileSetupPowerShellCommand = "'node' '.\\dist\\cli.js' 'auth-login' '--profile' 'pcmap.place.naver.com-recovery-profile' '--url' 'https://map.naver.com/p/entry/place/1790076538' '--wait-ms' '120000' '--browser-channel' 'chrome' '--persistent-profile'";
+  const evidenceRunPowerShellCommand = "'node' '.\\dist\\cli.js' 'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home' '--wait-ms' '3000' '--timeout-ms' '30000' '--headed' '--browser-channel' 'chrome' '--profile' 'pcmap.place.naver.com-recovery-profile' '--persistent-profile' '--no-frames'";
   return {
     recommendedAction: "profile_headed_retry",
     profileName: "pcmap.place.naver.com-recovery-profile",
@@ -56,11 +45,7 @@ function recoveryAdvice(): DestinationBlockedChildRecoveryAdvice {
     evidenceRunArgv: ["node", ".\\dist\\cli.js", "evidence-run", "--url", "https://pcmap.place.naver.com/restaurant/1790076538/home"],
     evidenceRunPowerShellCommand,
     commandHints: [profileSetupPowerShellCommand, evidenceRunPowerShellCommand],
-    reasons: [
-      "blocked_child_exposes_deeper_candidates",
-      "profile_headed_review_required",
-      "default_depth_2_execution_disabled"
-    ]
+    reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
   };
 }
 
@@ -89,9 +74,7 @@ const TRIAGE_RECORD = {
 
 // Build a run dir with one valid destination_triage artifact registered in
 // artifacts.jsonl. Optionally mutate the advice before writing.
-async function makeTriageRunDir(
-  mutate?: (advice: DestinationBlockedChildRecoveryAdvice) => void
-): Promise<string> {
+async function makeTriageRunDir(mutate?: (advice: DestinationBlockedChildRecoveryAdvice) => void): Promise<string> {
   const runDir = await makeTempDir("farm-destination-recovery-");
   await mkdir(join(runDir, "raw"), { recursive: true });
   const advice = recoveryAdvice();
@@ -103,10 +86,7 @@ async function makeTriageRunDir(
 
 // Construct an in-memory DestinationRecoveryPlanItem from advice (bypasses build,
 // so we can force bad order / whitespace profileName / missing steps).
-function makeRecoveryItem(
-  overrides: Partial<DestinationRecoveryPlanItem> = {},
-  advice: DestinationBlockedChildRecoveryAdvice = recoveryAdvice()
-): DestinationRecoveryPlanItem {
+function makeRecoveryItem(overrides: Partial<DestinationRecoveryPlanItem> = {}, advice: DestinationBlockedChildRecoveryAdvice = recoveryAdvice()): DestinationRecoveryPlanItem {
   return {
     order: 1,
     artifactId: "triage-text",
@@ -161,15 +141,7 @@ describe("destination-recovery-plan CLI", () => {
     const runDir = await makeTriageRunDir();
     const outFile = join(runDir, "plan.md");
 
-    const { exitCode } = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--format",
-      "markdown",
-      "--output-file",
-      outFile
-    ]);
+    const { exitCode } = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "markdown", "--output-file", outFile]);
     const md = await readFile(outFile, "utf8");
 
     expect(exitCode).toBeFalsy();
@@ -185,15 +157,7 @@ describe("destination-recovery-plan CLI", () => {
     const runDir = await makeTriageRunDir();
     const outFile = join(runDir, "check.json");
 
-    const { exitCode } = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--format",
-      "check",
-      "--output-file",
-      outFile
-    ]);
+    const { exitCode } = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "check", "--output-file", outFile]);
     const text = await readFile(outFile, "utf8");
 
     expect(exitCode).toBeFalsy();
@@ -209,33 +173,9 @@ describe("destination-recovery-plan CLI", () => {
     const setup = join(runDir, "setup.txt");
     const retry = join(runDir, "retry.txt");
 
-    const r1 = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--format",
-      "commands",
-      "--output-file",
-      cmds
-    ]);
-    const r2 = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--format",
-      "setup-commands",
-      "--output-file",
-      setup
-    ]);
-    const r3 = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--format",
-      "retry-commands",
-      "--output-file",
-      retry
-    ]);
+    const r1 = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "commands", "--output-file", cmds]);
+    const r2 = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "setup-commands", "--output-file", setup]);
+    const r3 = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "retry-commands", "--output-file", retry]);
 
     expect(r1.exitCode).toBeFalsy();
     expect(r2.exitCode).toBeFalsy();
@@ -246,9 +186,7 @@ describe("destination-recovery-plan CLI", () => {
     const retryText = await readFile(retry, "utf8");
 
     expect(cmdsText).toContain("'auth-login' '--profile' 'pcmap.place.naver.com-recovery-profile'");
-    expect(cmdsText).toContain(
-      "'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home'"
-    );
+    expect(cmdsText).toContain("'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home'");
     expect(setupText).toContain("'auth-login'");
     expect(setupText).not.toContain("'evidence-run'");
     expect(retryText).toContain("'evidence-run'");
@@ -261,9 +199,7 @@ describe("destination-recovery-plan CLI", () => {
     const { out, exitCode } = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--format", "bogus"]);
 
     expect(exitCode).toBe(1);
-    expect(out).toContain(
-      "--format must be json, check, markdown, commands, setup-commands, or retry-commands for destination-recovery-plan"
-    );
+    expect(out).toContain("--format must be json, check, markdown, commands, setup-commands, or retry-commands for destination-recovery-plan");
   });
 
   it("[SAFE] missing --run-dir throws required-arg error", async () => {
@@ -278,14 +214,7 @@ describe("destination-recovery-plan CLI", () => {
     await writeFile(join(emptyRunDir, "artifacts.jsonl"), "", "utf8");
     const outFile = join(emptyRunDir, "empty.json");
 
-    const { exitCode } = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      emptyRunDir,
-      "--output-file",
-      outFile,
-      "--fail-empty"
-    ]);
+    const { exitCode } = await runCli(["destination-recovery-plan", "--run-dir", emptyRunDir, "--output-file", outFile, "--fail-empty"]);
     const text = await readFile(outFile, "utf8");
 
     expect(exitCode).toBe(1);
@@ -301,25 +230,11 @@ describe("destination-recovery-plan CLI", () => {
     });
 
     const failCheckFile = join(runDir, "failcheck.json");
-    const { exitCode: failExit } = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--output-file",
-      failCheckFile,
-      "--fail-check"
-    ]);
+    const { exitCode: failExit } = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--output-file", failCheckFile, "--fail-check"]);
     expect(failExit).toBe(1);
 
     const onlyOkFile = join(runDir, "onlyok.json");
-    const { exitCode: onlyOkExit } = await runCli([
-      "destination-recovery-plan",
-      "--run-dir",
-      runDir,
-      "--output-file",
-      onlyOkFile,
-      "--only-check-ok"
-    ]);
+    const { exitCode: onlyOkExit } = await runCli(["destination-recovery-plan", "--run-dir", runDir, "--output-file", onlyOkFile, "--only-check-ok"]);
     const onlyOkText = await readFile(onlyOkFile, "utf8");
 
     expect(onlyOkExit).toBeFalsy();
@@ -357,11 +272,7 @@ describe("destination-recovery-plan API", () => {
   it("[SAFE] manifest skips invalid jsonl line, resolves structured records, and rejects outside-runDir paths", async () => {
     const runDir = await makeTempDir("farm-destination-recovery-api-manifest-");
     await mkdir(join(runDir, "structured"), { recursive: true });
-    await writeFile(
-      join(runDir, "structured", "fixture-destination-triage.json"),
-      triageDocument(recoveryAdvice()),
-      "utf8"
-    );
+    await writeFile(join(runDir, "structured", "fixture-destination-triage.json"), triageDocument(recoveryAdvice()), "utf8");
     const malformed = "not-json{";
     const escapeRecord = JSON.stringify({
       ...TRIAGE_RECORD,
@@ -377,11 +288,7 @@ describe("destination-recovery-plan API", () => {
       format: "json",
       path: "structured/fixture-destination-triage.json"
     });
-    await writeFile(
-      join(runDir, "artifacts.jsonl"),
-      `${malformed}\n${escapeRecord}\n${structuredRecord}\n`,
-      "utf8"
-    );
+    await writeFile(join(runDir, "artifacts.jsonl"), `${malformed}\n${escapeRecord}\n${structuredRecord}\n`, "utf8");
 
     const plan = await buildDestinationRecoveryPlanFromRunDir(runDir);
 
@@ -393,11 +300,7 @@ describe("destination-recovery-plan API", () => {
   it("[SAFE] fallback recurses into nested raw subdirectories", async () => {
     const runDir = await makeTempDir("farm-destination-recovery-api-fallback-");
     await mkdir(join(runDir, "raw", "nested"), { recursive: true });
-    await writeFile(
-      join(runDir, "raw", "nested", "fixture-destination-triage.txt"),
-      triageDocument(recoveryAdvice()),
-      "utf8"
-    );
+    await writeFile(join(runDir, "raw", "nested", "fixture-destination-triage.txt"), triageDocument(recoveryAdvice()), "utf8");
     await writeFile(join(runDir, "raw", "nested", "unrelated.log"), "noise", "utf8");
     // No artifacts.jsonl -> forces the fallback discovery path.
 
@@ -411,11 +314,7 @@ describe("destination-recovery-plan API", () => {
     // (1) summary present but no advice and no candidates -> extract returns undefined.
     const noAdviceDir = await makeTempDir("farm-destination-recovery-api-noadvice-");
     await mkdir(join(noAdviceDir, "raw"), { recursive: true });
-    await writeFile(
-      join(noAdviceDir, "raw", "fixture-destination-triage.txt"),
-      `${JSON.stringify({ schemaVersion: "1.0", summary: { status: "selected" } }, null, 2)}\n`,
-      "utf8"
-    );
+    await writeFile(join(noAdviceDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({ schemaVersion: "1.0", summary: { status: "selected" } }, null, 2)}\n`, "utf8");
     const noAdvicePlan = await buildDestinationRecoveryPlanFromRunDir(noAdviceDir);
     expect(noAdvicePlan.itemCount).toBe(0);
     expect(noAdvicePlan.warnings.some((w) => /No blocked child recovery advice was found under/.test(w))).toBe(true);
@@ -423,11 +322,7 @@ describe("destination-recovery-plan API", () => {
     // (2) candidates not an array -> synthesize returns undefined.
     const notArrayDir = await makeTempDir("farm-destination-recovery-api-notarray-");
     await mkdir(join(notArrayDir, "raw"), { recursive: true });
-    await writeFile(
-      join(notArrayDir, "raw", "fixture-destination-triage.txt"),
-      `${JSON.stringify({ summary: { blockedChildRecoveryCandidates: "not-an-array" } }, null, 2)}\n`,
-      "utf8"
-    );
+    await writeFile(join(notArrayDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({ summary: { blockedChildRecoveryCandidates: "not-an-array" } }, null, 2)}\n`, "utf8");
     const notArrayPlan = await buildDestinationRecoveryPlanFromRunDir(notArrayDir);
     expect(notArrayPlan.itemCount).toBe(0);
     expect(notArrayPlan.warnings.some((w) => /No blocked child recovery advice was found under/.test(w))).toBe(true);
@@ -437,15 +332,7 @@ describe("destination-recovery-plan API", () => {
     // to exercise isDestinationBlockedChildRecoveryCandidateSummary non-record branch.
     const partialDir = await makeTempDir("farm-destination-recovery-api-partial-");
     await mkdir(join(partialDir, "raw"), { recursive: true });
-    await writeFile(
-      join(partialDir, "raw", "fixture-destination-triage.txt"),
-      `${JSON.stringify(
-        { summary: { blockedChildRecoveryCandidates: [42, { partial: 1 }] } },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
+    await writeFile(join(partialDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({ summary: { blockedChildRecoveryCandidates: [42, { partial: 1 }] } }, null, 2)}\n`, "utf8");
     const partialPlan = await buildDestinationRecoveryPlanFromRunDir(partialDir);
     expect(partialPlan.itemCount).toBe(0);
     expect(partialPlan.warnings.some((w) => /No blocked child recovery advice was found under/.test(w))).toBe(true);

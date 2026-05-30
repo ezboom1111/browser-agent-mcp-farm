@@ -8,11 +8,7 @@ export * from "./tiktok.js";
 export * from "./types.js";
 export * from "./youtube.js";
 
-export const PLATFORM_ADAPTERS: PlatformEvidenceAdapter[] = [
-  new YouTubeEvidenceAdapter(),
-  new InstagramEvidenceAdapter(),
-  new TikTokEvidenceAdapter()
-];
+export const PLATFORM_ADAPTERS: PlatformEvidenceAdapter[] = [new YouTubeEvidenceAdapter(), new InstagramEvidenceAdapter(), new TikTokEvidenceAdapter()];
 
 export function describePlatformCapabilities(inputUrl: string): PlatformCapabilityMap {
   const url = parseUrl(inputUrl);
@@ -31,10 +27,7 @@ function describeGenericCapabilities(url: URL): PlatformCapabilityMap {
     canonicalUrl: url.toString(),
     confidence: "low",
     sources: [],
-    warnings: [
-      "No platform adapter matched this URL.",
-      "Only browser-visible evidence can be characterized without a platform-specific API contract."
-    ],
+    warnings: ["No platform adapter matched this URL.", "Only browser-visible evidence can be characterized without a platform-specific API contract."],
     capabilities: {
       metadata: notAttemptedCapability("metadata", "No platform-specific metadata API contract is registered for this URL."),
       thumbnail: notAttemptedCapability("thumbnail", "No platform-specific thumbnail API contract is registered for this URL."),

@@ -19,4 +19,3 @@ export function toToolError(error: unknown): { ok: false; code: string; message:
 
   return { ok: false, code: "internal_error", message: String(error) };
 }
-

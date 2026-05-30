@@ -4,14 +4,7 @@ import { matchingDestinationQueryTokens, type DestinationTextScriptFamily } from
 // seam in the split of that file): script-family detection for cross-script query/evidence
 // mismatch checks, and best-effort query recovery from a destination URL. No I/O, no browser.
 
-const TEXT_SCRIPT_FAMILIES: DestinationTextScriptFamily[] = [
-  "latin",
-  "hangul",
-  "hiragana",
-  "katakana",
-  "han",
-  "digit"
-];
+const TEXT_SCRIPT_FAMILIES: DestinationTextScriptFamily[] = ["latin", "hangul", "hiragana", "katakana", "han", "digit"];
 
 export function detectedTextScriptFamilies(value: string): DestinationTextScriptFamily[] {
   const counts = countTextScripts(value);
@@ -98,10 +91,7 @@ export function destinationQueryFromUrl(url: string): string | undefined {
 }
 
 function destinationQueryFromKnownSearchPath(parsed: URL): string | undefined {
-  const patterns = [
-    /\/maps\/search\/([^/?#]+)/i,
-    /\/p\/search\/([^/?#]+)/i
-  ];
+  const patterns = [/\/maps\/search\/([^/?#]+)/i, /\/p\/search\/([^/?#]+)/i];
   for (const pattern of patterns) {
     const match = parsed.pathname.match(pattern);
     const raw = match?.[1];

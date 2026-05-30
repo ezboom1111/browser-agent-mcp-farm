@@ -20,7 +20,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("executes only explicitly configured search actions and records action artifacts", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -85,7 +85,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures, scrolls, skips unconfigured generic actions, and records unsupported actions", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping generic source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -143,7 +143,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("records explicit follow-up destinations without navigating the parent page", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping follow-up source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -168,9 +168,7 @@ describe("executeSourceNavigationActions", () => {
 
       const result = await executeSourceNavigationActions({
         plan,
-        executableActions: [
-          { actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-destination" }
-        ],
+        executableActions: [{ actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-destination" }],
         browserPool: pool,
         artifactWriter,
         agentId: "agent",
@@ -204,7 +202,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("skips hash-only self links when resolving broad follow-up selectors", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping hash follow-up source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -229,9 +227,7 @@ describe("executeSourceNavigationActions", () => {
 
       const result = await executeSourceNavigationActions({
         plan,
-        executableActions: [
-          { actionKey: "destination-followup", operation: "follow_up", selector: ".followup-candidate", captureId: "fixture-destination" }
-        ],
+        executableActions: [{ actionKey: "destination-followup", operation: "follow_up", selector: ".followup-candidate", captureId: "fixture-destination" }],
         browserPool: pool,
         artifactWriter,
         agentId: "agent",
@@ -259,7 +255,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("extracts multiple visible destination links without navigating the parent page", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping multi-destination source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -327,7 +323,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("prefers unique extracted destinations before duplicate hash variants", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping destination extraction dedupe test because Playwright Chromium is not installed.");
       return;
     }
@@ -392,7 +388,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("extracts visible non-anchor destination attributes for SPA-style cards", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping attribute destination extraction test because Playwright Chromium is not installed.");
       return;
     }
@@ -454,7 +450,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures scoped map panels and verifies expected visible state", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping scoped map source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -523,17 +519,17 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(4);
       expect(result.skippedActionCount).toBe(2);
       expect(result.actionResults.find((action) => action.actionKey === "destination-followup")?.status).toBe("ok");
-      expect(result.followUps).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          url: "https://place.naver.com/restaurant/12345",
-          linkText: "Cafe Alpha Naver Place restaurant page"
-        })
-      ]));
+      expect(result.followUps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            url: "https://place.naver.com/restaurant/12345",
+            linkText: "Cafe Alpha Naver Place restaurant page"
+          })
+        ])
+      );
       const selectedPlace = result.actionResults.find((action) => action.actionKey === "selected-place");
       expect(selectedPlace?.status).toBe("ok");
-      expect(selectedPlace?.assertionResults).toEqual(expect.arrayContaining([
-        expect.objectContaining({ status: "ok", textIncludes: "Cafe Alpha" })
-      ]));
+      expect(selectedPlace?.assertionResults).toEqual(expect.arrayContaining([expect.objectContaining({ status: "ok", textIncludes: "Cafe Alpha" })]));
       expect(selectedPlace?.scopedCaptureArtifactIds?.length).toBeGreaterThan(0);
       expect(result.records.some((record) => record.tool_name === "farm_capture_scope" && record.kind === "screenshot")).toBe(true);
 
@@ -547,7 +543,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("extracts Naver Place destinations from browser client state", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping client-state destination extraction test because Playwright Chromium is not installed.");
       return;
     }
@@ -624,7 +620,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("extracts Naver Place destinations when client state lives in a visible iframe", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping frame client-state destination extraction test because Playwright Chromium is not installed.");
       return;
     }
@@ -699,7 +695,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures travel offer scopes and fails unmet expected states visibly", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping travel source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -777,9 +773,7 @@ describe("executeSourceNavigationActions", () => {
       const priceOcr = result.actionResults.find((action) => action.actionKey === "price-ocr");
       expect(priceOcr?.status).toBe("error");
       expect(priceOcr?.error).toContain("Expected source navigation state failed");
-      expect(priceOcr?.assertionResults).toEqual(expect.arrayContaining([
-        expect.objectContaining({ status: "error", textIncludes: "impossible text" })
-      ]));
+      expect(priceOcr?.assertionResults).toEqual(expect.arrayContaining([expect.objectContaining({ status: "error", textIncludes: "impossible text" })]));
 
       const ratePanel = await readFile(join(runDir, "raw", "fixture-travel-offer-detail-scope-rate-panel-after.txt"), "utf8");
       expect(ratePanel).toContain("Free cancellation");
@@ -793,7 +787,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("executes vertical tabs, filters, and bounded pagination in a search fixture", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping search vertical/pagination source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -866,7 +860,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Naver integrated search modules and extracts mixed vertical destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Naver integrated search source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -962,15 +956,17 @@ describe("executeSourceNavigationActions", () => {
       expect(result.status).toBe("ok");
       expect(result.executedActionCount).toBe(7);
       const followUpUrls = result.followUps.map((request) => request.url);
-      expect(followUpUrls).toEqual(expect.arrayContaining([
-        `${fixture.baseUrl}/naver-blog-destination`,
-        `${fixture.baseUrl}/naver-cafe-destination`,
-        `${fixture.baseUrl}/naver-news-destination`,
-        `${fixture.baseUrl}/naver-place-destination`,
-        `${fixture.baseUrl}/naver-image-destination`,
-        `${fixture.baseUrl}/naver-video-destination`,
-        `${fixture.baseUrl}/naver-shopping-destination`
-      ]));
+      expect(followUpUrls).toEqual(
+        expect.arrayContaining([
+          `${fixture.baseUrl}/naver-blog-destination`,
+          `${fixture.baseUrl}/naver-cafe-destination`,
+          `${fixture.baseUrl}/naver-news-destination`,
+          `${fixture.baseUrl}/naver-place-destination`,
+          `${fixture.baseUrl}/naver-image-destination`,
+          `${fixture.baseUrl}/naver-video-destination`,
+          `${fixture.baseUrl}/naver-shopping-destination`
+        ])
+      );
       expect(result.followUps.length).toBeGreaterThanOrEqual(7);
 
       const viewModule = await readFile(join(runDir, "raw", "fixture-naver-integrated-search-result-selection-scope-naver-view-module-after.txt"), "utf8");
@@ -987,7 +983,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Daum-like search result scopes and destination targets", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Daum-like search source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1073,7 +1069,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures fixture-backed Bing, Yahoo, and Yahoo Japan search scopes and destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping global search source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1197,12 +1193,14 @@ describe("executeSourceNavigationActions", () => {
         for (const actionKey of ["query-state", "vertical-tab", "visible-filters", "result-pagination", "result-selection", "destination-followup"]) {
           expect(result.actionResults.find((action) => action.actionKey === actionKey)?.status).toBe("ok");
         }
-        expect(result.followUps).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            actionKey: "destination-followup",
-            url: searchCase.destinationUrl
-          })
-        ]));
+        expect(result.followUps).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              actionKey: "destination-followup",
+              url: searchCase.destinationUrl
+            })
+          ])
+        );
 
         const resultCard = await readFile(join(runDir, "raw", `${searchCase.captureIdBase}-result-selection-scope-result-card-after.txt`), "utf8");
         expect(resultCard).toContain(searchCase.expectedCardText);
@@ -1215,7 +1213,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Google-like filters, result cards, gallery scopes, and follow-up targets", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Google-like source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1334,7 +1332,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Google-like rich modules and extracts mixed destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Google-like module source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1418,17 +1416,19 @@ describe("executeSourceNavigationActions", () => {
       expect(result.status).toBe("partial");
       expect(result.executedActionCount).toBe(5);
       expect(result.skippedActionCount).toBe(2);
-      expect(result.followUps).toEqual(expect.arrayContaining([
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-organic-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-news-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-local-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-image-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-video-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-travel-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-travel-search-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-hotel-destination` }),
-        expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-hotel-offer-destination` })
-      ]));
+      expect(result.followUps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-organic-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-news-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-local-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-image-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-video-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-travel-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-travel-search-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-hotel-destination` }),
+          expect.objectContaining({ actionKey: "destination-followup", url: `${fixture.baseUrl}/google-hotel-offer-destination` })
+        ])
+      );
       expect(result.actionResults.find((action) => action.actionKey === "destination-followup")?.operationDetails).toMatchObject({
         attributeDestinationCandidateCount: 5
       });
@@ -1457,7 +1457,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Korean and global news modules with publisher follow-up and obstruction state", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping news portal source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1625,7 +1625,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures community portal threads with follow-up and obstruction state", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping community portal source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1789,7 +1789,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures review portal listing cards, destinations, and obstruction state", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping review portal source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -1895,17 +1895,19 @@ describe("executeSourceNavigationActions", () => {
           expect(result.executedActionCount).toBe(7);
           expect(result.skippedActionCount).toBe(0);
           expect(result.unsupportedActionCount).toBe(3);
-          expect(result.followUps).toEqual(expect.arrayContaining([
-            expect.objectContaining({
-              actionKey: "destination-followup",
-              url: `${fixture.baseUrl}${item.destinationPath}`,
-              linkText: `${item.platform} listing destination`
-            }),
-            expect.objectContaining({
-              actionKey: "destination-followup",
-              url: `${fixture.baseUrl}/${item.id}-menu`
-            })
-          ]));
+          expect(result.followUps).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                actionKey: "destination-followup",
+                url: `${fixture.baseUrl}${item.destinationPath}`,
+                linkText: `${item.platform} listing destination`
+              }),
+              expect.objectContaining({
+                actionKey: "destination-followup",
+                url: `${fixture.baseUrl}/${item.id}-menu`
+              })
+            ])
+          );
 
           const extraction = result.actionResults.find((action) => action.actionKey === "destination-followup");
           expect(extraction?.operationDetails?.extractedDestinationCount).toBeGreaterThanOrEqual(3);
@@ -1928,7 +1930,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Google Scholar result metadata, citation links, and full-text destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Google Scholar source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2011,17 +2013,19 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(6);
       expect(result.skippedActionCount).toBe(1);
       expect(result.unsupportedActionCount).toBe(3);
-      expect(result.followUps).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          actionKey: "destination-followup",
-          url: "https://publisher.example/paper",
-          linkText: "Google Scholar academic result card"
-        }),
-        expect.objectContaining({
-          actionKey: "destination-followup",
-          url: "https://doi.org/10.1000/scholar-fixture"
-        })
-      ]));
+      expect(result.followUps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            actionKey: "destination-followup",
+            url: "https://publisher.example/paper",
+            linkText: "Google Scholar academic result card"
+          }),
+          expect.objectContaining({
+            actionKey: "destination-followup",
+            url: "https://doi.org/10.1000/scholar-fixture"
+          })
+        ])
+      );
 
       const extraction = result.actionResults.find((action) => action.actionKey === "destination-followup");
       expect(extraction?.operationDetails?.extractedDestinationCount).toBeGreaterThanOrEqual(4);
@@ -2040,7 +2044,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures knowledge database records, citation surfaces, and visible source destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping knowledge database source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2190,12 +2194,14 @@ describe("executeSourceNavigationActions", () => {
           expect(result.executedActionCount).toBe(3);
           expect(result.skippedActionCount).toBe(1);
           expect(result.unsupportedActionCount).toBe(1);
-          expect(result.followUps).toEqual(expect.arrayContaining([
-            expect.objectContaining({
-              actionKey: "destination-followup",
-              url: item.expectedDestinationUrl
-            })
-          ]));
+          expect(result.followUps).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                actionKey: "destination-followup",
+                url: item.expectedDestinationUrl
+              })
+            ])
+          );
           const extraction = result.actionResults.find((action) => action.actionKey === "destination-followup");
           expect(extraction?.operationDetails?.extractedDestinationCount).toBeGreaterThanOrEqual(2);
 
@@ -2212,7 +2218,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures community destination question answer and comment scopes", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping community destination source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2337,7 +2343,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("keeps long scoped capture file names unique after sanitization", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping long scoped capture filename test because Playwright Chromium is not installed.");
       return;
     }
@@ -2385,14 +2391,10 @@ describe("executeSourceNavigationActions", () => {
       });
 
       expect(result.executedActionCount).toBe(1);
-      const scopedPaths = result.records
-        .filter((record) => record.tool_name === "farm_capture_scope")
-        .map((record) => record.path);
+      const scopedPaths = result.records.filter((record) => record.tool_name === "farm_capture_scope").map((record) => record.path);
       expect(new Set(scopedPaths).size).toBe(scopedPaths.length);
 
-      const scopedTextPaths = result.records
-        .filter((record) => record.tool_name === "farm_capture_scope" && record.kind === "text")
-        .map((record) => record.path);
+      const scopedTextPaths = result.records.filter((record) => record.tool_name === "farm_capture_scope" && record.kind === "text").map((record) => record.path);
       expect(scopedTextPaths).toHaveLength(2);
       expect(new Set(scopedTextPaths).size).toBe(2);
 
@@ -2406,7 +2408,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Naver Cafe public content and member-wall obstruction without bypass", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Naver Cafe source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2478,10 +2480,7 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(4);
       expect(result.skippedActionCount).toBe(1);
       expect(result.unsupportedActionCount).toBe(1);
-      expect(result.followUps).toEqual([
-        expect.objectContaining({ url: `${fixture.baseUrl}/naver-cafe-source`, linkText: "Cafe source page" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/naver-cafe-related`, linkText: "Related cafe post" })
-      ]);
+      expect(result.followUps).toEqual([expect.objectContaining({ url: `${fixture.baseUrl}/naver-cafe-source`, linkText: "Cafe source page" }), expect.objectContaining({ url: `${fixture.baseUrl}/naver-cafe-related`, linkText: "Related cafe post" })]);
       expect(result.actionResults.find((action) => action.actionKey === "unsupported:member-only-bypass")).toBeDefined();
 
       const article = await readFile(join(runDir, "raw", "fixture-naver-cafe-article-capture-scope-article-after.txt"), "utf8");
@@ -2498,7 +2497,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures KakaoMap viewport, list, filter, and place detail panels", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping KakaoMap source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2585,7 +2584,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Google Maps selected place sheet, reviews, photos, and map labels", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Google Maps selected-place source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2701,7 +2700,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures Apple Maps local viewport, selected place, OCR label, and destinations", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping Apple Maps source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2789,11 +2788,13 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(6);
       expect(result.skippedActionCount).toBe(0);
       expect(result.unsupportedActionCount).toBe(0);
-      expect(result.followUps).toEqual(expect.arrayContaining([
-        expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-official`, linkText: "Official website" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-menu`, linkText: "Menu" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-reviews`, linkText: "Reviews" })
-      ]));
+      expect(result.followUps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-official`, linkText: "Official website" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-menu`, linkText: "Menu" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/apple-place-reviews`, linkText: "Reviews" })
+        ])
+      );
 
       const placeCard = await readFile(join(runDir, "raw", "fixture-apple-map-selected-place-scope-place-card-after.txt"), "utf8");
       expect(placeCard).toContain("Cafe Pomme");
@@ -2807,7 +2808,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures richer travel room and rate-card variants without entering booking flow", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping rich travel rate source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -2921,7 +2922,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures commerce product cards, seller terms, and price scopes without transaction actions", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping commerce marketplace source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3073,7 +3074,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures provider-specific commerce fixtures for major marketplaces without transaction actions", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping provider-specific commerce source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3249,12 +3250,14 @@ describe("executeSourceNavigationActions", () => {
         expect(result.executedActionCount).toBe(9);
         expect(result.unsupportedActionCount).toBe(3);
         expect(result.failedActionCount).toBe(0);
-        expect(result.followUps).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            actionKey: "destination-followup",
-            url: commerceCase.expectedDestinationUrl
-          })
-        ]));
+        expect(result.followUps).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              actionKey: "destination-followup",
+              url: commerceCase.expectedDestinationUrl
+            })
+          ])
+        );
 
         const productCard = await readFile(join(runDir, "raw", `${commerceCase.captureIdBase}-product-card-scope-product-card-after.txt`), "utf8");
         expect(productCard).toContain(commerceCase.expectedProductText);
@@ -3271,7 +3274,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures blog media gallery scopes without bypassing member walls", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping media gallery source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3350,7 +3353,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures video/social obstruction scopes without gate bypass", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping video obstruction source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3412,7 +3415,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures non-login video/social metadata, frame, and overlay scopes", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping visible video/social source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3520,7 +3523,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures YouTube search metadata and precise media destination links", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping YouTube source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3600,9 +3603,7 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(5);
       expect(result.skippedActionCount).toBe(0);
       expect(result.unsupportedActionCount).toBe(3);
-      expect(result.followUps).toEqual([
-        expect.objectContaining({ url: `${fixture.baseUrl}/watch?v=seoulcafes`, linkText: "Seoul cafe walkthrough" })
-      ]);
+      expect(result.followUps).toEqual([expect.objectContaining({ url: `${fixture.baseUrl}/watch?v=seoulcafes`, linkText: "Seoul cafe walkthrough" })]);
       const extraction = result.actionResults.find((action) => action.actionKey === "destination-followup");
       expect(extraction?.operationDetails?.anchorDestinationCandidateCount).toBe(1);
 
@@ -3618,7 +3619,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures TikTok public post metadata, SPA destinations, frame, and overlay scopes", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping TikTok visible source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3700,13 +3701,15 @@ describe("executeSourceNavigationActions", () => {
       expect(result.executedActionCount).toBe(5);
       expect(result.skippedActionCount).toBe(0);
       expect(result.unsupportedActionCount).toBe(3);
-      expect(result.followUps).toEqual(expect.arrayContaining([
-        expect.objectContaining({ url: `${fixture.baseUrl}/@public_cafe`, linkText: "Public TikTok profile" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/restaurant-source`, linkText: "Restaurant source" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-video/1234567890123456789`, linkText: "Canonical TikTok video" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-related-video`, linkText: "Related TikTok video card" }),
-        expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-creator-card`, linkText: "TikTok creator card" })
-      ]));
+      expect(result.followUps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ url: `${fixture.baseUrl}/@public_cafe`, linkText: "Public TikTok profile" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/restaurant-source`, linkText: "Restaurant source" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-video/1234567890123456789`, linkText: "Canonical TikTok video" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-related-video`, linkText: "Related TikTok video card" }),
+          expect.objectContaining({ url: `${fixture.baseUrl}/tiktok-creator-card`, linkText: "TikTok creator card" })
+        ])
+      );
       const extraction = result.actionResults.find((action) => action.actionKey === "destination-followup");
       expect(extraction?.operationDetails?.attributeDestinationCandidateCount).toBe(2);
       expect(extraction?.operationDetails?.anchorDestinationCandidateCount).toBe(3);
@@ -3729,7 +3732,7 @@ describe("executeSourceNavigationActions", () => {
   });
 
   it("captures X/Twitter public post metadata, thread context, media, and overlay scopes", async () => {
-    if (!await chromiumAvailable()) {
+    if (!(await chromiumAvailable())) {
       console.warn("Skipping X/Twitter source navigation executor test because Playwright Chromium is not installed.");
       return;
     }
@@ -3833,19 +3836,21 @@ describe("executeSourceNavigationActions", () => {
 
   it("rejects duplicate executable recipes before touching the browser", async () => {
     const artifactWriter = new ArtifactWriter();
-    await expect(executeSourceNavigationActions({
-      plan: planFor("https://example.com/"),
-      executableActions: [
-        { actionKey: "page-capture", operation: "capture" },
-        { actionKey: "page-capture", operation: "scroll" }
-      ],
-      browserPool: {} as BrowserPool,
-      artifactWriter,
-      agentId: "agent",
-      contextToken: "context",
-      pageId: "page",
-      runDir: "unused"
-    })).rejects.toThrow(/Duplicate executable action recipe/);
+    await expect(
+      executeSourceNavigationActions({
+        plan: planFor("https://example.com/"),
+        executableActions: [
+          { actionKey: "page-capture", operation: "capture" },
+          { actionKey: "page-capture", operation: "scroll" }
+        ],
+        browserPool: {} as BrowserPool,
+        artifactWriter,
+        agentId: "agent",
+        contextToken: "context",
+        pageId: "page",
+        runDir: "unused"
+      })
+    ).rejects.toThrow(/Duplicate executable action recipe/);
   });
 });
 
@@ -3857,7 +3862,8 @@ function planFor(url: string) {
 }
 
 async function chromiumAvailable(): Promise<boolean> {
-  return chromium.launch({ headless: true })
+  return chromium
+    .launch({ headless: true })
     .then(async (browser) => {
       await browser.close();
       return true;
@@ -4933,11 +4939,7 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
       const destination = isNaver ? "/naver-news-destination" : isYahoo ? "/yahoo-news-destination" : isReuters ? "/reuters-news-destination" : "/daum-news-destination";
       const mainId = isYahoo ? "Main" : isReuters ? "fusion-app" : "news-main";
       const moduleAttributes = isYahoo ? 'id="news-module" data-test-locator="stream" class="news-stream"' : 'id="news-module"';
-      const cardAttributes = isYahoo
-        ? 'id="headline-card" data-test-locator="stream-item"'
-        : isReuters
-          ? 'id="headline-card" data-testid="MediaStoryCard"'
-          : 'id="headline-card"';
+      const cardAttributes = isYahoo ? 'id="headline-card" data-test-locator="stream-item"' : isReuters ? 'id="headline-card" data-testid="MediaStoryCard"' : 'id="headline-card"';
       response.end(`<!doctype html><html><head><title>${platform} news fixture</title></head><body>
         <main id="${mainId}">
           <h1>${platform} news module fixture</h1>
@@ -4948,14 +4950,14 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
           <button id="${filterId}">Latest first</button>
           <p id="news-filter-state">sort: relevance</p>
           <section ${moduleAttributes}>
-            ${isReuters ? '<div id="reuters-news-module">' : ''}
+            ${isReuters ? '<div id="reuters-news-module">' : ""}
             <article ${cardAttributes}>
               <h2 data-testid="${isReuters ? "Heading" : "Headline"}">${platform} headline card - AI policy update</h2>
               <p data-testid="${isReuters ? "Body" : "Snippet"}">Visible headline snippet with thumbnail marker and ranking badge.</p>
               <a id="news-link" href="${destination}">${platform} publisher article</a>
             </article>
             <p id="publisher-meta">publisher: ${platform} Daily. published: 2026-05-27 09:00. section: technology.</p>
-            ${isReuters ? '</div>' : ''}
+            ${isReuters ? "</div>" : ""}
           </section>
           <button id="${moreId}">More news</button>
           <section id="news-obstruction-state">paywall: none. login: not required. comment write not attempted.</section>
@@ -4992,13 +4994,7 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
       </body></html>`);
       return;
     }
-    if ([
-      "/dcinside-community",
-      "/naver-kin-community",
-      "/reddit-community",
-      "/quora-community",
-      "/stack-overflow-community"
-    ].includes(path)) {
+    if (["/dcinside-community", "/naver-kin-community", "/reddit-community", "/quora-community", "/stack-overflow-community"].includes(path)) {
       const communityFixture = communityFixtureForPath(path);
       const { platform, queryId, destination, titleText } = communityFixture;
       response.end(`<!doctype html><html><head><title>${platform} community fixture</title></head><body>
@@ -5040,13 +5036,7 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
       </body></html>`);
       return;
     }
-    if ([
-      "/dcinside-thread",
-      "/naver-kin-answer",
-      "/reddit-thread",
-      "/quora-answer",
-      "/stack-overflow-answer"
-    ].includes(path)) {
+    if (["/dcinside-thread", "/naver-kin-answer", "/reddit-thread", "/quora-answer", "/stack-overflow-answer"].includes(path)) {
       const platform = destinationPlatformForPath(path);
       response.end(`<!doctype html><html><head><title>${platform} destination fixture</title></head><body>
         <main id="community-destination">
@@ -5129,16 +5119,7 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
       </body></html>`);
       return;
     }
-    if ([
-      "/yelp-business",
-      "/yelp-menu",
-      "/yelp-reviews",
-      "/yelp-official",
-      "/tripadvisor-listing",
-      "/tripadvisor-menu",
-      "/tripadvisor-reviews",
-      "/tripadvisor-official"
-    ].includes(path)) {
+    if (["/yelp-business", "/yelp-menu", "/yelp-reviews", "/yelp-official", "/tripadvisor-listing", "/tripadvisor-menu", "/tripadvisor-reviews", "/tripadvisor-official"].includes(path)) {
       const platform = path.startsWith("/yelp") ? "Yelp" : "TripAdvisor";
       response.end(`<!doctype html><html><head><title>${platform} review destination fixture</title></head><body>
         <main>
@@ -5614,14 +5595,15 @@ async function startNavigationFixtureServer(): Promise<{ baseUrl: string; close:
   }
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
-    close: () => new Promise<void>((resolve, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    })
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      })
   };
 }
