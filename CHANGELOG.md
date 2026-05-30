@@ -59,6 +59,10 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Changed
 
+- **Split `evidence-runner.ts`** (3064 → 2689 lines) along stage seams: the pure
+  text-script/destination-query helpers moved to `evidence-runner-text.ts` and the public
+  option/result/assessment/claim data model to `evidence-runner-types.ts` (re-exported, so
+  importers are unchanged).
 - Consolidated duplicated url/text/collection helpers into `src/util/`.
 - `cli.ts` is testable in-process (exported `main` behind an ESM entry-point guard).
 
