@@ -310,6 +310,59 @@ describe("runClaimGate", () => {
     const result = await runClaimGate(runDir, { mode: "final" });
     expect(result.ok).toBe(true);
   });
+
+  it("fails when a claim's only citation has no usable evidence reference", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-orphan-citation-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "gate",
+      text: "Evidence"
+    });
+    const evidence = records[0]?.artifact_id;
+    if (!evidence) {
+      throw new Error("Expected a registered artifact");
+    }
+
+    // The claim cites a registered artifact, but its only citation row carries
+    // no usable evidence/artifact reference. Before the per-claim fix this left
+    // the global citation-ref set empty and silently passed every claim.
+    await appendFile(join(runDir, "claims.jsonl"), `${JSON.stringify({ claim_id: "claim-1", claim: "Orphan", evidence })}\n`);
+    await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({ claim_id: "claim-1" })}\n`);
+
+    const result = await runClaimGate(runDir);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain("no usable evidence reference");
+  });
+
+  it("fails when a citation points at a different artifact than the claim evidence", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-citation-mismatch-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const aRecords = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/a", contextToken: "ctx_test", pageId: "page_a", captureId: "a", text: "Evidence A"
+    });
+    const bRecords = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/b", contextToken: "ctx_test", pageId: "page_b", captureId: "b", text: "Evidence B"
+    });
+    const evidenceA = aRecords[0]?.artifact_id;
+    const evidenceB = bRecords[0]?.artifact_id;
+    if (!evidenceA || !evidenceB) {
+      throw new Error("Expected two registered artifacts");
+    }
+
+    // The claim cites artifact A, but the citation row points at artifact B.
+    await appendFile(join(runDir, "claims.jsonl"), `${JSON.stringify({ claim_id: "claim-1", claim: "Mismatch", evidence: evidenceA })}\n`);
+    await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({ claim_id: "claim-1", evidence: evidenceB })}\n`);
+
+    const result = await runClaimGate(runDir);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain("does not match evidence");
+  });
 });
 
 async function appendTypedClaim(runDir: string, claim: {

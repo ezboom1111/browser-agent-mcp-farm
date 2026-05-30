@@ -85,7 +85,6 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
   }
 
   const citationIds = new Set(citations.map((citation) => citation.claim_id).filter((value): value is string => Boolean(value)));
-  const citationRefs = new Set<string>();
   const citationsByClaimId = new Map<string, CitationEvidence[]>();
   for (const citation of citations) {
     if (citation.claim_id === undefined) {
@@ -96,7 +95,6 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       continue;
     }
     const normalizedRef = normalizeEvidenceRef(citationRef);
-    citationRefs.add(`${citation.claim_id}\u0000${normalizedRef}`);
     const artifact = artifactsByRef.get(normalizedRef);
     const existing = citationsByClaimId.get(citation.claim_id) ?? [];
     existing.push({
@@ -116,11 +114,23 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       continue;
     }
 
-    if (claim.claim_id && !citationIds.has(claim.claim_id)) {
-      errors.push(`claim has no matching citation: ${claim.claim_id}`);
-    }
-    if (claim.claim_id && claim.evidence && citationRefs.size > 0 && !citationRefs.has(`${claim.claim_id}\u0000${normalizeEvidenceRef(claim.evidence)}`)) {
-      errors.push(`claim citation does not match evidence: ${claim.claim_id} -> ${claim.evidence}`);
+    if (claim.claim_id) {
+      const claimCitations = citationsByClaimId.get(claim.claim_id);
+      // claim.evidence is guaranteed defined here (the `!claim.evidence` guard
+      // above `continue`s). Hoist the normalized ref so the narrowing survives
+      // the `.some()` closure below.
+      const claimEvidenceRef = normalizeEvidenceRef(claim.evidence);
+      if (!citationIds.has(claim.claim_id)) {
+        errors.push(`claim has no matching citation: ${claim.claim_id}`);
+      } else if (claimCitations === undefined || claimCitations.length === 0) {
+        // A citation row exists for this claim id but none carries a usable
+        // evidence/artifact reference, so it cannot actually back the claim.
+        // Previously the per-claim match below was disabled whenever the GLOBAL
+        // citation-ref set was empty, silently passing such malformed ledgers.
+        errors.push(`claim citation has no usable evidence reference: ${claim.claim_id}`);
+      } else if (!claimCitations.some((citation) => citation.ref === claimEvidenceRef)) {
+        errors.push(`claim citation does not match evidence: ${claim.claim_id} -> ${claim.evidence}`);
+      }
     }
 
     const evidenceRef = normalizeEvidenceRef(claim.evidence);
