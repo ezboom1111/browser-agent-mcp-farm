@@ -5,7 +5,15 @@
   "type": "module",
   "description": "Playwright BrowserContext farm exposed through MCP tools.",
   "license": "Apache-2.0",
-  "author": "이지범 <cheonhorollerbounce@gmail.com>",
+  "author": "이지범 <ezboom1111@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezboom1111/browser-agent-mcp-farm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ezboom1111/browser-agent-mcp-farm/issues"
+  },
+  "homepage": "https://github.com/ezboom1111/browser-agent-mcp-farm#readme",
   "keywords": [
     "mcp",
     "model-context-protocol",
