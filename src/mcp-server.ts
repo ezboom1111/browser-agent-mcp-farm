@@ -21,8 +21,35 @@ import {
   ScrollInputSchema,
   SelectOptionInputSchema,
   WaitForSelectorInputSchema,
-  WaitInputSchema
+  WaitInputSchema,
+  ReadReportInputSchema,
+  ListArtifactsInputSchema,
+  RunClaimGateInputSchema
 } from "./schemas.js";
+
+const TOOL_DESCRIPTIONS: Record<string, string> = {
+  farm_acquire_context: "Acquire an isolated browser lease (BrowserContext) with capability, allowed-domain, and page-limit guards. Call FIRST before opening pages. Use read-only (default) for capture; read-write only to click/fill/press.",
+  farm_heartbeat: "Extend a lease's TTL so it is not reaped during long multi-step work. Call periodically.",
+  farm_open_page: "Open a URL in a leased context and return a pageId. Requires an active lease from farm_acquire_context.",
+  farm_capture: "Capture browser-visible evidence (screenshot, text, HTML, metadata, visible links, media index) of the current page into the run's artifact ledger. Read-only.",
+  farm_wait: "Wait a fixed number of milliseconds on a page to let content settle. Prefer farm_wait_for_selector when you know the target element.",
+  farm_wait_for_selector: "Wait until a CSS selector is present/visible (bounded by timeout). Use before capturing or acting on dynamic content.",
+  farm_scroll: "Scroll a page down/up/top/bottom to reveal lazy-loaded content before capture.",
+  farm_capture_after_idle: "Wait for network/DOM idle (bounded), then capture. Use for SPA/dynamic pages where content arrives after load.",
+  farm_sample_frames: "Sample timestamped frame screenshots from visible media (required to support visual claims). Supports dense sampling around transcript/OCR/scene-change hits.",
+  farm_evidence_run: "Flagship one-shot research workflow: given a URL (and optional bounded source-navigation recipe) it captures the page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a final claim-gated report. Prefer this for end-to-end research; it manages its own lease. Returns runDir + reportPath; the result is isError when the final claim gate fails.",
+  farm_read_report: "Read back the Markdown report a prior farm_evidence_run produced, given its reportPath. Read-only; no browser.",
+  farm_list_artifacts: "List the artifact ledger (artifacts.jsonl) for a prior run's runDir, optionally filtered by evidence kind. Read-only; no browser.",
+  farm_run_claim_gate: "Re-run the claim gate over an existing run's runDir to validate that claims cite registered, hash-verified artifacts. Read-only; the result is isError when the gate fails.",
+  farm_close_page: "Close a page in a leased context when finished with it.",
+  farm_click: "Guarded click on a selector. Requires a read-write lease; payment/booking/account-changing controls are refused.",
+  farm_fill: "Guarded fill of a form field. Requires a read-write lease.",
+  farm_press: "Guarded key press on a page (e.g. Enter to submit a search). Requires a read-write lease.",
+  farm_select_option: "Guarded <select> option choice. Requires a read-write lease.",
+  farm_release_context: "Release a lease and close its browser context. Call when finished to free the profile lock and resources.",
+  farm_list_leases: "List active leases (agent, capability, domains, page count, TTL). Read-only diagnostics.",
+  farm_reap_expired: "Reap expired leases and close their contexts. Maintenance/cleanup."
+};
 
 export function createMcpServer(service = new FarmService()): McpServer {
   const server = new McpServer({
@@ -40,6 +67,9 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_capture_after_idle", CaptureAfterIdleInputSchema, (input) => service.captureAfterIdle(input));
   registerJsonTool(server, "farm_sample_frames", SampleFramesInputSchema, (input) => service.sampleFrames(input));
   registerJsonTool(server, "farm_evidence_run", EvidenceRunInputSchema, (input) => service.evidenceRun(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(server, "farm_read_report", ReadReportInputSchema, (input) => service.readReport(input));
+  registerJsonTool(server, "farm_list_artifacts", ListArtifactsInputSchema, (input) => service.listArtifacts(input));
+  registerJsonTool(server, "farm_run_claim_gate", RunClaimGateInputSchema, (input) => service.runClaimGate(input), (result) => resultHasFailedClaimGate(result));
   registerJsonTool(server, "farm_close_page", ClosePageInputSchema, (input) => service.closePage(input));
   registerJsonTool(server, "farm_click", ClickInputSchema, (input) => service.click(input));
   registerJsonTool(server, "farm_fill", FillInputSchema, (input) => service.fill(input));
@@ -69,7 +99,7 @@ function registerJsonTool<T extends z.ZodRawShape>(
     name,
     {
       title: name,
-      description: `${name} for the Browser-Agent MCP Farm`,
+      description: TOOL_DESCRIPTIONS[name] ?? `${name} for the Browser-Agent MCP Farm`,
       inputSchema: schema.shape
     } as never,
     async (input: unknown) => {

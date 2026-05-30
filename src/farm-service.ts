@@ -1,4 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { BrowserPool } from "./browser-pool.js";
+import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { LeaseManager } from "./lease-manager.js";
@@ -19,6 +22,9 @@ import {
   WaitForSelectorInputSchema,
   WaitInputSchema,
   EvidenceRunInputSchema,
+  ReadReportInputSchema,
+  ListArtifactsInputSchema,
+  RunClaimGateInputSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
   type CaptureInput,
@@ -34,7 +40,10 @@ import {
   type SelectOptionInput,
   type WaitForSelectorInput,
   type WaitInput,
-  type EvidenceRunInput
+  type EvidenceRunInput,
+  type ReadReportInput,
+  type ListArtifactsInput,
+  type RunClaimGateInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -143,6 +152,46 @@ export class FarmService {
 
   listLeases() {
     return { ok: true as const, leases: this.leaseManager.list() };
+  }
+
+  // Read-only evidence-loop tools: let a pure-MCP agent read back what a prior
+  // evidence run produced (report, artifact ledger) and re-validate it, without
+  // opening a browser.
+  async readReport(input: ReadReportInput) {
+    const parsed = ReadReportInputSchema.parse(input);
+    const content = await readFile(parsed.reportPath, "utf8");
+    return { ok: true as const, reportPath: parsed.reportPath, content };
+  }
+
+  async listArtifacts(input: ListArtifactsInput) {
+    const parsed = ListArtifactsInputSchema.parse(input);
+    const text = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
+    const rows = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          return undefined;
+        }
+      })
+      .filter((row): row is Record<string, unknown> => row !== undefined);
+    const filtered = parsed.evidenceKind === undefined
+      ? rows
+      : rows.filter((row) => row.evidence_kind === parsed.evidenceKind);
+    const artifacts = filtered.slice(-parsed.limit).reverse();
+    return { ok: true as const, runDir: parsed.runDir, total: filtered.length, returned: artifacts.length, artifacts };
+  }
+
+  async runClaimGate(input: RunClaimGateInput) {
+    const parsed = RunClaimGateInputSchema.parse(input);
+    const options: ClaimGateOptions = { mode: parsed.mode };
+    if (parsed.minClaims !== undefined) {
+      options.minClaims = parsed.minClaims;
+    }
+    return runClaimGate(parsed.runDir, options);
   }
 
   async evidenceRun(input: EvidenceRunInput) {

@@ -112,19 +112,19 @@ export const FingerprintSchema = z.object({
 });
 
 export const AcquireContextInputSchema = z.object({
-  agentId: z.string().min(1),
-  runId: z.string().min(1),
-  artifactRunDir: z.string().min(1),
-  ttlMs: z.number().int().positive().max(3_600_000).optional(),
-  allowedDomains: z.array(z.string().min(1)).optional(),
-  maxPages: z.number().int().positive().max(20).optional(),
-  capability: CapabilitySchema.default("read-only"),
-  storagePolicy: StoragePolicySchema.default("ephemeral"),
-  profileName: z.string().min(1).optional(),
-  storageStatePath: z.string().min(1).optional(),
-  userDataDir: z.string().min(1).optional(),
-  proxy: ProxyConfigSchema.optional(),
-  fingerprint: FingerprintSchema.optional()
+  agentId: z.string().min(1).describe("ID of the calling agent; recorded as the lease owner and required by every later tool call."),
+  runId: z.string().min(1).describe("Caller-chosen run identifier used to group artifacts for one research run."),
+  artifactRunDir: z.string().min(1).describe("Absolute directory where this run's artifacts (screenshots, text, ledgers) are written."),
+  ttlMs: z.number().int().positive().max(3_600_000).optional().describe("Lease time-to-live in ms (max 1h). Extend with farm_heartbeat during long work."),
+  allowedDomains: z.array(z.string().min(1)).optional().describe("Allowlist of hostnames this lease may open; requests to other domains are refused."),
+  maxPages: z.number().int().positive().max(20).optional().describe("Maximum concurrent open pages for this lease (max 20)."),
+  capability: CapabilitySchema.default("read-only").describe("'read-only' for capture (default); 'read-write' only when you must click/fill/press. Payment/booking actions are always refused."),
+  storagePolicy: StoragePolicySchema.default("ephemeral").describe("'ephemeral' (fresh context, default); 'storage-state' (reuse a saved cookie jar); 'persistent-profile' (a real on-disk browser profile)."),
+  profileName: z.string().min(1).optional().describe("Named saved profile to reuse (with storage-state/persistent-profile). One active lease per profile, enforced across processes."),
+  storageStatePath: z.string().min(1).optional().describe("Explicit path to a Playwright storageState JSON (alternative to profileName)."),
+  userDataDir: z.string().min(1).optional().describe("Explicit persistent user-data directory (used with persistent-profile)."),
+  proxy: ProxyConfigSchema.optional().describe("Optional upstream proxy for this context."),
+  fingerprint: FingerprintSchema.optional().describe("Optional user-agent/locale/timezone/viewport overrides.")
 });
 
 export const HeartbeatInputSchema = z.object({
@@ -347,8 +347,8 @@ export const SourceNavigationRecipeInputSchema = z.object({
 }).default({ enabled: false, calibrate: false, actions: [] });
 
 export const EvidenceRunInputSchema = z.object({
-  url: z.url(),
-  runDir: z.string().min(1).optional(),
+  url: z.url().describe("The page to research. The farm captures the rendered page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a claim-gated report."),
+  runDir: z.string().min(1).optional().describe("Directory for this run's artifacts. Defaults to a temp directory; the chosen path is returned as `runDir`."),
   captureId: z.string().min(1).optional(),
   frameSelector: z.string().min(1).optional(),
   timestampsSec: z.array(z.number().nonnegative().max(86_400)).max(120).optional(),
@@ -357,11 +357,11 @@ export const EvidenceRunInputSchema = z.object({
   navigationTimeoutMs: z.number().int().positive().max(120_000).optional(),
   seekTimeoutMs: z.number().int().positive().max(30_000).optional(),
   settleMs: z.number().int().nonnegative().max(10_000).optional(),
-  sampleFrames: z.boolean().default(true),
-  finalClaimGate: z.boolean().default(true),
-  profileName: z.string().min(1).optional(),
+  sampleFrames: z.boolean().default(true).describe("Sample timestamped frames from visible media (required to support visual claims). Default true."),
+  finalClaimGate: z.boolean().default(true).describe("Run the final claim gate; the report (and the MCP result) fails if any claim is uncited or there are zero claims. Default true."),
+  profileName: z.string().min(1).optional().describe("Named saved profile to drive this run (for authenticated or anti-bot-sensitive pages)."),
   storagePolicy: StoragePolicySchema.optional(),
-  headed: z.boolean().default(false),
+  headed: z.boolean().default(false).describe("Run with a visible browser window. NOT supported over MCP (use the CLI); MCP evidence-run is headless."),
   browserChannel: z.string().min(1).optional(),
   overlayDismissal: z.object({
     enabled: z.boolean().default(true),
@@ -388,7 +388,23 @@ export const EvidenceRunInputSchema = z.object({
     enabled: z.boolean().default(false),
     credentials: OfficialApiCredentialsSchema.default({})
   }).default({ enabled: false, credentials: {} }),
-  sourceNavigation: SourceNavigationRecipeInputSchema
+  sourceNavigation: SourceNavigationRecipeInputSchema.describe("Optional explicit, bounded portal-navigation recipe (actions, follow-ups, destination extraction). Disabled by default; only supplied action-key recipes run, and only read-only/non-mutating operations are allowed.")
+});
+
+export const ReadReportInputSchema = z.object({
+  reportPath: z.string().min(1).describe("Path to a final report file, exactly as returned by farm_evidence_run's `reportPath`.")
+});
+
+export const ListArtifactsInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory (the `runDir` returned by farm_evidence_run) whose artifacts.jsonl ledger to list."),
+  evidenceKind: EvidenceKindSchema.optional().describe("Optional filter: only return artifacts of this evidence kind (e.g. frame_screenshot, destination_triage)."),
+  limit: z.number().int().positive().max(1000).default(200).describe("Maximum number of artifact rows to return.")
+});
+
+export const RunClaimGateInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory (the `runDir` returned by farm_evidence_run) to validate."),
+  mode: z.enum(["smoke", "final"]).default("final").describe("'final' enforces typed claims, citation provenance, and at least one cited claim; 'smoke' is lenient."),
+  minClaims: z.number().int().nonnegative().max(1000).optional().describe("Minimum number of claims required (defaults to 1 in final mode, 0 in smoke mode).")
 });
 
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
@@ -417,3 +433,6 @@ export type SourceNavigationExecutableActionInput = z.infer<typeof SourceNavigat
 export type SourceNavigationRecipeInput = z.infer<typeof SourceNavigationRecipeInputSchema>;
 export type EvidenceRunInput = z.input<typeof EvidenceRunInputSchema>;
 export type NormalizedEvidenceRunInput = z.output<typeof EvidenceRunInputSchema>;
+export type ReadReportInput = z.input<typeof ReadReportInputSchema>;
+export type ListArtifactsInput = z.input<typeof ListArtifactsInputSchema>;
+export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
