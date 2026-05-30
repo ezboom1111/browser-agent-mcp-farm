@@ -23,6 +23,11 @@ export const AGENT_GUIDANCE = {
     "To make your OWN answer cite-or-fail: farm_register_evidence { text, evidenceKind, sourceUrl } -> artifactId,",
     "then farm_add_claim { claim, artifactId, anchor: { type: 'text_span', quote } } -> the gate REJECTS a claim whose quote is not in the cited bytes."
   ],
+  verify: [
+    "Inspect a prior run without re-fetching: farm_list_runs -> farm_read_report / farm_list_artifacts / farm_read_artifact (re-hashes on read) / farm_run_claim_gate.",
+    "Portable attestation: farm_export_bundle { runDir } -> a Merkle-rooted (optionally Ed25519-signed) manifest; another agent runs farm_verify_bundle to detect any tampered file or manifest, fully offline.",
+    "Structured facts: farm_extract_structured { html } parses JSON-LD / Open Graph from a page_html artifact (a SITE CLAIM — cross-check against DOM/OCR)."
+  ],
   evidenceRules: [
     "A claim is only as good as its citation; visual claims need a timestamped frame, transcript/audio claims need the matching artifact.",
     "The gate proves byte-stability + grounding, NOT that bytes faithfully represent the live page; do not overstate.",
@@ -51,6 +56,9 @@ export function renderCodexGuidanceBlock(): string {
     "",
     "Author your own cite-or-fail claim:",
     ...g.authoring.map((line) => `- ${line}`),
+    "",
+    "Verify / inspect / portability:",
+    ...g.verify.map((line) => `- ${line}`),
     "",
     "Evidence rules:",
     ...g.evidenceRules.map((line) => `- ${line}`),

@@ -84,6 +84,25 @@ When you need fine control:
    Call `farm_heartbeat` periodically during long work so the lease is not
    reaped.
 
+## Verify, author, and portability (the trust loop)
+
+- **Read back / re-verify a run:** `farm_list_runs` to find a runDir; then
+  `farm_read_report`, `farm_list_artifacts`, `farm_read_artifact` (re-hashes on
+  read to flag tampering), or `farm_run_claim_gate` to re-validate.
+- **Make your OWN answer cite-or-fail:** `farm_register_evidence { text,
+  evidenceKind, sourceUrl }` → an artifactId, then `farm_add_claim { claim,
+  artifactId, anchor: { type: "text_span", quote } }`. The gate rejects a claim
+  whose quote is not present in the cited bytes.
+- **Portable attestation:** `farm_export_bundle { runDir }` produces a
+  Merkle-rooted (optionally Ed25519-signed) manifest; another agent runs
+  `farm_verify_bundle` to detect any tampered file or manifest, fully offline.
+- **Structured facts:** `farm_extract_structured { html }` parses JSON-LD /
+  Open Graph from a page_html artifact — treat publisher markup as a site claim
+  and cross-check it.
+
+See [`docs/THREAT_MODEL.md`](../../docs/THREAT_MODEL.md) for exactly what these
+prove and do not prove.
+
 ## Evidence rules to respect
 
 - A claim is only as good as its citation: visual claims require a timestamped
