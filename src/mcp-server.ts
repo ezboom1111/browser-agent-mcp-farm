@@ -27,7 +27,9 @@ import {
   RunClaimGateInputSchema,
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
-  AddClaimInputSchema
+  AddClaimInputSchema,
+  CapabilitiesInputSchema,
+  ListRunsInputSchema
 } from "./schemas.js";
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
@@ -54,7 +56,9 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_select_option: "Guarded <select> option choice. Requires a read-write lease.",
   farm_release_context: "Release a lease and close its browser context. Call when finished to free the profile lock and resources.",
   farm_list_leases: "List active leases (agent, capability, domains, page count, TTL). Read-only diagnostics.",
-  farm_reap_expired: "Reap expired leases and close their contexts. Maintenance/cleanup."
+  farm_reap_expired: "Reap expired leases and close their contexts. Maintenance/cleanup.",
+  farm_capabilities: "Identify THIS server (name, version, evidence kinds, non-goals, optional deps). Call to confirm you reached browser-agent-mcp-farm and not a similarly-named browse skill.",
+  farm_list_runs: "List prior evidence-run directories under a root (default: the temp dir) with artifact/claim counts, so you can find a runDir to read or verify. Read-only."
 };
 
 export function createMcpServer(service = new FarmService()): McpServer {
@@ -87,6 +91,8 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_release_context", ReleaseContextInputSchema, (input) => service.releaseContext(input));
   registerJsonTool(server, "farm_list_leases", ListLeasesInputSchema, () => service.listLeases());
   registerJsonTool(server, "farm_reap_expired", ReapExpiredInputSchema, () => service.reapExpired());
+  registerJsonTool(server, "farm_capabilities", CapabilitiesInputSchema, () => service.capabilities());
+  registerJsonTool(server, "farm_list_runs", ListRunsInputSchema, (input) => service.listRuns(input));
 
   return server;
 }

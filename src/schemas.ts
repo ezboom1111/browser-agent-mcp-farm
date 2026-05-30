@@ -472,6 +472,13 @@ export const AddClaimInputSchema = z.object({
   timestampSec: z.number().nonnegative().max(86_400).optional().describe("Required for visual claims citing a frame screenshot.")
 });
 
+export const CapabilitiesInputSchema = z.object({});
+
+export const ListRunsInputSchema = z.object({
+  runRoot: z.string().min(1).optional().describe("Directory to scan for run folders. Defaults to the system temp dir, where evidence-run writes."),
+  limit: z.number().int().positive().max(500).default(50).describe("Maximum number of runs to return.")
+});
+
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
 export type HeartbeatInput = z.input<typeof HeartbeatInputSchema>;
 export type OpenPageInput = z.input<typeof OpenPageInputSchema>;
@@ -504,5 +511,6 @@ export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
 export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
 export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
+export type ListRunsInput = z.input<typeof ListRunsInputSchema>;
 export type ClaimAnchor = z.infer<typeof ClaimAnchorSchema>;
 export type ClaimTaxonomy = z.infer<typeof ClaimTaxonomySchema>;

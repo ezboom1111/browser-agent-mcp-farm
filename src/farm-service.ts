@@ -1,5 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { appendFile, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { appendFile, readdir, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ArtifactWriter, type CaptureBundleInput } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
@@ -30,6 +33,8 @@ import {
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
+  ListRunsInputSchema,
+  EvidenceKindSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
   type CaptureInput,
@@ -51,7 +56,8 @@ import {
   type RunClaimGateInput,
   type ReadArtifactInput,
   type RegisterEvidenceInput,
-  type AddClaimInput
+  type AddClaimInput,
+  type ListRunsInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -344,6 +350,52 @@ export class FarmService {
     return { ok: gate.ok, appended: true as const, claimId, gate };
   }
 
+  // Self-description so an agent can confirm it reached THIS server (vs a
+  // collidingly-named browse skill) and discover evidence kinds + non-goals.
+  capabilities() {
+    return {
+      ok: true as const,
+      serverName: "browser-agent-mcp-farm",
+      version: "0.3.0",
+      evidenceKinds: EvidenceKindSchema.options,
+      nonGoals: [
+        "no login / CAPTCHA / paywall / age-gate bypass",
+        "no payments / bookings / account changes",
+        "no raw video or audio stream download",
+        "no full-video understanding without transcript/audio evidence"
+      ],
+      optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") }
+    };
+  }
+
+  // Discover prior runs (so a parallel agent can find a runDir to read/verify).
+  async listRuns(input: ListRunsInput) {
+    const parsed = ListRunsInputSchema.parse(input);
+    const root = parsed.runRoot ?? tmpdir();
+    const runs: Array<{ runDir: string; artifactCount: number; claimCount: number; hasReport: boolean }> = [];
+    try {
+      const entries = await readdir(root, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) {
+          continue;
+        }
+        const runDir = join(root, entry.name);
+        if (!existsSync(join(runDir, "artifacts.jsonl"))) {
+          continue;
+        }
+        runs.push({
+          runDir,
+          artifactCount: countJsonlLines(await readFile(join(runDir, "artifacts.jsonl"), "utf8").catch(() => "")),
+          claimCount: countJsonlLines(await readFile(join(runDir, "claims.jsonl"), "utf8").catch(() => "")),
+          hasReport: existsSync(join(runDir, "reports"))
+        });
+      }
+    } catch {
+      // unreadable root -> empty list
+    }
+    return { ok: true as const, runRoot: root, runs: runs.slice(0, parsed.limit) };
+  }
+
   async evidenceRun(input: EvidenceRunInput) {
     const parsed = EvidenceRunInputSchema.parse(input);
     if (parsed.headed) {
@@ -410,4 +462,19 @@ export class FarmService {
 
 function isTextLikeEvidenceKind(kind: string | undefined): boolean {
   return kind !== "page_screenshot" && kind !== "frame_screenshot" && kind !== "media";
+}
+
+function countJsonlLines(text: string): number {
+  return text.split("\n").filter((line) => line.trim().length > 0).length;
+}
+
+const requireForOptionalDeps = createRequire(import.meta.url);
+
+function optionalDepAvailable(name: string): boolean {
+  try {
+    requireForOptionalDeps.resolve(name);
+    return true;
+  } catch {
+    return false;
+  }
 }

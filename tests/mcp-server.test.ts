@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -247,6 +247,34 @@ describe("createMcpServer", () => {
     });
     expect(bad.isError).toBe(true);
     expect(bad.content[0].text).toContain("claim text not found in cited artifact");
+  });
+
+  it("farm_capabilities identifies the server with non-goals and evidence kinds", async () => {
+    const tools = registeredTools(createMcpServer());
+    const caps = JSON.parse((await tools.farm_capabilities.handler({})).content[0].text) as {
+      serverName: string; evidenceKinds: string[]; nonGoals: string[]; optionalDeps: { tesseractAvailable: boolean };
+    };
+    expect(caps.serverName).toBe("browser-agent-mcp-farm");
+    expect(Array.isArray(caps.evidenceKinds)).toBe(true);
+    expect(caps.nonGoals.join(" ")).toContain("no payments");
+    expect(typeof caps.optionalDeps.tesseractAvailable).toBe("boolean");
+  });
+
+  it("farm_list_runs finds a run directory with an artifact ledger", async () => {
+    const root = await mkdtemp(join(tmpdir(), "farm-runs-root-"));
+    dirs.push(root);
+    const runDir = join(root, "run-1");
+    await mkdir(runDir, { recursive: true });
+    await writeFile(join(runDir, "artifacts.jsonl"), `${JSON.stringify({ artifact_id: "a1", path: "raw/x.txt", sha256: "0" })}\n`, "utf8");
+    await writeFile(join(runDir, "claims.jsonl"), `${JSON.stringify({ claim_id: "c1" })}\n`, "utf8");
+
+    const tools = registeredTools(createMcpServer());
+    const listed = JSON.parse((await tools.farm_list_runs.handler({ runRoot: root })).content[0].text) as {
+      runs: Array<{ artifactCount: number; claimCount: number }>;
+    };
+    expect(listed.runs.length).toBe(1);
+    expect(listed.runs[0].artifactCount).toBe(1);
+    expect(listed.runs[0].claimCount).toBe(1);
   });
 });
 
