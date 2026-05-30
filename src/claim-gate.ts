@@ -227,7 +227,9 @@ function validateTypedClaim(
     errors.push(`transcript claim must cite a transcript cue artifact: ${claimLabel}`);
   }
   if (claim.claim_type === "audio" && artifact?.evidence_kind !== "audio_transcription") {
-    errors.push(`audio claim must cite an audio transcription artifact: ${claimLabel}`);
+    // audio_transcription is a lawful provider/operator-supplied transcript only; the
+    // farm never performs speech-to-text (non-goal). Captured captions are transcript_cue.
+    errors.push(`audio claim must cite a lawful provider-supplied audio_transcription artifact (the farm performs no speech-to-text): ${claimLabel}`);
   }
 }
 

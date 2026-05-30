@@ -349,7 +349,11 @@ interstitials, bot blocks, region/age gates, and unavailable-media pages are
 recorded as structured `browser_obstruction` evidence instead of being treated
 as successful content access. Audio and transcript understanding remain marked
 unverified unless an authorized caption body, transcript cue, or audio
-transcription artifact exists in the run. The workflow also reports stage
+transcription artifact exists in the run. The farm performs no audio capture or
+speech-to-text (an explicit non-goal): `audio_transcription` is a lawful
+provider/operator-supplied transcript only, and the autonomous pipeline emits
+captured captions as `transcript_cue`, never a fabricated transcription. The
+workflow also reports stage
 timings for setup, browser open/capture/frame sampling, official API, OCR,
 OCR-hit dense sampling, scene-change dense sampling, overlay dismissal,
 obstruction classification, claim gate, and final report generation.

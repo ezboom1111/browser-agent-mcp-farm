@@ -40,6 +40,25 @@ cooperating second agent can independently verify.
 | **Evidence-quality evaluation & measurement** (newly surfaced) | 1 | 10 |
 | **Security-at-rest, legal/ToS posture & data lifecycle** (newly surfaced) | 2.5 | 10 |
 
+## Progress (live)
+
+**P0–P2 landed** (flagship non-tautological gate, agent-authored cite-or-fail claims,
+dual-agent parity, full `.describe()`, capabilities/list-runs). **P3 in progress —
+landed so far:**
+- ✅ deterministic structured extractor (JSON-LD / OpenGraph / Twitter / canonical /
+  title / typed price+rating summary) wired into the evidence-run pipeline, registered
+  as a `structured_data` artifact on every run that exposes structure.
+- ✅ claims groundable against `structured_data` (cite-or-fail on typed values).
+- ✅ **evidence-quality golden corpus + precision/recall/exact-match benchmark** wired
+  into CI against named thresholds — the previously-unowned 1/10 domain now measured.
+- ✅ structured-vs-DOM **disagreement cross-check** (site-claim price vs rendered text).
+- ✅ **HTML-table** extraction (semi-structured / 반정형 coverage) — bounded, byte-reproducible.
+- ✅ `audio_transcription` **phantom resolved**: formalized as lawful provider/operator-
+  supplied only (no farm-side speech-to-text; captured captions are `transcript_cue`),
+  documented at the schema + gate, with a behavioral guard proving non-fabrication.
+- ⬜ remaining P3: microdata/RDFa + headings extraction; OCR text-profile → typed values
+  with provenance; capture-provenance attestation (HAR / response digests).
+
 ## How 10/10 is measured (falsifiable exit gates)
 
 A regenerated `SCORECARD.json/md` (rebuilt by the verify/release path like `STATUS.md`)

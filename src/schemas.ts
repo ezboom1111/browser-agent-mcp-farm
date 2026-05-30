@@ -30,6 +30,11 @@ export const EvidenceKindSchema = z.enum([
   "destination_deepening_run",
   "browser_obstruction",
   "browser_overlay_dismissal",
+  // Lawful PROVIDER/OPERATOR-supplied transcript ONLY (platform captions, or an
+  // official-API caption body fetched under the operator's own auth, registered via
+  // register_evidence). The autonomous capture pipeline NEVER produces this: the farm
+  // performs no audio capture or speech-to-text (explicit non-goal). Lawful captured
+  // captions are `transcript_cue`; an "audio" claim must cite a provider transcript.
   "audio_transcription",
   "failure"
 ]);

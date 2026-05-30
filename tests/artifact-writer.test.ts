@@ -39,6 +39,31 @@ describe("ArtifactWriter", () => {
     expect(ledger).toContain("screenshots/example.png");
   });
 
+  it("never auto-produces an audio_transcription artifact (lawful provider-supplied only; no speech-to-text)", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-no-audio-"));
+    runDirs.push(runDir);
+
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "audio-guard",
+      html: "<html><body><audio src=\"clip.mp3\"></audio>spoken words</body></html>",
+      text: "spoken words",
+      screenshot: Buffer.from("fake-png"),
+      metadata: { title: "Audio page" },
+      mediaIndex: [{ url: "https://example.com/clip.mp3", type: "audio" }],
+      networkEvents: [],
+      consoleEvents: []
+    });
+
+    // The autonomous pipeline only emits captions as transcript_cue; audio_transcription
+    // is reachable only via an explicit operator-registered provider transcript.
+    expect(records.some((record) => record.evidence_kind === "audio_transcription")).toBe(false);
+  });
+
   it("records partial failures as structured artifacts", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-failure-"));
     runDirs.push(runDir);
