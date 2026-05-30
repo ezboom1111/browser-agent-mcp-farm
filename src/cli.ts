@@ -6,6 +6,7 @@ import { createServer, type Server } from "node:http";
 import { createInterface } from "node:readline/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { chromium, type BrowserContext } from "playwright";
 import { ArtifactWriter } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
@@ -42,7 +43,7 @@ import { parseSourceNavigationPromotionSummary, promoteSourceNavigationCalibrati
 import { applySourceNavigationSelectorHintsToRecipePlan, buildSourceNavigationRecipeCatalog, exportMaintainedSourceNavigationRecipes, formatSourceNavigationDestinationSelectorHintsAsLines, parseSourceNavigationDestinationSelectorHintsAsLines, type SourceNavigationDestinationSelectorHintLine } from "./source-navigation-recipe-catalog.js";
 import { SourceNavigationExecutableActionSchema, type SourceNavigationExecutableActionInput } from "./schemas.js";
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
 
   if (command === "serve") {
@@ -2559,7 +2560,14 @@ function summarizeCalibrationInputs(input: SourceNavigationCalibrationReportLoad
   };
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.stack : String(error));
-  process.exitCode = 1;
-});
+// Run main() only when executed as the CLI entry point, NOT when imported (e.g. by
+// tests), so the command functions can be exercised in-process. verify's 4 smokes
+// (which run `node dist/cli.js …`) prove this guard still launches the real CLI.
+const invokedPath = process.argv[1];
+const isEntryPoint = invokedPath !== undefined && import.meta.url === pathToFileURL(invokedPath).href;
+if (isEntryPoint) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.stack : String(error));
+    process.exitCode = 1;
+  });
+}
