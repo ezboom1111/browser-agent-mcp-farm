@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   SOURCE_REGISTRY,
+  SOURCE_LEGAL_BASIS_VALUES,
   assertRegistryCoverage,
   listSourceRegistryEntries,
   selectSourceRegistryEntriesForIntent,
@@ -10,6 +11,28 @@ import {
 import { describeSourceStrategy } from "../src/source-strategy.js";
 
 describe("source registry", () => {
+  it("assigns every source a legal_basis derived from its evidence role", () => {
+    const valid = new Set<string>(SOURCE_LEGAL_BASIS_VALUES);
+    for (const entry of SOURCE_REGISTRY) {
+      expect(valid.has(entry.legalBasis), `${entry.platform} has an invalid legalBasis`).toBe(true);
+      if (entry.evidenceRole === "derivative") {
+        expect(entry.legalBasis).toBe("derivative_citation");
+      }
+      if (entry.evidenceRole === "user_controlled") {
+        expect(entry.legalBasis).toBe("user_provided");
+      }
+      if (entry.evidenceRole === "primary") {
+        expect(entry.legalBasis).toBe("public_browser_visible");
+      }
+    }
+  });
+
+  it("surfaces the matched sources' legal bases in the summary", () => {
+    const match = selectSourceRegistryEntriesForIntent({ category: "ai_search", locale: "global" });
+    const summary = summarizeSourceRegistryMatch(match);
+    expect(summary.legalBases).toEqual(["derivative_citation"]);
+  });
+
   it("passes mandatory top-slot coverage checks", () => {
     const report = assertRegistryCoverage();
 

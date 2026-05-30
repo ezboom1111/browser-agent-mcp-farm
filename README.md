@@ -358,6 +358,16 @@ timings for setup, browser open/capture/frame sampling, official API, OCR,
 OCR-hit dense sampling, scene-change dense sampling, overlay dismissal,
 obstruction classification, claim gate, and final report generation.
 
+Every source-registry entry carries a `legalBasis` recording the lawful access
+posture under which the farm reads it: `public_browser_visible` (public pages a
+human can view without auth, robots-respecting, no bypass), `official_api` (the
+provider's official API under the operator's own credentials), `user_provided`
+(an operator-supplied authenticated session the user owns), `derivative_citation`
+(AI/aggregator output used only to point at primary sources), or `planning_only`.
+It records the INTENDED basis, not a license, and pairs with the hard non-goals —
+no login/CAPTCHA/paywall/age-gate bypass, no raw audio/video stream download, no
+payment/booking/account actions.
+
 Source navigation execution is disabled by default. When `sourceNavigation` is
 enabled through MCP/HTTP input or CLI flags, the workflow opens a read-write
 lease and runs only the supplied action-key recipes before final page capture.

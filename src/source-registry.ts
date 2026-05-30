@@ -30,6 +30,20 @@ export const LOCALE_SEGMENT_VALUES = [
 export type LocaleSegment = typeof LOCALE_SEGMENT_VALUES[number];
 export type SourceSupportTier = 0 | 1 | 2 | 3 | 4 | 5;
 export type SourceRegistryEvidenceRole = "primary" | "derivative" | "user_controlled" | "planning_only";
+
+// The lawful basis under which the farm accesses a source. Documents the legal/ToS
+// posture per source so the registry is auditable, and pairs with the hard non-goals
+// (no login/CAPTCHA/paywall bypass, no raw-stream download). Robots/ToS stance is
+// honored at the browser layer; this field records the INTENDED basis, not a license.
+export const SOURCE_LEGAL_BASIS_VALUES = [
+  "public_browser_visible", // public pages a human can view without auth; robots-respecting, no bypass
+  "official_api",           // the provider's official API, under the operator's own credentials
+  "user_provided",          // operator-supplied authenticated session; the user owns the account/data
+  "derivative_citation",    // AI/aggregator output used only to point at primary sources to cite
+  "planning_only"           // registry/planning seed, not a live data access
+] as const;
+
+export type SourceLegalBasis = typeof SOURCE_LEGAL_BASIS_VALUES[number];
 export type SourceTopSlotMetric = "market_share" | "monthly_visits" | "active_users" | "strategic_relevance";
 
 export interface SourceRegistryTopSlot {
@@ -51,6 +65,7 @@ export interface SourceRegistryEntry {
   localeSegments: LocaleSegment[];
   supportTier: SourceSupportTier;
   evidenceRole: SourceRegistryEvidenceRole;
+  legalBasis: SourceLegalBasis;
   requiredCapabilities: string[];
   unsupportedActions: string[];
   topSlots: SourceRegistryTopSlot[];
@@ -108,6 +123,7 @@ export interface SourceRegistrySummary {
   maxSupportTier: SourceSupportTier | null;
   topSlotCount: number;
   evidenceRoles: SourceRegistryEvidenceRole[];
+  legalBases: SourceLegalBasis[];
   warnings: string[];
 }
 
@@ -466,6 +482,7 @@ export function summarizeSourceRegistryMatch(match: SourceRegistryMatch): Source
     maxSupportTier: tiers.length === 0 ? null : (Math.max(...tiers) as SourceSupportTier),
     topSlotCount: match.entries.reduce((total, entry) => total + entry.topSlots.length, 0),
     evidenceRoles: unique(match.entries.map((entry) => entry.evidenceRole)),
+    legalBases: unique(match.entries.map((entry) => entry.legalBasis)),
     warnings: match.warnings
   };
 }
@@ -555,7 +572,8 @@ function entry(
   topSlots: SourceRegistryTopSlot[],
   requiredCapabilities: string[],
   unsupportedActions: string[],
-  notes: string[] = []
+  notes: string[] = [],
+  legalBasis?: SourceLegalBasis
 ): SourceRegistryEntry {
   return {
     schemaVersion: "1.0",
@@ -566,11 +584,27 @@ function entry(
     localeSegments,
     supportTier,
     evidenceRole,
+    legalBasis: legalBasis ?? defaultLegalBasis(evidenceRole),
     requiredCapabilities,
     unsupportedActions,
     topSlots,
     notes
   };
+}
+
+// Derive the lawful access basis from the evidence role unless an entry overrides it
+// (e.g. an official-API-backed source passes "official_api").
+function defaultLegalBasis(role: SourceRegistryEvidenceRole): SourceLegalBasis {
+  switch (role) {
+    case "derivative":
+      return "derivative_citation";
+    case "user_controlled":
+      return "user_provided";
+    case "planning_only":
+      return "planning_only";
+    case "primary":
+      return "public_browser_visible";
+  }
 }
 
 function top(category: InformationCategory, segment: LocaleSegment, rank: number): SourceRegistryTopSlot {
