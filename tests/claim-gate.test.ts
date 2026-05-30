@@ -410,6 +410,30 @@ describe("runClaimGate", () => {
     expect(result.errors.join("\n")).toContain("claim text not found in cited artifact");
   });
 
+  it("grounds a claim against a structured_data artifact", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-structured-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "structured",
+      text: JSON.stringify({ summary: { price: { value: "4500", currency: "KRW" } } }),
+      evidenceKind: "structured_data"
+    });
+    const record = records.find((item) => item.kind === "text");
+    if (!record) {
+      throw new Error("expected a structured text artifact");
+    }
+
+    await appendTypedClaim(runDir, {
+      claim_id: "s-1", claim_type: "metadata", claim: "Price is 4500 KRW",
+      artifact_id: record.artifact_id, evidence_kind: "structured_data", verification_level: "grounded",
+      anchor: { type: "text_span", quote: "4500" }
+    });
+
+    const result = await runClaimGate(runDir, { mode: "final" });
+    expect(result.ok).toBe(true);
+  });
+
   it("grounds a derived claim by supporting tokens", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-claim-derived-"));
     runDirs.push(runDir);

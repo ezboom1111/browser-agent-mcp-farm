@@ -342,7 +342,8 @@ function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {
     || kind === "page_html"
     || kind === "ocr_text"
     || kind === "transcript_cue"
-    || kind === "audio_transcription";
+    || kind === "audio_transcription"
+    || kind === "structured_data";
 }
 
 async function readArtifactText(runDir: string, artifact: ArtifactLedgerRow | undefined): Promise<string | undefined> {
