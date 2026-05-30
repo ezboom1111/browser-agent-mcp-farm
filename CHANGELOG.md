@@ -10,6 +10,16 @@ adheres to semantic versioning. Build/test status is tracked in
 > first publish, set `repository` in `package.json` to the real remote. `prepublishOnly`
 > runs the full verify gate, so a publish requires a green build.
 
+### Added — self-verifying coverage (P4)
+
+- **`recipe-canary`**: re-verifies a maintained recipe's required selectors against a stored
+  golden (offline replay via `--observation-file`, or a read-only headless probe via `--url`),
+  auto-demoting a decayed slot to `needs_recalibration`; appends to a hash-free canary ledger.
+- **`coverage-report`**: classifies every source as `autonomous_ready` / `api_backed` /
+  `headed_only` / `blocked` / `unmaintained`, where `autonomous_ready` REQUIRES a passing
+  canary inside a freshness window and anything outside the named maintenance budget is
+  honestly `unmaintained`.
+
 ### Added — release readiness
 
 - **Apache-2.0 license** + `author`, and a `LICENSE` file shipped in the package.
