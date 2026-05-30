@@ -68,6 +68,127 @@ describe("BrowserPool", () => {
     }
   });
 
+  it("aborts low-level page waits with AbortSignal", async () => {
+    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
+      await browser.close();
+      return true;
+    }).catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping browser abort test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-browser-abort-"));
+    runDirs.push(runDir);
+    const manager = new LeaseManager();
+    const pool = new BrowserPool(manager);
+
+    try {
+      const lease = manager.acquire({ agentId: "reader", runId: "run", artifactRunDir: runDir, allowedDomains: ["127.0.0.1"] });
+      const page = await pool.openPage("reader", lease.contextToken, `${fixture.baseUrl}/dynamic`);
+      const controller = new AbortController();
+      const wait = pool.waitForPage("reader", lease.contextToken, page.pageId, 10_000, controller.signal);
+      setTimeout(() => controller.abort("test cancel"), 10);
+      await expect(wait).rejects.toMatchObject({ name: "AbortError" });
+      await pool.releaseContext("reader", lease.contextToken);
+    } finally {
+      await pool.shutdown();
+      await fixture.close();
+    }
+  });
+
+  it("dismisses benign overlays without clicking access-control buttons", async () => {
+    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
+      await browser.close();
+      return true;
+    }).catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping overlay dismissal safety test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-overlay-safety-"));
+    runDirs.push(runDir);
+    const manager = new LeaseManager();
+    const pool = new BrowserPool(manager);
+
+    try {
+      const lease = manager.acquire({ agentId: "reader", runId: "run", artifactRunDir: runDir, allowedDomains: ["127.0.0.1"] });
+      const page = await pool.openPage("reader", lease.contextToken, `${fixture.baseUrl}/overlay-actions`);
+      const report = await pool.dismissBenignOverlays("reader", lease.contextToken, page.pageId, 5);
+      await pool.capturePage("reader", lease.contextToken, page.pageId, "overlay-safety");
+
+      expect(report.status).toBe("dismissed");
+      expect(report.dismissedCount).toBeGreaterThan(0);
+      expect(report.skippedCount).toBeGreaterThan(0);
+      expect(report.actions).toEqual(expect.arrayContaining([
+        expect.objectContaining({ status: "skipped", label: expect.stringContaining("log in") })
+      ]));
+
+      const text = await readFile(join(runDir, "raw", "overlay-safety.txt"), "utf8");
+      expect(text).not.toContain("cookie banner");
+      expect(text).toContain("login required");
+      expect(text).not.toContain("logged in");
+    } finally {
+      await pool.shutdown();
+      await fixture.close();
+    }
+  });
+
+  it("captures visible text and destination links from accessible frames", async () => {
+    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
+      await browser.close();
+      return true;
+    }).catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping frame-aware capture test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-frame-capture-"));
+    runDirs.push(runDir);
+    const manager = new LeaseManager();
+    const pool = new BrowserPool(manager);
+
+    try {
+      const lease = manager.acquire({ agentId: "reader", runId: "run", artifactRunDir: runDir, allowedDomains: ["127.0.0.1"] });
+      const page = await pool.openPage("reader", lease.contextToken, `${fixture.baseUrl}/framed-capture`);
+      await pool.capturePage("reader", lease.contextToken, page.pageId, "framed");
+
+      const text = await readFile(join(runDir, "raw", "framed.txt"), "utf8");
+      expect(text).toContain("top shell evidence");
+      expect(text).toContain("iframe-only place evidence");
+      expect(text).toContain("성수 카페");
+
+      const metadata = JSON.parse(await readFile(join(runDir, "structured", "framed.metadata.json"), "utf8")) as {
+        visibleTextFrames?: {
+          frameCount: number;
+          textFrameCount: number;
+          frames: Array<{ frameUrl: string; textLength: number; textSnippet?: string }>;
+        };
+        visibleLinks?: Array<{ url: string; text: string; frameUrl?: string }>;
+      };
+      expect(metadata.visibleTextFrames?.frameCount).toBeGreaterThanOrEqual(2);
+      expect(metadata.visibleTextFrames?.textFrameCount).toBeGreaterThanOrEqual(2);
+      expect(metadata.visibleTextFrames?.frames.some((frame) => frame.textSnippet?.includes("iframe-only place evidence"))).toBe(true);
+      expect(metadata.visibleLinks).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          url: `${fixture.baseUrl}/framed-destination`,
+          text: "Frame destination"
+        })
+      ]));
+    } finally {
+      await pool.shutdown();
+      await fixture.close();
+    }
+  });
+
   it("persists storage-state profiles and allows non-payment write actions", async () => {
     const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
       await browser.close();
@@ -608,6 +729,45 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
       response.end(`<!doctype html><html><head><title>ua</title></head><body>
         <main id="value"></main>
         <script>document.querySelector('#value').textContent = navigator.userAgent;</script>
+      </body></html>`);
+      return;
+    }
+    if (path === "/overlay-actions") {
+      response.end(`<!doctype html><html><head><title>overlay actions</title></head><body>
+        <main id="content">primary page</main>
+        <div id="cookie-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:50;background:white">
+          <p>cookie banner</p>
+          <button id="reject" onclick="document.querySelector('#cookie-banner').remove()">Reject all</button>
+        </div>
+        <div id="login-wall" role="dialog" aria-modal="true" style="position:fixed;top:20px;left:20px;z-index:60;background:white">
+          <p>login required</p>
+          <button id="login" onclick="document.body.textContent = 'logged in'">Log in to continue</button>
+        </div>
+      </body></html>`);
+      return;
+    }
+    if (path === "/framed-capture") {
+      response.end(`<!doctype html><html><head><title>framed capture</title></head><body>
+        <main>
+          <h1>top shell evidence</h1>
+          <iframe src="/framed-inner" title="inner evidence" style="width:420px;height:160px;border:0"></iframe>
+        </main>
+      </body></html>`);
+      return;
+    }
+    if (path === "/framed-inner") {
+      response.end(`<!doctype html><html><head><title>inner evidence</title></head><body>
+        <main>
+          <h2>iframe-only place evidence</h2>
+          <p>성수 카페 review text from accessible frame</p>
+          <a href="/framed-destination">Frame destination</a>
+        </main>
+      </body></html>`);
+      return;
+    }
+    if (path === "/framed-destination") {
+      response.end(`<!doctype html><html><head><title>framed destination</title></head><body>
+        <main>destination page</main>
       </body></html>`);
       return;
     }
