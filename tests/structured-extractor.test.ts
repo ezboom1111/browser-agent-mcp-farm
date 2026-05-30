@@ -42,6 +42,17 @@ describe("extractStructuredData", () => {
     expect(data.title).toBeUndefined();
   });
 
+  it("extracts a document outline of h1-h6 headings in order", () => {
+    const html = "<h1>Title</h1><section><h2>First</h2><p>x</p><h3>Detail &amp; more</h3></section><h2>Second</h2>";
+    const data = extractStructuredData(html);
+    expect(data.headings).toEqual([
+      { level: 1, text: "Title" },
+      { level: 2, text: "First" },
+      { level: 3, text: "Detail & more" },
+      { level: 2, text: "Second" }
+    ]);
+  });
+
   it("extracts an HTML table with header row, caption, and body rows", () => {
     const html = `
       <table>

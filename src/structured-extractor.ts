@@ -23,6 +23,11 @@ export interface StructuredTable {
   truncated?: boolean;
 }
 
+export interface StructuredHeading {
+  level: number;
+  text: string;
+}
+
 export interface StructuredData {
   jsonLd: unknown[];
   openGraph: Record<string, string>;
@@ -30,6 +35,7 @@ export interface StructuredData {
   canonical?: string;
   title?: string;
   summary: StructuredSummary;
+  headings: StructuredHeading[];
   tables: StructuredTable[];
   // Set only by callers that have the page's visible text (see crossCheckStructured);
   // NOT produced by extractStructuredData, which stays byte-reproducible from HTML.
@@ -43,6 +49,7 @@ export function extractStructuredData(html: string): StructuredData {
     openGraph: extractMeta(html, "property", "og:"),
     twitter: extractMeta(html, "name", "twitter:"),
     summary: summarizeJsonLd(jsonLd),
+    headings: extractHeadings(html),
     tables: extractTables(html)
   };
   const canonical = extractCanonical(html);
@@ -181,6 +188,25 @@ function extractTitle(html: string): string | undefined {
   }
   const title = match[1].replace(/\s+/g, " ").trim();
   return title.length > 0 ? title : undefined;
+}
+
+// Deterministic document outline (h1-h6) extraction. Byte-reproducible from the
+// captured HTML; bounded so a pathological page can't bloat the artifact.
+const MAX_HEADINGS = 200;
+
+export function extractHeadings(html: string): StructuredHeading[] {
+  const headings: StructuredHeading[] = [];
+  for (const match of html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)) {
+    if (headings.length >= MAX_HEADINGS) {
+      break;
+    }
+    const level = Number.parseInt(match[1] ?? "0", 10);
+    const text = cellText(match[2] ?? "");
+    if (text.length > 0) {
+      headings.push({ level, text });
+    }
+  }
+  return headings;
 }
 
 // Deterministic HTML-table extraction (semi-structured data). Best-effort and
