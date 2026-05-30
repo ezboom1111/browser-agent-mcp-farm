@@ -1,4 +1,5 @@
 import { ArtifactWriter, type ArtifactRecord, type ArtifactStatus } from "./artifact-writer.js";
+import { safeUrl } from "./util/url.js";
 import { resolveDestinationUrl, type DestinationUrlResolutionMethod } from "./destination-url.js";
 import type { SourceNavigationFollowUpRequest } from "./source-navigation-executor.js";
 import type { SourceFamily, SourcePlatform } from "./source-strategy.js";
@@ -2315,14 +2316,6 @@ function normalizeDestinationUrl(url: string): string {
   parsed.hostname = parsed.hostname.toLowerCase();
   parsed.searchParams.sort();
   return parsed.href;
-}
-
-function safeUrl(url: string): URL | undefined {
-  try {
-    return new URL(url);
-  } catch {
-    return undefined;
-  }
 }
 
 function childResultKey(actionKey: string, url: string): string {

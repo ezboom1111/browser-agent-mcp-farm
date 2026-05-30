@@ -1,4 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
+import { uniqueNonEmpty as uniqueStrings } from "./util/collections.js";
+import { stripBom } from "./util/text.js";
 import type { Dirent } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import type { SourceNavigationCalibrationReport } from "./source-navigation-calibration.js";
@@ -292,12 +294,4 @@ function resolveInside(root: string, relPath: string): string {
     throw new Error(relPath);
   }
   return resolvedPath;
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-function stripBom(text: string): string {
-  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }

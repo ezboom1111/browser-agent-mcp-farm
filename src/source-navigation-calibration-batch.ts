@@ -1,4 +1,5 @@
 import { sanitizeFileBase } from "./artifact-writer.js";
+import { stripBom } from "./util/text.js";
 import type { SourceFamily, SourcePlatform } from "./source-strategy.js";
 import type { SourceNavigationCalibrationSummary } from "./source-navigation-calibration.js";
 
@@ -383,8 +384,4 @@ export function normalizeSourceNavigationCalibrationBatchConcurrency(value: numb
 
 function defaultTargetId(index: number): string {
   return `target-${String(index + 1).padStart(3, "0")}`;
-}
-
-function stripBom(text: string): string {
-  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }

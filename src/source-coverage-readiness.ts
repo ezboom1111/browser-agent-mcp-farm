@@ -1,4 +1,5 @@
 import { buildSourceNavigationCalibrationTargetPlan } from "./source-navigation-calibration-targets.js";
+import { uniqueSorted as uniqueStrings } from "./util/collections.js";
 import { reviewSourceNavigationPromotion, type SourceNavigationBlockedSignalCount, type SourceNavigationDestinationExtractionPromotionSummary, type SourceNavigationPromotionGroupReview, type SourceNavigationPromotionReviewStatus, type SourceNavigationPromotionSummary } from "./source-navigation-promotion.js";
 import { describeSourceNavigationPlan } from "./source-navigation.js";
 import { describeSourceNavigationRecipePlan } from "./source-navigation-recipes.js";
@@ -931,10 +932,6 @@ function mergeWarningCounts(
   return [...counts.entries()]
     .sort((left, right) => left[0].localeCompare(right[0]))
     .map(([warning, count]) => ({ warning, count }));
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values)].sort();
 }
 
 function selectorHintFilesForGroups(groups: SourceNavigationPromotionGroupReview[]): string[] {

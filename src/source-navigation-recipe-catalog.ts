@@ -1,4 +1,6 @@
 import type { SourceNavigationExecutableAction, SourceNavigationExecutableOperation } from "./source-navigation-executor.js";
+import { unique as uniqueStrings } from "./util/collections.js";
+import { stripBom } from "./util/text.js";
 import type {
   SourceNavigationActionCalibrationResult,
   SourceNavigationCalibrationReport,
@@ -816,10 +818,6 @@ function uniqueSelectorCandidates(
   });
 }
 
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values)];
-}
-
 function requiredColumn(columns: string[], index: number, lineIndex: number, name: string): string {
   const value = columns[index]?.trim();
   if (value === undefined || value.length === 0) {
@@ -835,10 +833,6 @@ function optionalColumn(columns: string[], index: number): string | undefined {
 
 function splitSelectorSuggestions(value: string): string[] {
   return value.split("|").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
-}
-
-function stripBom(input: string): string {
-  return input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
 }
 
 function selectorHintContainerScopes(

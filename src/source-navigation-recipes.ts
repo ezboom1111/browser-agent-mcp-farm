@@ -1,4 +1,5 @@
 import type { SourceNavigationExecutableOperation } from "./source-navigation-executor.js";
+import { unique as uniqueStrings } from "./util/collections.js";
 import type { SourceNavigationPlan } from "./source-navigation.js";
 
 export type SourceNavigationRecipeExecutionPolicy = "manual_opt_in_only";
@@ -2763,17 +2764,6 @@ function uniqueCandidates(candidates: SourceNavigationSelectorCandidate[]): Sour
       return false;
     }
     seen.add(key);
-    return true;
-  });
-}
-
-function uniqueStrings(values: string[]): string[] {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    if (seen.has(value)) {
-      return false;
-    }
-    seen.add(value);
     return true;
   });
 }

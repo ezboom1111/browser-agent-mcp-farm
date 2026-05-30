@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { safeUrl } from "./util/url.js";
 
 export type DestinationUrlResolutionMethod =
   | "bing_ck_u"
@@ -168,12 +169,4 @@ function decodeBase64Url(value: string): string | undefined {
 
 function isGoogleHost(host: string): boolean {
   return host === "google.com" || host.endsWith(".google.com") || host.startsWith("www.google.");
-}
-
-function safeUrl(url: string): URL | undefined {
-  try {
-    return new URL(url);
-  } catch {
-    return undefined;
-  }
 }

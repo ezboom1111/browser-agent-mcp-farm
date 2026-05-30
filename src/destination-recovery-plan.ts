@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
+import { unique as uniqueStrings } from "./util/collections.js";
 import { join, resolve, sep } from "node:path";
 import type { DestinationBlockedChildRecoveryAdvice, DestinationBlockedChildRecoveryCandidateSummary } from "./destination-triage.js";
 
@@ -599,10 +600,6 @@ function uniquePathItems<T extends { path: string }>(items: T[]): T[] {
     seen.add(item.path);
     return true;
   });
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values)];
 }
 
 function checkRecoveryProfileExists(
