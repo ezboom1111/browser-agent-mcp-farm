@@ -17,6 +17,7 @@ import { runStdioServer } from "./mcp-server.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { runClaimGate } from "./claim-gate.js";
 import { buildBundleManifest, signManifest, verifyBundle, type BundleManifest } from "./evidence-bundle.js";
+import { scanRunArtifacts } from "./secret-scan.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
@@ -118,6 +119,11 @@ async function main(): Promise<void> {
     if (!result.ok) {
       process.exitCode = 1;
     }
+    return;
+  }
+
+  if (command === "scan-secrets") {
+    await runScanSecretsCommand();
     return;
   }
 
@@ -513,6 +519,21 @@ async function runHtmlPreviewCommand(): Promise<void> {
 
   const result = await buildHtmlPreview(runDir);
   console.log(JSON.stringify(result, null, 2));
+}
+
+// Secret-at-rest guard: scan a finished run's text artifacts / ledgers / reports for
+// credentials and exit non-zero if any are found (redacted in the output).
+async function runScanSecretsCommand(): Promise<void> {
+  const runDir = getArgValue("--run-dir");
+  if (!runDir) {
+    throw new Error("scan-secrets requires --run-dir <evidence-run-dir>");
+  }
+
+  const findings = await scanRunArtifacts(runDir);
+  console.log(JSON.stringify({ ok: findings.length === 0, runDir, findingCount: findings.length, findings }, null, 2));
+  if (findings.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
 async function runCritiqueNextCommand(): Promise<void> {
@@ -1997,6 +2018,8 @@ Commands:
           Fail when claims cite missing or unregistered artifacts
   html-preview --run-dir <path>
           Generate html/farm-evidence-preview.html
+  scan-secrets --run-dir <evidence-run-dir>
+          Scan a finished run's artifacts/ledgers/reports for secrets-at-rest (exit 1 if any)
   critique-next [--queue <path>]
           Print exactly one next media critical review task without mutating the queue
   critique-complete [--queue <path>] [--task-id <id>]
