@@ -18,6 +18,7 @@ import {
 } from "./frame-sampler.js";
 import { type Lease, LeaseManager } from "./lease-manager.js";
 import { profilePaths, profileRoot } from "./profile-store.js";
+import { acquireProfileLock, releaseProfileLock, type ProfileLockHandle } from "./profile-lock.js";
 
 const MAX_MEDIA_ARTIFACTS_PER_PAGE = 40;
 const MAX_SINGLE_MEDIA_BYTES = 10 * 1024 * 1024;
@@ -56,6 +57,7 @@ interface ContextState {
   persistent: boolean;
   storageStatePath?: string;
   profileLockKey?: string;
+  profileLock?: ProfileLockHandle;
 }
 
 interface PageState {
@@ -1125,6 +1127,7 @@ export class BrowserPool {
       if (state.profileLockKey !== undefined && this.activeProfileLeases.get(state.profileLockKey) === contextToken) {
         this.activeProfileLeases.delete(state.profileLockKey);
       }
+      releaseProfileLock(state.profileLock);
       this.contexts.delete(contextToken);
     }
   }
@@ -1146,11 +1149,17 @@ export class BrowserPool {
 
     const storageStatePath = resolveStorageStatePath(lease);
     const profileLockKey = resolveProfileLockKey(lease);
+    let profileLock: ProfileLockHandle | undefined;
     if (profileLockKey !== undefined) {
       const activeLease = this.activeProfileLeases.get(profileLockKey);
       if (activeLease !== undefined && activeLease !== lease.contextToken) {
         throw new FarmError("profile_in_use", `Profile or storage state is already leased by ${activeLease}: ${profileLockKey}`);
       }
+      // Cross-process guard: the in-memory map above only sees this process, but
+      // a separate farm process (e.g. another agent's `serve`) can lease the
+      // same profile and clobber its shared storage-state file. The on-disk lock
+      // throws profile_in_use across processes.
+      profileLock = acquireProfileLock(profileLockKey, lease.contextToken);
       this.activeProfileLeases.set(profileLockKey, lease.contextToken);
     }
 
@@ -1177,12 +1186,16 @@ export class BrowserPool {
       if (profileLockKey !== undefined) {
         state.profileLockKey = profileLockKey;
       }
+      if (profileLock !== undefined) {
+        state.profileLock = profileLock;
+      }
       this.contexts.set(lease.contextToken, state);
       return state;
     } catch (error) {
       if (profileLockKey !== undefined && this.activeProfileLeases.get(profileLockKey) === lease.contextToken) {
         this.activeProfileLeases.delete(profileLockKey);
       }
+      releaseProfileLock(profileLock);
       throw error;
     }
   }
