@@ -11,7 +11,7 @@ import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
 import { buildBundleManifest, signManifest, verifyBundle as verifyEvidenceBundle, type BundleManifest } from "./evidence-bundle.js";
-import { LeaseManager, redactLease } from "./lease-manager.js";
+import { LeaseManager, leaseManagerOptionsFromEnv, redactLease } from "./lease-manager.js";
 import {
   AcquireContextInputSchema,
   CaptureAfterIdleInputSchema,
@@ -72,7 +72,7 @@ export class FarmService {
   readonly leaseManager: LeaseManager;
   readonly browserPool: BrowserPool;
 
-  constructor(leaseManager = new LeaseManager(), browserPool?: BrowserPool) {
+  constructor(leaseManager = new LeaseManager(leaseManagerOptionsFromEnv()), browserPool?: BrowserPool) {
     this.leaseManager = leaseManager;
     this.browserPool = browserPool ?? new BrowserPool(leaseManager);
   }

@@ -22,6 +22,13 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added — release readiness
 
+- **Global context cap + backpressure**: `LeaseManager` accepts `maxContexts` (env
+  `FARM_MAX_CONTEXTS` for a deployed `serve`/`serve-http`); past the cap, `acquire` rejects
+  with a typed `capacity_exhausted` instead of overloading the host. Capacity auto-recovers
+  on release/expiry.
+- **Parallel-safety conformance suite** (`tests/conformance.test.ts`): proves the cap +
+  backpressure recovery, reaper crash-recovery, secret redaction, same-port `EADDRINUSE`
+  refusal, and **real two-process** profile mutual-exclusion (O_EXCL lock contention).
 - **Apache-2.0 license** + `author`, and a `LICENSE` file shipped in the package.
 - **Packaged-artifact gate** (`test:tarball`, wired into `verify`): asserts the published
   tarball ships the bin + `LICENSE` + skill, and that the packed `dist/cli.js` runs
