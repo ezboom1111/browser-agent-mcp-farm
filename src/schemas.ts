@@ -160,50 +160,50 @@ export const AcquireContextInputSchema = z.object({
 });
 
 export const HeartbeatInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context.")
 });
 
 export const OpenPageInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  url: z.url()
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  url: z.url().describe("URL to open in the leased context.")
 });
 
 export const CaptureInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
   captureId: z.string().min(1).optional()
 });
 
 export const WaitInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
   waitMs: z.number().int().positive().max(120_000)
 });
 
 export const WaitForSelectorInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
-  selector: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
+  selector: z.string().min(1).describe("CSS selector to wait for."),
   timeoutMs: z.number().int().positive().max(120_000).default(10_000)
 });
 
 export const ScrollInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
   direction: z.enum(["down", "up", "bottom", "top"]).default("down"),
   pixels: z.number().int().positive().max(50_000).default(800)
 });
 
 export const CaptureAfterIdleInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
   captureId: z.string().min(1).optional(),
   waitMs: z.number().int().nonnegative().max(120_000).default(0),
   idleMs: z.number().int().nonnegative().max(30_000).default(500),
@@ -211,9 +211,9 @@ export const CaptureAfterIdleInputSchema = z.object({
 });
 
 export const SampleFramesInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
   selector: z.string().min(1).default("video"),
   captureId: z.string().min(1).optional(),
   timestampsSec: z.array(z.number().nonnegative().max(86_400)).max(120).optional(),
@@ -225,44 +225,44 @@ export const SampleFramesInputSchema = z.object({
 });
 
 export const ClosePageInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page.")
 });
 
 export const ReleaseContextInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context.")
 });
 
 export const ClickInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
-  selector: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
+  selector: z.string().min(1).describe("CSS selector for the target element.")
 });
 
 export const FillInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
-  selector: z.string().min(1),
-  value: z.string()
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
+  selector: z.string().min(1).describe("CSS selector for the target element."),
+  value: z.string().describe("Text to fill into the field.")
 });
 
 export const PressInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
-  key: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
+  key: z.string().min(1).describe("Key to press (e.g. 'Enter', 'Tab', 'ArrowDown').")
 });
 
 export const SelectOptionInputSchema = z.object({
-  agentId: z.string().min(1),
-  contextToken: z.string().min(1),
-  pageId: z.string().min(1),
-  selector: z.string().min(1),
-  value: z.string().min(1)
+  agentId: z.string().min(1).describe("ID of the calling agent; must own the lease."),
+  contextToken: z.string().min(1).describe("Lease/context token returned by farm_acquire_context."),
+  pageId: z.string().min(1).describe("Page ID returned by farm_open_page."),
+  selector: z.string().min(1).describe("CSS selector for the <select> element."),
+  value: z.string().min(1).describe("Option value to select.")
 });
 
 export const ReapExpiredInputSchema = z.object({});
