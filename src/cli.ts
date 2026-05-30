@@ -24,6 +24,8 @@ import { appendDecision, verifyDecisionLog } from "./decision-log.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
+import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, DEFAULT_API_BACKED_PLATFORMS, DEFAULT_CANARY_MAINTENANCE_SET, type CoverageReportSource } from "./coverage-report.js";
+import { appendRecipeCanaryResult, evaluateRecipeCanary, loadRecipeCanaryLedger, runRecipeCanary, type RecipeCanaryGolden, type RecipeCanaryObservation, type RecipeCanaryResult } from "./recipe-canary.js";
 import { listProfiles, profilePaths, removeProfile } from "./profile-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
@@ -206,6 +208,16 @@ export async function main(): Promise<void> {
 
   if (command === "source-coverage-readiness") {
     await runSourceCoverageReadinessCommand();
+    return;
+  }
+
+  if (command === "coverage-report") {
+    await runCoverageReportCommand();
+    return;
+  }
+
+  if (command === "recipe-canary") {
+    await runRecipeCanaryCommand();
     return;
   }
 
@@ -770,6 +782,113 @@ async function runSourceCoverageReadinessCommand(): Promise<void> {
   if (!ok) {
     process.exitCode = 1;
   }
+}
+
+async function runCoverageReportCommand(): Promise<void> {
+  const categoryArg = getArgValue("--category");
+  const localeArg = getArgValue("--locale");
+  const platformArg = getArgValue("--platform");
+  const sourceFamilyArg = getArgValue("--family");
+  const minTierArg = getArgValue("--min-tier");
+  const topRankArg = getArgValue("--top-rank");
+  const audit = buildSourceCoverageReadinessAudit({
+    category: categoryArg === undefined ? undefined : parseInformationCategoryArg(categoryArg),
+    locale: localeArg === undefined ? undefined : parseLocaleSegmentArg(localeArg),
+    platform: platformArg as SourcePlatform | undefined,
+    sourceFamily: sourceFamilyArg as SourceFamily | undefined,
+    minSupportTier: minTierArg === undefined ? undefined : parseSupportTierArg(minTierArg),
+    topRankMax: topRankArg === undefined ? undefined : Number(topRankArg),
+    query: getArgValue("--query"),
+    promotionSummaries: await loadPromotionSummariesFromArgs()
+  });
+  const sources: CoverageReportSource[] = audit.items.map((item) => ({
+    platform: item.platform,
+    displayName: item.displayName,
+    readinessStatus: item.status,
+    requiresHeadedProfile: item.profileHeadedRetry !== undefined
+  }));
+
+  const maintenanceArg = getArgValue("--maintenance");
+  const apiArg = getArgValue("--api-backed");
+  const canaryLedgerPath = getArgValue("--canary-ledger");
+  const report = buildCoverageReport({
+    sources,
+    maintenanceSet: maintenanceArg !== undefined ? splitCsvArg(maintenanceArg) : DEFAULT_CANARY_MAINTENANCE_SET,
+    apiBackedPlatforms: apiArg !== undefined ? splitCsvArg(apiArg) : DEFAULT_API_BACKED_PLATFORMS,
+    canaryLedger: canaryLedgerPath !== undefined ? await loadRecipeCanaryLedger(canaryLedgerPath) : [],
+    freshnessWindowMs: parsePositiveIntegerArg("--freshness-days", 7) * 24 * 60 * 60 * 1000,
+    now: getArgValue("--now") ?? new Date().toISOString()
+  });
+
+  const format = getArgValue("--format") ?? "json";
+  if (format === "json") {
+    console.log(JSON.stringify(report, null, 2));
+  } else if (format === "lines") {
+    process.stdout.write(formatCoverageReportAsLines(report));
+  } else if (format === "markdown") {
+    process.stdout.write(formatCoverageReportAsMarkdown(report));
+  } else {
+    throw new Error("--format must be json, lines, or markdown for coverage-report");
+  }
+}
+
+async function runRecipeCanaryCommand(): Promise<void> {
+  const goldenFile = getArgValue("--golden-file");
+  if (goldenFile === undefined) {
+    throw new Error("recipe-canary requires --golden-file <golden.json>");
+  }
+  const golden = JSON.parse(await readFile(goldenFile, "utf8")) as RecipeCanaryGolden;
+  const verifiedAt = getArgValue("--now") ?? new Date().toISOString();
+
+  let result: RecipeCanaryResult;
+  const observationFile = getArgValue("--observation-file");
+  const url = getArgValue("--url");
+  if (observationFile !== undefined) {
+    // Offline replay: evaluate a recorded observation (no browser).
+    const observation = JSON.parse(await readFile(observationFile, "utf8")) as RecipeCanaryObservation;
+    result = evaluateRecipeCanary(golden, observation, verifiedAt);
+  } else if (url !== undefined) {
+    // Live, read-only headless health probe. One page per invocation = naturally rate-capped.
+    result = await runRecipeCanary(golden, url, browserRecipeCanaryProbe, verifiedAt);
+  } else {
+    throw new Error("recipe-canary requires --observation-file <obs.json> or --url <url>");
+  }
+
+  const ledgerPath = getArgValue("--canary-ledger");
+  if (ledgerPath !== undefined) {
+    await appendRecipeCanaryResult(ledgerPath, result);
+  }
+
+  console.log(JSON.stringify(result, null, 2));
+  if (result.verdict === "needs_recalibration" && hasFlag("--fail-on-recalibration")) {
+    process.exitCode = 1;
+  }
+}
+
+// Read-only headless selector-health probe for the live canary: navigate and report which
+// of the recipe's required selectors still resolve. No login/bypass/payment — a canary only
+// re-checks a page the farm can already see.
+async function browserRecipeCanaryProbe(url: string, requiredSelectors: string[]): Promise<RecipeCanaryObservation> {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15_000 });
+    const presentSelectors: string[] = [];
+    for (const selector of requiredSelectors) {
+      const count = await page.locator(selector).count().catch(() => 0);
+      if (count > 0) {
+        presentSelectors.push(selector);
+      }
+    }
+    return { presentSelectors, obstructionSignals: [] };
+  } finally {
+    await browser.close();
+  }
+}
+
+function splitCsvArg(value: string): string[] {
+  return value.split(",").map((part) => part.trim()).filter((part) => part.length > 0);
 }
 
 async function runSourceCoverageCalibrateCommand(): Promise<void> {
@@ -2149,6 +2268,10 @@ Commands:
           Inspect information-source coverage registry entries and support tiers
   source-coverage-readiness [--category <name>] [--locale <segment>] [--top-rank 3] [--promotion-summary <path>] [--format json|targets|retry-commands|retry-plan]
           Audit registry source slots against promoted maintained action files for QA coverage
+  coverage-report [--maintenance <a,b>] [--api-backed <a,b>] [--canary-ledger <path>] [--freshness-days 7] [--format json|lines|markdown]
+          Classify each source: autonomous_ready (fresh passing canary) / api_backed / headed_only / blocked / unmaintained
+  recipe-canary --golden-file <golden.json> (--observation-file <obs.json> | --url <url>) [--canary-ledger <path>] [--fail-on-recalibration]
+          Re-verify a maintained recipe's selectors vs a golden; auto-demotes a decayed ready slot to needs_recalibration
   source-coverage-calibrate [--category <name>] [--locale <segment>] [--run-root <path>] [--calibration-concurrency 1] [--plan-only] [--check-files] [--check-profiles]
           Generate readiness-guided targets, optionally run read-only calibration, promote, and re-audit coverage
   source-coverage-retry-plan --retry-plan <path> [--platform <id>] [--priority top_slot_blocked|blocked] [--limit <n>] [--format json|check|markdown|commands|setup-commands|retry-commands] [--output-file <path>] [--check-files] [--check-profiles] [--only-check-ok]
