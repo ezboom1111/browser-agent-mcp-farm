@@ -33,6 +33,12 @@ adheres to semantic versioning. Build/test status is tracked in
 - **`upgrade` CLI command**: prints the installed version + how to upgrade and re-register
   (`register-all`); the `recipe-canary` / `coverage-report` freshness layer + CI gate cover the rest
   of the maintenance loop.
+- **Transcript intake** (`FarmService.registerTranscript`): ingest a video's spoken/caption track
+  from ANY lawful source (a YouTube auto-caption fetch, yt-dlp, a transcript service, a human
+  paste) — WebVTT is parsed into timed cues, registered as a `transcript_cue` artifact, and a
+  spoken-content claim then cites it with a `text_span` anchor so **what was said becomes
+  cite-or-fail**. The farm still performs no speech-to-text; the transcript is the platform's own
+  caption, supplied with BYO-capture provenance.
 
 ### Changed
 

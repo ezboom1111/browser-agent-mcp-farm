@@ -11,6 +11,7 @@ import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
 import { proposeGroundedClaims } from "./grounded-extraction.js";
+import { parseWebVtt } from "./transcript-parser.js";
 import type { EvidenceKind } from "./schemas.js";
 import { buildBundleManifest, signManifest, verifyBundle as verifyEvidenceBundle, type BundleManifest } from "./evidence-bundle.js";
 import { LeaseManager, leaseManagerOptionsFromEnv, redactLease } from "./lease-manager.js";
@@ -294,6 +295,43 @@ export class FarmService {
       sha256: record.sha256,
       evidenceKind: record.evidence_kind
     };
+  }
+
+  // Ingest a video's transcript (its spoken/caption track) from ANY lawful source — a YouTube
+  // auto-caption fetch, yt-dlp --write-auto-sub, a transcript service, or a human paste — and
+  // register it as a transcript_cue artifact. WebVTT is parsed into timed cues (parseWebVtt);
+  // plain text is registered as-is. A spoken-content claim then cites this artifact with a
+  // text_span anchor on the quoted phrase, so the gate verifies WHAT WAS SAID against the
+  // captured transcript bytes. The farm performs no speech-to-text — the transcript is the
+  // platform's own caption (e.g. Google's auto-ASR for YouTube), supplied lawfully and recorded
+  // with bring-your-own-capture provenance.
+  async registerTranscript(input: { runDir: string; sourceUrl: string; vtt?: string; text?: string; captureMethod?: string; capturedBy?: string }) {
+    let transcriptText: string;
+    let cueCount = 0;
+    if (input.vtt !== undefined) {
+      const parsed = parseWebVtt(input.vtt);
+      if (parsed.cueCount === 0) {
+        return { ok: false as const, error: "no transcript cues parsed from the supplied WebVTT" };
+      }
+      transcriptText = parsed.text;
+      cueCount = parsed.cueCount;
+    } else if (input.text !== undefined && input.text.trim().length > 0) {
+      transcriptText = input.text;
+    } else {
+      return { ok: false as const, error: "provide a WebVTT (vtt) or plain-text (text) transcript" };
+    }
+    const reg = await this.registerEvidence({
+      runDir: input.runDir,
+      sourceUrl: input.sourceUrl,
+      text: transcriptText,
+      evidenceKind: "transcript_cue",
+      captureMethod: input.captureMethod ?? "byo-transcript",
+      capturedBy: input.capturedBy
+    });
+    if (!reg.registered) {
+      return { ok: false as const, error: "failed to register transcript artifact" };
+    }
+    return { ok: true as const, artifactId: reg.artifactId, evidenceKind: "transcript_cue" as const, cueCount, chars: transcriptText.length };
   }
 
   // Author a substantive claim that cites a registered artifact, then run the
