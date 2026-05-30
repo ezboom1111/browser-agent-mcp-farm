@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ArtifactWriter } from "../src/artifact-writer.js";
 import {
   buildBundleManifest,
+  exportBundleArchive,
   merkleRoot,
   signManifest,
   verifyBundle,
+  verifyBundleArchive,
   verifyManifestSignature
 } from "../src/evidence-bundle.js";
 
@@ -96,5 +98,62 @@ describe("evidence-bundle", () => {
   it("merkleRoot is deterministic and input-sensitive", () => {
     expect(merkleRoot(["a", "b"])).toBe(merkleRoot(["a", "b"]));
     expect(merkleRoot(["a", "b"])).not.toBe(merkleRoot(["a", "c"]));
+  });
+});
+
+describe("evidence-bundle self-contained archive (.evb)", () => {
+  it("verifies a signed archive FULLY OFFLINE after the runDir is deleted", async () => {
+    const { runDir } = await makeRun();
+    const { privPem, pubPem } = ed25519Pem();
+    const archive = await exportBundleArchive(runDir, { privateKeyPem: privPem });
+
+    expect(archive.format).toBe("evb-1");
+    expect(Object.keys(archive.files).length).toBeGreaterThan(0);
+
+    // Remove the original run entirely — the archive must still verify on its own.
+    await rm(runDir, { recursive: true, force: true });
+
+    const result = verifyBundleArchive(archive, pubPem);
+    expect(result.ok).toBe(true);
+    expect(result.complete).toBe(true);
+    expect(result.merkleMatches).toBe(true);
+    expect(result.signatureValid).toBe(true);
+    expect(result.tamperedArtifacts).toEqual([]);
+  });
+
+  it("detects a tampered embedded artifact", async () => {
+    const { runDir } = await makeRun();
+    const archive = await exportBundleArchive(runDir);
+    const [firstPath] = Object.keys(archive.files);
+    if (firstPath === undefined) {
+      throw new Error("expected an embedded file");
+    }
+    archive.files[firstPath] = Buffer.from("tampered bytes").toString("base64");
+
+    const result = verifyBundleArchive(archive);
+    expect(result.ok).toBe(false);
+    expect(result.tamperedArtifacts.length).toBeGreaterThan(0);
+  });
+
+  it("rejects an archive verified with the wrong public key", async () => {
+    const { runDir } = await makeRun();
+    const { privPem } = ed25519Pem();
+    const archive = await exportBundleArchive(runDir, { privateKeyPem: privPem });
+
+    const other = ed25519Pem();
+    const result = verifyBundleArchive(archive, other.pubPem);
+    expect(result.signatureValid).toBe(false);
+    expect(result.ok).toBe(false);
+  });
+
+  it("flags incompleteness when a file exceeds the embed size cap", async () => {
+    const { runDir } = await makeRun();
+    const archive = await exportBundleArchive(runDir, { maxFileBytes: 1 });
+    expect(archive.omitted.length).toBeGreaterThan(0);
+
+    const result = verifyBundleArchive(archive);
+    expect(result.complete).toBe(false);
+    expect(result.missingArtifacts.length).toBeGreaterThan(0);
+    expect(result.ok).toBe(false);
   });
 });

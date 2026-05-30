@@ -16,7 +16,7 @@ import { LeaseManager } from "./lease-manager.js";
 import { runStdioServer } from "./mcp-server.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { runClaimGate } from "./claim-gate.js";
-import { buildBundleManifest, signManifest, verifyBundle, type BundleManifest } from "./evidence-bundle.js";
+import { buildBundleManifest, exportBundleArchive, signManifest, verifyBundle, verifyBundleArchive, type BundleArchive, type BundleManifest } from "./evidence-bundle.js";
 import { scanRunArtifacts } from "./secret-scan.js";
 import { purgeRun, pruneRuns } from "./run-lifecycle.js";
 import { appendDecision, verifyDecisionLog } from "./decision-log.js";
@@ -87,13 +87,29 @@ async function main(): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    const manifest = await buildBundleManifest(runDir);
     const privateKeyEnv = getArgValue("--private-key-env");
-    if (privateKeyEnv !== undefined) {
-      const pem = process.env[privateKeyEnv];
-      if (pem !== undefined && pem.length > 0) {
-        manifest.signature = signManifest(manifest, pem);
-      }
+    const privateKeyPem = privateKeyEnv !== undefined ? process.env[privateKeyEnv] : undefined;
+
+    // Self-contained, offline-verifiable archive when --archive-file is given.
+    const archiveFile = getArgValue("--archive-file");
+    if (archiveFile !== undefined) {
+      const archive = await exportBundleArchive(runDir, privateKeyPem !== undefined && privateKeyPem.length > 0 ? { privateKeyPem } : {});
+      await writeFile(archiveFile, `${JSON.stringify(archive)}\n`, "utf8");
+      console.log(JSON.stringify({
+        ok: true,
+        archiveFile,
+        merkleRoot: archive.manifest.merkleRoot,
+        signed: archive.manifest.signature !== undefined,
+        artifactCount: archive.manifest.artifactCount,
+        embeddedFiles: Object.keys(archive.files).length,
+        omitted: archive.omitted.length
+      }, null, 2));
+      return;
+    }
+
+    const manifest = await buildBundleManifest(runDir);
+    if (privateKeyPem !== undefined && privateKeyPem.length > 0) {
+      manifest.signature = signManifest(manifest, privateKeyPem);
     }
     const outputFile = getArgValue("--output-file");
     if (outputFile !== undefined) {
@@ -106,16 +122,29 @@ async function main(): Promise<void> {
   }
 
   if (command === "verify-bundle") {
+    const publicKeyEnv = getArgValue("--public-key-env");
+    const publicKeyPem = publicKeyEnv !== undefined ? process.env[publicKeyEnv] : undefined;
+
+    // Offline, self-contained verification when --archive-file is given (no runDir).
+    const archiveFile = getArgValue("--archive-file");
+    if (archiveFile !== undefined) {
+      const archive = JSON.parse(await readFile(archiveFile, "utf8")) as BundleArchive;
+      const result = verifyBundleArchive(archive, publicKeyPem);
+      console.log(JSON.stringify(result, null, 2));
+      if (!result.ok) {
+        process.exitCode = 1;
+      }
+      return;
+    }
+
     const runDir = getArgValue("--run-dir");
     const manifestFile = getArgValue("--manifest-file");
     if (runDir === undefined || manifestFile === undefined) {
-      console.error("verify-bundle requires --run-dir <dir> --manifest-file <manifest.json>");
+      console.error("verify-bundle requires --run-dir <dir> --manifest-file <manifest.json>, or --archive-file <bundle.evb>");
       process.exitCode = 1;
       return;
     }
     const manifest = JSON.parse(await readFile(manifestFile, "utf8")) as BundleManifest;
-    const publicKeyEnv = getArgValue("--public-key-env");
-    const publicKeyPem = publicKeyEnv !== undefined ? process.env[publicKeyEnv] : undefined;
     const result = await verifyBundle(runDir, manifest, publicKeyPem);
     console.log(JSON.stringify(result, null, 2));
     if (!result.ok) {
@@ -2103,6 +2132,10 @@ Commands:
           Delete one evidence run (refuses a non-run directory unless --force)
   prune-runs --run-root <dir> [--max-age-days 30] [--dry-run]
           Sweep a runs root, removing runs older than the max age (--dry-run to preview)
+  export-bundle --run-dir <dir> [--output-file <manifest.json>] [--archive-file <bundle.evb>] [--private-key-env <ENV>]
+          Build a Merkle-rooted manifest, or a self-contained signed .evb archive
+  verify-bundle (--run-dir <dir> --manifest-file <m.json> | --archive-file <bundle.evb>) [--public-key-env <ENV>]
+          Verify a bundle; --archive-file verifies fully offline (no runDir)
   critique-next [--queue <path>]
           Print exactly one next media critical review task without mutating the queue
   critique-complete [--queue <path>] [--task-id <id>]

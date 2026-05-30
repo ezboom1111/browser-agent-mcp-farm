@@ -34,6 +34,28 @@ export interface BundleVerification {
   signatureValid?: boolean;
 }
 
+// A self-contained `.evb` archive: the manifest PLUS the artifact bytes embedded as
+// base64, so one cooperating second agent can verify it FULLY OFFLINE — no runDir, no
+// network. Files over a size cap are omitted (recorded in `omitted`); their hashes stay
+// in the manifest but they are not offline-verifiable, so the verifier flags `complete`.
+export interface BundleArchive {
+  format: "evb-1";
+  manifest: BundleManifest;
+  files: Record<string, string>;
+  omitted: Array<{ path: string; reason: string }>;
+}
+
+export interface BundleArchiveVerification {
+  ok: boolean;
+  merkleMatches: boolean;
+  tamperedArtifacts: string[];
+  missingArtifacts: string[];
+  complete: boolean;
+  signatureValid?: boolean;
+}
+
+const DEFAULT_MAX_EMBED_BYTES = 25 * 1024 * 1024;
+
 function sha256Hex(data: string): string {
   return createHash("sha256").update(data, "utf8").digest("hex");
 }
@@ -97,6 +119,81 @@ export async function buildBundleManifest(runDir: string): Promise<BundleManifes
     claimCount,
     citationCount
   };
+}
+
+// Build a self-contained archive: manifest + embedded artifact bytes (base64), signed
+// if a private key is supplied. Large files are omitted with a recorded reason.
+export async function exportBundleArchive(
+  runDir: string,
+  options: { privateKeyPem?: string; maxFileBytes?: number } = {}
+): Promise<BundleArchive> {
+  const manifest = await buildBundleManifest(runDir);
+  if (options.privateKeyPem !== undefined && options.privateKeyPem.length > 0) {
+    manifest.signature = signManifest(manifest, options.privateKeyPem);
+  }
+
+  const maxBytes = options.maxFileBytes ?? DEFAULT_MAX_EMBED_BYTES;
+  const files: Record<string, string> = {};
+  const omitted: Array<{ path: string; reason: string }> = [];
+  const seen = new Set<string>();
+  for (const artifact of manifest.artifacts) {
+    if (artifact.path === undefined || seen.has(artifact.path)) {
+      continue;
+    }
+    seen.add(artifact.path);
+    let bytes: Buffer;
+    try {
+      bytes = await readFile(join(runDir, artifact.path));
+    } catch {
+      omitted.push({ path: artifact.path, reason: "unreadable" });
+      continue;
+    }
+    if (bytes.length > maxBytes) {
+      omitted.push({ path: artifact.path, reason: "too_large" });
+      continue;
+    }
+    files[artifact.path] = bytes.toString("base64");
+  }
+
+  return { format: "evb-1", manifest, files, omitted };
+}
+
+// Verify a self-contained archive offline: re-hash each embedded artifact, recompute the
+// Merkle root over the manifest hashes, and (if a public key is given) check the
+// signature. No runDir, no network.
+export function verifyBundleArchive(archive: BundleArchive, publicKeyPem?: string): BundleArchiveVerification {
+  const tamperedArtifacts: string[] = [];
+  const missingArtifacts: string[] = [];
+  for (const artifact of archive.manifest.artifacts) {
+    if (artifact.path === undefined) {
+      missingArtifacts.push(artifact.artifact_id);
+      continue;
+    }
+    const embedded = archive.files[artifact.path];
+    if (embedded === undefined) {
+      missingArtifacts.push(artifact.artifact_id);
+      continue;
+    }
+    const recomputed = createHash("sha256").update(Buffer.from(embedded, "base64")).digest("hex");
+    if (recomputed !== artifact.sha256) {
+      tamperedArtifacts.push(artifact.artifact_id);
+    }
+  }
+
+  const merkleMatches = merkleRoot(archive.manifest.artifacts.map((artifact) => artifact.sha256)) === archive.manifest.merkleRoot;
+
+  let signatureValid: boolean | undefined;
+  if (archive.manifest.signature !== undefined && publicKeyPem !== undefined) {
+    signatureValid = verifyManifestSignature(archive.manifest.merkleRoot, archive.manifest.signature, publicKeyPem);
+  }
+
+  const complete = missingArtifacts.length === 0;
+  const ok = tamperedArtifacts.length === 0 && complete && merkleMatches && signatureValid !== false;
+  const verification: BundleArchiveVerification = { ok, merkleMatches, tamperedArtifacts, missingArtifacts, complete };
+  if (signatureValid !== undefined) {
+    verification.signatureValid = signatureValid;
+  }
+  return verification;
 }
 
 export function signManifest(manifest: BundleManifest, privateKeyPem: string): string {
