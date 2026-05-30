@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
+import { ClaimAnchorSchema, ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
 
 interface ArtifactLedgerRow {
   artifact_id?: string;
@@ -21,6 +21,8 @@ interface ClaimLedgerRow {
   evidence_kind?: EvidenceKind;
   timestampSec?: number;
   verification_level?: string;
+  anchor?: unknown;
+  claim_taxonomy?: string;
 }
 
 interface CitationLedgerRow {
@@ -143,6 +145,9 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
     if (mode === "final") {
       validateTypedClaim(claim, artifact, claimLabel, errors);
       validateDestinationProvenanceClaim(claim, citationsByClaimId.get(claim.claim_id ?? ""), claimLabel, errors);
+      if (claim.anchor !== undefined) {
+        await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors);
+      }
     } else {
       validateSmokeTypedClaim(claim, artifact, claimLabel, warnings);
     }
@@ -261,6 +266,102 @@ function requiredDestinationProvenanceKinds(evidenceKind: EvidenceKind | undefin
     default:
       return [];
   }
+}
+
+/**
+ * Grounding check (master-plan flagship). When a final-mode claim carries an
+ * anchor, verify it against the CITED ARTIFACT'S ACTUAL BYTES, not just the
+ * ledger graph. For a text_span this opens the artifact and confirms the quote
+ * (or, for derived/aggregated claims, the supporting tokens) actually appear in
+ * it — so the gate proves a claim is grounded in evidence, not merely that the
+ * citation graph is well-formed. Other anchor types are checked structurally
+ * (the cited artifact's kind must match the anchor).
+ */
+async function validateClaimGrounding(
+  runDir: string,
+  claim: ClaimLedgerRow,
+  artifact: ArtifactLedgerRow | undefined,
+  claimLabel: string,
+  errors: string[]
+): Promise<void> {
+  const parsed = ClaimAnchorSchema.safeParse(claim.anchor);
+  if (!parsed.success) {
+    errors.push(`claim anchor is malformed: ${claimLabel}`);
+    return;
+  }
+  const anchor = parsed.data;
+  const kind = artifact?.evidence_kind;
+
+  if (anchor.type === "ocr_bbox") {
+    if (kind !== "ocr_text") {
+      errors.push(`ocr_bbox anchor requires an ocr_text artifact: ${claimLabel}`);
+    }
+    return;
+  }
+  if (anchor.type === "transcript_cue") {
+    if (kind !== "transcript_cue") {
+      errors.push(`transcript_cue anchor requires a transcript_cue artifact: ${claimLabel}`);
+    }
+    return;
+  }
+  if (anchor.type === "frame") {
+    if (kind !== "frame_screenshot") {
+      errors.push(`frame anchor requires a frame_screenshot artifact: ${claimLabel}`);
+    }
+    return;
+  }
+
+  // text_span: actually open the artifact bytes and check the quote/tokens.
+  if (!isTextGroundableKind(kind)) {
+    errors.push(`text_span anchor requires a text/HTML/OCR/transcript artifact: ${claimLabel}`);
+    return;
+  }
+  const content = await readArtifactText(runDir, artifact);
+  if (content === undefined) {
+    errors.push(`claim grounding artifact could not be read: ${claimLabel}`);
+    return;
+  }
+  const normContent = normalizeForMatch(content);
+  if (claim.claim_taxonomy === "derived" || claim.claim_taxonomy === "aggregated") {
+    const tokens = anchor.normalizedTokens !== undefined && anchor.normalizedTokens.length > 0
+      ? anchor.normalizedTokens
+      : tokenizeForMatch(anchor.quote);
+    const missing = tokens.filter((token) => !normContent.includes(normalizeForMatch(token)));
+    if (missing.length > 0) {
+      errors.push(`claim grounding tokens not found in cited artifact: ${claimLabel} -> ${missing.slice(0, 5).join(", ")}`);
+    }
+    return;
+  }
+  if (!normContent.includes(normalizeForMatch(anchor.quote))) {
+    errors.push(`claim text not found in cited artifact: ${claimLabel} -> "${anchor.quote.slice(0, 80)}"`);
+  }
+}
+
+function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {
+  return kind === "page_text"
+    || kind === "page_html"
+    || kind === "ocr_text"
+    || kind === "transcript_cue"
+    || kind === "audio_transcription";
+}
+
+async function readArtifactText(runDir: string, artifact: ArtifactLedgerRow | undefined): Promise<string | undefined> {
+  if (artifact?.path === undefined) {
+    return undefined;
+  }
+  try {
+    return await readFile(join(runDir, artifact.path), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeForMatch(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function tokenizeForMatch(value: string): string[] {
+  return normalizeForMatch(value).split(" ").filter((token) => token.length >= 2);
 }
 
 async function readJsonl<T>(path: string): Promise<T[]> {

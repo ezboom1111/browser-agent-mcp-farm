@@ -363,6 +363,75 @@ describe("runClaimGate", () => {
     expect(result.ok).toBe(false);
     expect(result.errors.join("\n")).toContain("does not match evidence");
   });
+
+  it("grounds a text_span claim against the cited artifact bytes", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-grounded-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "grounded", text: "The price is 38,000 KRW today."
+    });
+    const record = records.find((item) => item.evidence_kind === "page_text");
+    if (!record) {
+      throw new Error("expected a page_text artifact");
+    }
+
+    await appendTypedClaim(runDir, {
+      claim_id: "g-1", claim_type: "text", claim: "Price is 38,000 KRW",
+      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      anchor: { type: "text_span", quote: "38,000 KRW" }
+    });
+
+    const result = await runClaimGate(runDir, { mode: "final" });
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("fails a text_span claim whose quote is absent from the cited artifact", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-ungrounded-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "ungrounded", text: "The price is 38,000 KRW today."
+    });
+    const record = records.find((item) => item.evidence_kind === "page_text");
+    if (!record) {
+      throw new Error("expected a page_text artifact");
+    }
+
+    await appendTypedClaim(runDir, {
+      claim_id: "g-2", claim_type: "text", claim: "It costs 50,000 USD",
+      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      anchor: { type: "text_span", quote: "50,000 USD" }
+    });
+
+    const result = await runClaimGate(runDir, { mode: "final" });
+    expect(result.ok).toBe(false);
+    expect(result.errors.join("\n")).toContain("claim text not found in cited artifact");
+  });
+
+  it("grounds a derived claim by supporting tokens", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-claim-derived-"));
+    runDirs.push(runDir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "derived", text: "Open now. Rated 4.6 out of 5 by 1200 reviews."
+    });
+    const record = records.find((item) => item.evidence_kind === "page_text");
+    if (!record) {
+      throw new Error("expected a page_text artifact");
+    }
+
+    await appendTypedClaim(runDir, {
+      claim_id: "g-3", claim_type: "metadata", claim: "Highly rated place",
+      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      claim_taxonomy: "derived",
+      anchor: { type: "text_span", quote: "4.6 rating", normalizedTokens: ["4.6", "rated", "reviews"] }
+    });
+
+    const result = await runClaimGate(runDir, { mode: "final" });
+    expect(result.ok).toBe(true);
+  });
 });
 
 async function appendTypedClaim(runDir: string, claim: {
@@ -373,6 +442,8 @@ async function appendTypedClaim(runDir: string, claim: {
   evidence_kind: EvidenceKind | string;
   verification_level: string;
   timestampSec?: number;
+  anchor?: unknown;
+  claim_taxonomy?: string;
   extraCitations?: ArtifactRecord[];
 }): Promise<void> {
   const row = {
