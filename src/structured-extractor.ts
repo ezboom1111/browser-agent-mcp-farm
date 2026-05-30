@@ -89,6 +89,10 @@ function normalizeForCorroboration(value: string): string {
   return value.toLowerCase().replace(/[\s,]+/g, "");
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // Pull a few common typed facts out of JSON-LD (Product/Offer/Place/Review nodes)
 // so a price/rating becomes a typed value, not a fuzzy regex hit. A SITE CLAIM.
 function summarizeJsonLd(jsonLd: unknown[]): StructuredSummary {
@@ -117,15 +121,19 @@ function summarizeJsonLd(jsonLd: unknown[]): StructuredSummary {
         }
       }
     }
-    if (summary.rating === undefined && record.aggregateRating !== null && typeof record.aggregateRating === "object") {
-      const ratingRecord = record.aggregateRating as Record<string, unknown>;
-      if (ratingRecord.ratingValue !== undefined) {
-        summary.rating = { value: String(ratingRecord.ratingValue) };
-        if (ratingRecord.bestRating !== undefined) {
-          summary.rating.scale = String(ratingRecord.bestRating);
+    if (summary.rating === undefined) {
+      // Prefer an aggregateRating (Product/Place); fall back to a single Review's
+      // reviewRating so a standalone review's score is captured too.
+      const ratingSource = isRecord(record.aggregateRating)
+        ? record.aggregateRating
+        : (isRecord(record.reviewRating) ? record.reviewRating : undefined);
+      if (ratingSource !== undefined && ratingSource.ratingValue !== undefined) {
+        summary.rating = { value: String(ratingSource.ratingValue) };
+        if (ratingSource.bestRating !== undefined) {
+          summary.rating.scale = String(ratingSource.bestRating);
         }
-        if (ratingRecord.ratingCount !== undefined) {
-          summary.rating.count = String(ratingRecord.ratingCount);
+        if (ratingSource.ratingCount !== undefined) {
+          summary.rating.count = String(ratingSource.ratingCount);
         }
       }
     }

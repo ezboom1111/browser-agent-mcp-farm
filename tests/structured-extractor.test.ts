@@ -82,6 +82,18 @@ describe("extractStructuredData", () => {
     expect(extractStructuredData("<html><body><p>hello</p></body></html>").tables).toEqual([]);
   });
 
+  it("reads a standalone Review's reviewRating when there is no aggregateRating", () => {
+    const html = '<script type="application/ld+json">{"@type":"Review","name":"Great espresso","reviewRating":{"ratingValue":"5","bestRating":"5"}}</script>';
+    const data = extractStructuredData(html);
+    expect(data.summary.rating).toEqual({ value: "5", scale: "5" });
+  });
+
+  it("prefers aggregateRating over reviewRating when both are present", () => {
+    const html = '<script type="application/ld+json">{"@type":"Product","name":"X","aggregateRating":{"ratingValue":"4.2","bestRating":"5","ratingCount":"9"},"reviewRating":{"ratingValue":"5"}}</script>';
+    const data = extractStructuredData(html);
+    expect(data.summary.rating).toEqual({ value: "4.2", scale: "5", count: "9" });
+  });
+
   it("summarizes typed price and rating from JSON-LD", () => {
     const html = '<script type="application/ld+json">{"@type":"Product","name":"Latte","offers":{"@type":"Offer","price":"4500","priceCurrency":"KRW"},"aggregateRating":{"ratingValue":"4.6","bestRating":"5","ratingCount":"1200"}}</script>';
     const data = extractStructuredData(html);

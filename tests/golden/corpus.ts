@@ -6,9 +6,8 @@
 // CI can regress against.
 //
 // Honesty notes baked into the corpus:
-//  - `review-en` labels the TRUE review rating (5), which the current extractor does
-//    NOT read (it only summarizes aggregateRating, not reviewRating) — a deliberate
-//    recall gap that documents a real limitation instead of hiding it.
+//  - `review-en` labels the TRUE review rating (5) from a Review node's reviewRating,
+//    which the extractor now reads (aggregateRating preferred, reviewRating fallback).
 //  - `conflict-en` labels the JSON-LD price (a SITE CLAIM the extractor reports),
 //    while the DOM body shows a different sale price. Surfacing that disagreement is a
 //    follow-up slice; the corpus is already staged for it.
@@ -171,7 +170,7 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     id: "review-en",
     category: "review",
     locale: "en",
-    note: "reviewRating is NOT read by the current extractor — labeled to document the recall gap.",
+    note: "Review.reviewRating is read as a fallback when there is no aggregateRating.",
     html: page({
       title: "Review: Acme Espresso",
       jsonLd: {

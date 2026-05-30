@@ -1,6 +1,6 @@
 {
   "precision": 0.95,
-  "recall": 0.9,
-  "exactMatch": 0.9,
-  "note": "Evidence-quality gate for the deterministic structured extractor, measured against tests/golden/corpus.ts by tests/structured-benchmark.test.ts. Raise the floor as the extractor improves (e.g. reviewRating support, microdata, DOM-conflict surfacing); never lower it to make CI pass."
+  "recall": 0.95,
+  "exactMatch": 0.95,
+  "note": "Evidence-quality gate for the deterministic structured extractor, measured against tests/golden/corpus.ts by tests/structured-benchmark.test.ts. Raised after reviewRating support closed the review recall gap. Raise the floor further as the extractor improves (microdata/RDFa, DOM-conflict surfacing); never lower it to make CI pass."
 }
