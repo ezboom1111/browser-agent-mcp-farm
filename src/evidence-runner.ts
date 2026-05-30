@@ -1,5 +1,6 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { extractStructuredData } from "./structured-extractor.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
@@ -857,6 +858,33 @@ async function captureBrowserEvidence(input: {
           ocrRecords.push(...denseOcrResult.records);
         }
       }
+    }
+    // Deterministic structured-data derivative over the captured HTML (best-effort,
+    // never fails the run). Registers a structured_data artifact when the page
+    // exposes JSON-LD / Open Graph, so structured facts become part of the bundle.
+    try {
+      const htmlRecord = capture.records.find((record) => record.evidence_kind === "page_html" && typeof record.path === "string");
+      if (htmlRecord?.path !== undefined) {
+        const html = await readFile(join(input.options.runDir, htmlRecord.path), "utf8");
+        const structured = extractStructuredData(html);
+        const hasStructured = structured.jsonLd.length > 0
+          || Object.keys(structured.openGraph).length > 0
+          || structured.summary.name !== undefined;
+        if (hasStructured) {
+          await input.runStage("structured_extraction", () => withAbort(input.writer.writeCaptureBundle({
+            runDir: input.options.runDir,
+            sourceUrl: input.options.url,
+            contextToken: lease.contextToken,
+            pageId: page.pageId,
+            captureId: `${input.baseCaptureId}-structured`,
+            text: JSON.stringify(structured),
+            evidenceKind: "structured_data",
+            captureMethod: "structured-extractor"
+          }), input.options.abortSignal));
+        }
+      }
+    } catch {
+      // structured extraction is best-effort; never fail the run for it
     }
     await pool.releaseContext(agentId, lease.contextToken).catch(() => undefined);
     released = true;

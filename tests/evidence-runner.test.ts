@@ -16,6 +16,46 @@ describe("runEvidenceWorkflow", () => {
     runDirs = [];
   });
 
+  it("registers a structured_data artifact when the page exposes JSON-LD", async () => {
+    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
+      await browser.close();
+      return true;
+    }).catch(() => false);
+    if (!executableAvailable) {
+      console.warn("Skipping structured extraction test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-structured-run-"));
+    runDirs.push(runDir);
+    try {
+      const result = await runEvidenceWorkflow({
+        url: `${fixture.baseUrl}/structured`,
+        runDir,
+        captureId: "structured-evidence",
+        sampleFrames: false,
+        waitMs: 0,
+        finalClaimGate: false
+      });
+      expect(result.ok).toBe(true);
+
+      const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
+      const rows = ledger
+        .split("\n")
+        .filter((line) => line.trim().length > 0)
+        .map((line) => JSON.parse(line) as { evidence_kind?: string; kind?: string; path?: string });
+      const structured = rows.find((row) => row.evidence_kind === "structured_data" && row.kind === "text");
+      expect(structured).toBeDefined();
+      if (structured?.path !== undefined) {
+        const parsed = JSON.parse(await readFile(join(runDir, structured.path), "utf8")) as { summary?: { price?: { value?: string } } };
+        expect(parsed.summary?.price?.value).toBe("4500");
+      }
+    } finally {
+      await fixture.close();
+    }
+  });
+
   it("creates page, frame, claim, citation, report, and final gate artifacts", async () => {
     const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
       await browser.close();
@@ -1526,6 +1566,14 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
     if (path === "/captions.vtt") {
       response.writeHead(200, { "content-type": "text/vtt", "content-length": String(captions.byteLength) });
       response.end(captions);
+      return;
+    }
+    if (path === "/structured") {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(`<!doctype html><html><head><title>structured fixture</title>
+        <meta property="og:title" content="Acme Cafe">
+        <script type="application/ld+json">{"@type":"Product","name":"Latte","offers":{"@type":"Offer","price":"4500","priceCurrency":"KRW"}}</script>
+        </head><body><main><h1>Acme Cafe</h1><p>open now</p></main></body></html>`);
       return;
     }
     if (path === "/login-wall") {

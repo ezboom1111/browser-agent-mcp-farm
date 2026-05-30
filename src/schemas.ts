@@ -13,6 +13,7 @@ export const EvidenceKindSchema = z.enum([
   "media_index",
   "transcript_cue",
   "ocr_text",
+  "structured_data",
   "official_api_metadata",
   "api_cache",
   "source_strategy",
