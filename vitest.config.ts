@@ -1,4 +1,12 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
+
+// Coverage thresholds live in coverage-thresholds.json so scripts/ratchet-coverage.mjs
+// can raise them (never lower) on every green run, making coverage monotonic-upward
+// toward the 80% target as untested surfaces (cli.ts, http-server, scheduler) gain tests.
+const thresholds = JSON.parse(
+  readFileSync(new URL("./coverage-thresholds.json", import.meta.url), "utf8")
+) as { lines: number; statements: number; functions: number; branches: number };
 
 export default defineConfig({
   test: {
@@ -12,17 +20,7 @@ export default defineConfig({
       reportsDirectory: "coverage",
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts", "**/*.d.ts"],
-      // Ratcheting baseline (Phase 1b). Measured on the committed baseline:
-      // lines 72.7 / statements 72.9 / functions 82.4 / branches 67.6.
-      // Floors are set ~1pt under measured to avoid run-to-run flakiness, and
-      // should be ratcheted UP toward the 80% target as untested surfaces
-      // (cli.ts, http-server, scheduler, registration) gain coverage.
-      thresholds: {
-        lines: 72,
-        statements: 72,
-        functions: 81,
-        branches: 66
-      }
+      thresholds
     }
   }
 });

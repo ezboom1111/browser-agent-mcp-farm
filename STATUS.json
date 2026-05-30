@@ -2,9 +2,9 @@
   "package": "browser-agent-mcp-farm",
   "version": "0.3.0",
   "branch": "claude/handoff-baseline",
-  "commit": "75dbcdf",
-  "workingTree": "dirty (6 files)",
-  "generatedAt": "2026-05-30T03:47:34.568Z",
+  "commit": "199affa",
+  "workingTree": "dirty (4 files)",
+  "generatedAt": "2026-05-30T03:54:11.934Z",
   "gate": "npm run verify",
   "verify": "PASS",
   "tests": {
