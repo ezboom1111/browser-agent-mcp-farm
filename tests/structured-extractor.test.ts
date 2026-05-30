@@ -42,6 +42,35 @@ describe("extractStructuredData", () => {
     expect(data.title).toBeUndefined();
   });
 
+  it("extracts an HTML table with header row, caption, and body rows", () => {
+    const html = `
+      <table>
+        <caption>Menu &amp; Prices</caption>
+        <thead><tr><th>Item</th><th>Price</th></tr></thead>
+        <tbody>
+          <tr><td>Latte</td><td>4,500</td></tr>
+          <tr><td>Espresso</td><td>3,000</td></tr>
+        </tbody>
+      </table>`;
+    const data = extractStructuredData(html);
+    expect(data.tables.length).toBe(1);
+    const table = data.tables[0];
+    expect(table?.caption).toBe("Menu & Prices");
+    expect(table?.headers).toEqual(["Item", "Price"]);
+    expect(table?.rows).toEqual([["Latte", "4,500"], ["Espresso", "3,000"]]);
+  });
+
+  it("treats a headerless table as all body rows", () => {
+    const html = "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>";
+    const data = extractStructuredData(html);
+    expect(data.tables[0]?.headers).toEqual([]);
+    expect(data.tables[0]?.rows).toEqual([["a", "b"], ["c", "d"]]);
+  });
+
+  it("emits no tables for plain HTML", () => {
+    expect(extractStructuredData("<html><body><p>hello</p></body></html>").tables).toEqual([]);
+  });
+
   it("summarizes typed price and rating from JSON-LD", () => {
     const html = '<script type="application/ld+json">{"@type":"Product","name":"Latte","offers":{"@type":"Offer","price":"4500","priceCurrency":"KRW"},"aggregateRating":{"ratingValue":"4.6","bestRating":"5","ratingCount":"1200"}}</script>';
     const data = extractStructuredData(html);

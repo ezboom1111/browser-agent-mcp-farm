@@ -16,6 +16,13 @@ export interface StructuredCrossCheck {
   corroborated: boolean;
 }
 
+export interface StructuredTable {
+  caption?: string;
+  headers: string[];
+  rows: string[][];
+  truncated?: boolean;
+}
+
 export interface StructuredData {
   jsonLd: unknown[];
   openGraph: Record<string, string>;
@@ -23,6 +30,7 @@ export interface StructuredData {
   canonical?: string;
   title?: string;
   summary: StructuredSummary;
+  tables: StructuredTable[];
   // Set only by callers that have the page's visible text (see crossCheckStructured);
   // NOT produced by extractStructuredData, which stays byte-reproducible from HTML.
   crossCheck?: StructuredCrossCheck[];
@@ -34,7 +42,8 @@ export function extractStructuredData(html: string): StructuredData {
     jsonLd,
     openGraph: extractMeta(html, "property", "og:"),
     twitter: extractMeta(html, "name", "twitter:"),
-    summary: summarizeJsonLd(jsonLd)
+    summary: summarizeJsonLd(jsonLd),
+    tables: extractTables(html)
   };
   const canonical = extractCanonical(html);
   if (canonical !== undefined) {
@@ -172,6 +181,86 @@ function extractTitle(html: string): string | undefined {
   }
   const title = match[1].replace(/\s+/g, " ").trim();
   return title.length > 0 ? title : undefined;
+}
+
+// Deterministic HTML-table extraction (semi-structured data). Best-effort and
+// byte-reproducible from the captured HTML: each <table> becomes {caption, headers,
+// rows}. A leading all-<th> row is treated as the header. Bounded (tables/rows/cols/
+// cell length) so a pathological page can't bloat the artifact; truncation is flagged.
+// Caveat: nested tables are not disentangled (the non-greedy match stops at the first
+// </table>), which is acceptable for the data tables this targets.
+const MAX_TABLES = 20;
+const MAX_TABLE_ROWS = 200;
+const MAX_TABLE_COLS = 50;
+const MAX_CELL_CHARS = 500;
+
+export function extractTables(html: string): StructuredTable[] {
+  const tables: StructuredTable[] = [];
+  const tableRe = /<table\b[^>]*>([\s\S]*?)<\/table>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = tableRe.exec(html)) !== null && tables.length < MAX_TABLES) {
+    const inner = match[1] ?? "";
+    const captionMatch = inner.match(/<caption\b[^>]*>([\s\S]*?)<\/caption>/i);
+    const parsedRows: Array<{ cells: string[]; isHeader: boolean }> = [];
+    let truncated = false;
+
+    for (const rowMatch of inner.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+      if (parsedRows.length >= MAX_TABLE_ROWS) {
+        truncated = true;
+        break;
+      }
+      const cells: string[] = [];
+      let allHeader = true;
+      let sawCell = false;
+      for (const cellMatch of (rowMatch[1] ?? "").matchAll(/<(th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/gi)) {
+        sawCell = true;
+        if ((cellMatch[1] ?? "").toLowerCase() !== "th") {
+          allHeader = false;
+        }
+        if (cells.length >= MAX_TABLE_COLS) {
+          truncated = true;
+          break;
+        }
+        cells.push(cellText(cellMatch[2] ?? ""));
+      }
+      if (sawCell) {
+        parsedRows.push({ cells, isHeader: allHeader });
+      }
+    }
+
+    if (parsedRows.length === 0) {
+      continue;
+    }
+    const headerRow = parsedRows[0];
+    const hasHeader = headerRow !== undefined && headerRow.isHeader;
+    const table: StructuredTable = {
+      headers: hasHeader ? headerRow.cells : [],
+      rows: (hasHeader ? parsedRows.slice(1) : parsedRows).map((row) => row.cells)
+    };
+    const caption = captionMatch?.[1] === undefined ? undefined : cellText(captionMatch[1]);
+    if (caption !== undefined && caption.length > 0) {
+      table.caption = caption;
+    }
+    if (truncated) {
+      table.truncated = true;
+    }
+    tables.push(table);
+  }
+  return tables;
+}
+
+function cellText(raw: string): string {
+  const stripped = raw
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped.length > MAX_CELL_CHARS ? stripped.slice(0, MAX_CELL_CHARS) : stripped;
 }
 
 function attrValue(tag: string, attr: string): string | undefined {
