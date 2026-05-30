@@ -4,10 +4,13 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderCodexGuidanceBlock } from "./agent-guidance.js";
 
 const SERVER_NAME = "browser-agent-mcp-farm";
 const CODEX_BEGIN = "# BEGIN browser-agent-mcp-farm";
 const CODEX_END = "# END browser-agent-mcp-farm";
+const CODEX_GUIDANCE_BEGIN = "<!-- BEGIN browser-agent-mcp-farm guidance -->";
+const CODEX_GUIDANCE_END = "<!-- END browser-agent-mcp-farm guidance -->";
 
 export interface RegistrationResult {
   ok: boolean;
@@ -91,7 +94,33 @@ export async function registerClaude(): Promise<RegistrationResult> {
 }
 
 export async function registerAll(): Promise<RegistrationResult[]> {
-  return [await registerCodex(), await registerClaude(), await registerClaudeSkill()];
+  return [await registerCodex(), await registerClaude(), await registerClaudeSkill(), await registerCodexSkill()];
+}
+
+// Install the Codex-facing usage guidance (when-to-use / fast path / authoring /
+// non-goals) into ~/.codex/AGENTS.md as a managed block, so Codex reaches PARITY
+// with Claude's SKILL.md instead of getting the tools with no guidance.
+export async function registerCodexSkill(agentsPath = join(homedir(), ".codex", "AGENTS.md")): Promise<RegistrationResult> {
+  await mkdir(dirname(agentsPath), { recursive: true });
+  const block = `${CODEX_GUIDANCE_BEGIN}\n${renderCodexGuidanceBlock()}${CODEX_GUIDANCE_END}\n`;
+  const existing = existsSync(agentsPath) ? await readFile(agentsPath, "utf8") : "";
+  const backupPath = existsSync(agentsPath) ? await backupFile(agentsPath) : undefined;
+  const pattern = new RegExp(`\\n?${escapeRegex(CODEX_GUIDANCE_BEGIN)}[\\s\\S]*?${escapeRegex(CODEX_GUIDANCE_END)}\\n?`, "m");
+  const next = pattern.test(existing)
+    ? existing.replace(pattern, `\n${block}`)
+    : `${existing.trimEnd()}\n\n${block}`;
+  await writeFile(agentsPath, next, "utf8");
+
+  const registration: RegistrationResult = {
+    ok: true,
+    target: "codex",
+    configPath: agentsPath,
+    message: `Installed ${SERVER_NAME} guidance into ${agentsPath}.`
+  };
+  if (backupPath !== undefined) {
+    registration.backupPath = backupPath;
+  }
+  return registration;
 }
 
 // Install the in-repo Claude skill (skills/browser-agent-mcp-farm/SKILL.md) so a

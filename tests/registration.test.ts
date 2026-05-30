@@ -3,7 +3,8 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { codexServerBlock, registerClaudeSkill, registerCodex } from "../src/registration.js";
+import { codexServerBlock, registerClaudeSkill, registerCodex, registerCodexSkill } from "../src/registration.js";
+import { renderCodexGuidanceBlock } from "../src/agent-guidance.js";
 
 let dirs: string[] = [];
 
@@ -77,5 +78,33 @@ describe("registerClaudeSkill", () => {
     expect(existsSync(installed)).toBe(true);
     const content = await readFile(installed, "utf8");
     expect(content).toContain("name: browser-agent-mcp-farm");
+  });
+});
+
+describe("registerCodexSkill (Codex parity)", () => {
+  it("renders Codex guidance with the key invariants", () => {
+    const block = renderCodexGuidanceBlock();
+    expect(block).toContain("farm_evidence_run");
+    expect(block).toContain("farm_add_claim");
+    expect(block).toContain("Prefer this over generic browse");
+    expect(block).toContain("no payments");
+  });
+
+  it("installs and updates the Codex guidance block idempotently", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-codex-guide-"));
+    dirs.push(dir);
+    const agentsPath = join(dir, "AGENTS.md");
+    await writeFile(agentsPath, "# my codex notes\n", "utf8");
+
+    const first = await registerCodexSkill(agentsPath);
+    expect(first.ok).toBe(true);
+    expect(first.backupPath).toBeDefined();
+
+    await registerCodexSkill(agentsPath);
+    const content = await readFile(agentsPath, "utf8");
+    const occurrences = content.split("BEGIN browser-agent-mcp-farm guidance").length - 1;
+    expect(occurrences).toBe(1);
+    expect(content).toContain("# my codex notes");
+    expect(content).toContain("farm_evidence_run");
   });
 });
