@@ -24,6 +24,15 @@ adheres to semantic versioning. Build/test status is tracked in
   appears on the rendered page. The gate re-verifies every quote against the bytes, so a value the
   extractor invented — or a publisher (JSON-LD) value that disagrees with the page — is never
   grounded: extraction proposes, the gate decides. Sector-agnostic, no per-site selectors, no LLM.
+- **Acquisition tier router** (`acquisition-router.ts`, `coverage-report --format routes`): a
+  deterministic routing brain that maps each source's coverage class to the cheapest viable
+  acquisition tier (`official_api` → `feed` → `model_extract` → `profile` → `headed` →
+  `byo_capture`). `byo_capture` closes every route as the universal fallback, so the farm never
+  implies it can autonomously capture everything — a hard source is still acquirable by an external
+  capture that feeds the gate.
+- **`upgrade` CLI command**: prints the installed version + how to upgrade and re-register
+  (`register-all`); the `recipe-canary` / `coverage-report` freshness layer + CI gate cover the rest
+  of the maintenance loop.
 
 ### Changed
 

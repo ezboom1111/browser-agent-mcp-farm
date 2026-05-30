@@ -6,7 +6,7 @@ import { createServer, type Server } from "node:http";
 import { createInterface } from "node:readline/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium, type BrowserContext } from "playwright";
 import { ArtifactWriter } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
@@ -33,6 +33,7 @@ import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
 import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, DEFAULT_API_BACKED_PLATFORMS, DEFAULT_CANARY_MAINTENANCE_SET, type CoverageReportSource } from "./coverage-report.js";
+import { formatAcquisitionRoutesAsLines, routeCoverageReport } from "./acquisition-router.js";
 import { appendRecipeCanaryResult, evaluateRecipeCanary, loadRecipeCanaryLedger, runRecipeCanary, type RecipeCanaryGolden, type RecipeCanaryObservation, type RecipeCanaryResult } from "./recipe-canary.js";
 import { listProfiles, profilePaths, removeProfile } from "./profile-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
@@ -367,6 +368,11 @@ export async function main(): Promise<void> {
 
   if (command === "register-all") {
     console.log(JSON.stringify({ ok: true, results: await registerAll() }, null, 2));
+    return;
+  }
+
+  if (command === "upgrade") {
+    await runUpgradeCommand();
     return;
   }
 
@@ -883,9 +889,29 @@ async function runCoverageReportCommand(): Promise<void> {
     process.stdout.write(formatCoverageReportAsLines(report));
   } else if (format === "markdown") {
     process.stdout.write(formatCoverageReportAsMarkdown(report));
+  } else if (format === "routes") {
+    process.stdout.write(formatAcquisitionRoutesAsLines(routeCoverageReport(report)));
   } else {
-    throw new Error("--format must be json, lines, or markdown for coverage-report");
+    throw new Error("--format must be json, lines, markdown, or routes for coverage-report");
   }
+}
+
+async function runUpgradeCommand(): Promise<void> {
+  const pkgPath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+  const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as { name: string; version: string };
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        name: pkg.name,
+        version: pkg.version,
+        upgrade: [`npm install -g ${pkg.name}@latest   # or 'npm update ${pkg.name}' in your project`, "node ./dist/cli.js register-all      # re-register the MCP server + skill with Codex & Claude"],
+        note: "Self-maintenance: 'recipe-canary' + 'coverage-report' auto-detect source decay; the CI/verify gate guards every release."
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runRecipeCanaryCommand(): Promise<void> {
@@ -2353,8 +2379,8 @@ Commands:
           Inspect information-source coverage registry entries and support tiers
   source-coverage-readiness [--category <name>] [--locale <segment>] [--top-rank 3] [--promotion-summary <path>] [--format json|targets|retry-commands|retry-plan]
           Audit registry source slots against promoted maintained action files for QA coverage
-  coverage-report [--maintenance <a,b>] [--api-backed <a,b>] [--canary-ledger <path>] [--freshness-days 7] [--format json|lines|markdown]
-          Classify each source: autonomous_ready (fresh passing canary) / api_backed / headed_only / blocked / unmaintained
+  coverage-report [--maintenance <a,b>] [--api-backed <a,b>] [--canary-ledger <path>] [--freshness-days 7] [--format json|lines|markdown|routes]
+          Classify each source (autonomous_ready / api_backed / headed_only / blocked / unmaintained); --format routes shows the cheapest acquisition tier per source (byo_capture is the universal fallback)
   recipe-canary --golden-file <golden.json> (--observation-file <obs.json> | --url <url>) [--canary-ledger <path>] [--fail-on-recalibration]
           Re-verify a maintained recipe's selectors vs a golden; auto-demotes a decayed ready slot to needs_recalibration
   source-coverage-calibrate [--category <name>] [--locale <segment>] [--run-root <path>] [--calibration-concurrency 1] [--plan-only] [--check-files] [--check-profiles]
@@ -2394,6 +2420,8 @@ Commands:
           Remove a saved browser farm profile
   register-codex | register-claude | register-all
           Register this MCP server in local agent configs
+  upgrade
+          Print the installed version + how to upgrade and re-register
 
 Options:
   --run-dir <path>   Write smoke artifacts into a specific evidence run
