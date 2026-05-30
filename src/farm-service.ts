@@ -264,10 +264,18 @@ export class FarmService {
       pageId: "agent",
       text: parsed.text,
       evidenceKind: parsed.evidenceKind,
-      captureMethod: "agent-authored"
+      // Bring-your-own-capture: honor caller-supplied provenance (an external capturer records
+      // its own method/id/time); default to agent-authored for the existing cite-or-fail path.
+      captureMethod: parsed.captureMethod ?? "agent-authored"
     };
     if (parsed.captureId !== undefined) {
       bundleInput.captureId = parsed.captureId;
+    }
+    if (parsed.capturedBy !== undefined) {
+      bundleInput.capturedBy = parsed.capturedBy;
+    }
+    if (parsed.capturedAt !== undefined) {
+      bundleInput.capturedAt = parsed.capturedAt;
     }
     const records = await writer.writeCaptureBundle(bundleInput);
     // Select the raw text artifact (the one whose bytes hold the registered

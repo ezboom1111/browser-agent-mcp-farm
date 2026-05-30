@@ -6,9 +6,23 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
-> Not yet published. Licensed **Apache-2.0** (`LICENSE` + `package.json` set). Before a
-> first publish, set `repository` in `package.json` to the real remote. `prepublishOnly`
-> runs the full verify gate, so a publish requires a green build.
+## [0.4.0] — flexible acquisition
+
+> Not yet published. Licensed **Apache-2.0** (`LICENSE` + `package.json` set, `repository`
+> pointed at the GitHub remote). `prepublishOnly` runs the full verify gate.
+
+### Added — bring-your-own-capture (BYO) acquisition
+
+- **BYO-capture provenance**: `register_evidence` (MCP `farm_register_evidence`) now accepts
+  caller-supplied `captureMethod` / `capturedBy` / `capturedAt`, persisted on every artifact
+  record. Bytes from ANY external capturer — Firecrawl, an operator agent, a human paste, a
+  mobile mitmproxy session — are hash-registered with recorded (self-asserted) provenance and
+  still pass the same cite-or-fail gate. The farm verifies; it need not capture.
+
+### Changed
+
+- `.gitattributes` (`* text=auto eol=lf`) pins LF line endings cross-platform so the Biome
+  format gate stays consistent regardless of git autocrlf.
 
 ### Added — self-verifying coverage (P4)
 
