@@ -22,6 +22,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.check.json",
+    "boundaries": "node scripts/check-boundaries.mjs",
     "prepack": "npm run build",
     "test": "vitest run",
     "test:ci": "vitest run --reporter=default --reporter=json --outputFile=.status/vitest-result.json",
@@ -36,7 +38,7 @@
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",
-    "verify": "npm run build && npm run test:ci && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status"
+    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run test:ci && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
