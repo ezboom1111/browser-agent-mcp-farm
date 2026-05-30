@@ -754,7 +754,7 @@ node .\dist\cli.js register-all
 claude mcp get browser-agent-mcp-farm
 ```
 
-If Codex does not expose `mcp__browser_agent_mcp_farm__*` tools after an
+If Codex does not expose `mcp__browser-agent-mcp-farm__*` tools after an
 upgrade, restart Codex once and run `register-all` again.
 
 ## MCP Write Tools
