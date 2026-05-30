@@ -10,6 +10,8 @@ import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
+import { proposeGroundedClaims } from "./grounded-extraction.js";
+import type { EvidenceKind } from "./schemas.js";
 import { buildBundleManifest, signManifest, verifyBundle as verifyEvidenceBundle, type BundleManifest } from "./evidence-bundle.js";
 import { LeaseManager, leaseManagerOptionsFromEnv, redactLease } from "./lease-manager.js";
 import {
@@ -394,6 +396,52 @@ export class FarmService {
       ok: true as const,
       ...extractStructuredData(html),
       note: "Publisher markup (JSON-LD / Open Graph) is a site claim, not ground truth; cross-check against DOM/OCR."
+    };
+  }
+
+  // Verifiable generic-extraction loop: extract typed values from a captured HTML artifact and
+  // author a text_span-anchored claim, citing the VISIBLE-TEXT artifact, for each value that
+  // literally appears in what a human sees. Grounding against visible text (not the raw HTML
+  // that contains the JSON-LD) keeps it non-tautological — a publisher value that disagrees with
+  // the rendered page is never grounded. addClaim re-runs the gate, so an invented value is
+  // never groundable: extraction proposes, the gate decides. Deterministic, no LLM.
+  async groundExtractedClaims(input: { runDir: string; htmlArtifactId: string; textArtifactId: string }) {
+    const rows = await this.readArtifactRows(input.runDir);
+    const htmlRow = rows.find((candidate) => candidate.artifact_id === input.htmlArtifactId);
+    const textRow = rows.find((candidate) => candidate.artifact_id === input.textArtifactId);
+    if (htmlRow === undefined || typeof htmlRow.path !== "string") {
+      return { ok: false as const, error: `html artifact not found: ${input.htmlArtifactId}` };
+    }
+    if (textRow === undefined || typeof textRow.path !== "string") {
+      return { ok: false as const, error: `text artifact not found: ${input.textArtifactId}` };
+    }
+    const html = await readFile(join(input.runDir, htmlRow.path), "utf8").catch(() => undefined);
+    const visibleText = await readFile(join(input.runDir, textRow.path), "utf8").catch(() => undefined);
+    if (html === undefined || visibleText === undefined) {
+      return { ok: false as const, error: "could not read artifact bytes" };
+    }
+    const evidenceKind: EvidenceKind = (typeof textRow.evidence_kind === "string" ? textRow.evidence_kind : "page_text") as EvidenceKind;
+    const proposals = proposeGroundedClaims(extractStructuredData(html), visibleText, evidenceKind);
+
+    const claims: Array<{ field: string; claim: string; grounded: boolean }> = [];
+    for (const proposal of proposals) {
+      const result = await this.addClaim({
+        runDir: input.runDir,
+        artifactId: input.textArtifactId,
+        claim: proposal.claim,
+        claimType: proposal.claimType,
+        evidenceKind: proposal.evidenceKind,
+        verificationLevel: "grounded",
+        anchor: proposal.anchor
+      });
+      const grounded = (result as { gate?: { ok?: boolean }; appended?: boolean }).gate?.ok ?? Boolean((result as { appended?: boolean }).appended);
+      claims.push({ field: proposal.field, claim: proposal.claim, grounded });
+    }
+    return {
+      ok: true as const,
+      proposed: proposals.length,
+      grounded: claims.filter((claim) => claim.grounded).length,
+      claims
     };
   }
 
