@@ -1,16 +1,32 @@
 {
   "name": "browser-agent-mcp-farm",
-  "version": "0.2.6",
-  "private": true,
+  "version": "0.3.0",
+  "private": false,
   "type": "module",
   "description": "Playwright BrowserContext farm exposed through MCP tools.",
   "bin": {
     "browser-agent-mcp-farm": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "HOST-ADAPTERS.md",
+    "AGENTS.md",
+    "docs/PRODUCT_DEVELOPMENT_PLAN.md",
+    "docs/INFORMATION_SOURCE_TAXONOMY.md",
+    "docs/PORTAL_NAVIGATION_ARCHITECTURE.md",
+    "docs/PORTAL_NAVIGATION_IMPLEMENTATION_GUIDE.md",
+    "docs/OCR.md",
+    "docs/OFFICIAL_API.md",
+    "docs/SOURCE_STRATEGY.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "test": "vitest run",
     "test:unit": "vitest run tests/lease-manager.test.ts tests/artifact-writer.test.ts",
+    "test:ocr-integration": "vitest run --config vitest.ocr.config.ts",
+    "test:official-api": "vitest run --config vitest.official-api.config.ts",
     "smoke": "node ./dist/cli.js smoke",
     "smoke:web": "node ./dist/cli.js smoke-web --timeout-ms 10000",
     "smoke:media": "node ./dist/cli.js smoke-media",
@@ -24,6 +40,14 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "playwright": "^1.60.0",
     "zod": "^4.1.13"
+  },
+  "peerDependencies": {
+    "tesseract.js": "^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tesseract.js": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
