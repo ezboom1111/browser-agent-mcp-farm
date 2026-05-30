@@ -483,6 +483,31 @@ export const ExtractStructuredInputSchema = z.object({
   html: z.string().min(1).describe("Captured HTML to parse for deterministic structured derivatives (JSON-LD, Open Graph, Twitter cards, canonical, title). Get it from farm_read_artifact on a page_html artifact.")
 });
 
+export const ExportBundleInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory to export a verifiable bundle manifest for."),
+  privateKeyEnv: z.string().min(1).optional().describe("Name of an env var holding an Ed25519 private key (PEM) to sign the Merkle root. Omit to skip signing.")
+});
+
+export const BundleManifestSchema = z.object({
+  version: z.literal(1),
+  artifactCount: z.number().int().nonnegative(),
+  artifacts: z.array(z.object({
+    artifact_id: z.string().min(1),
+    path: z.string().min(1).optional(),
+    sha256: z.string().min(1)
+  })),
+  merkleRoot: z.string().min(1),
+  claimCount: z.number().int().nonnegative(),
+  citationCount: z.number().int().nonnegative(),
+  signature: z.string().min(1).optional()
+});
+
+export const VerifyBundleInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory whose artifacts the manifest is checked against (re-hashed in place)."),
+  manifest: BundleManifestSchema.describe("The bundle manifest from farm_export_bundle."),
+  publicKeyEnv: z.string().min(1).optional().describe("Name of an env var holding the Ed25519 public key (PEM) to verify the signature. Omit to skip signature verification.")
+});
+
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
 export type HeartbeatInput = z.input<typeof HeartbeatInputSchema>;
 export type OpenPageInput = z.input<typeof OpenPageInputSchema>;
@@ -517,5 +542,7 @@ export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
 export type ListRunsInput = z.input<typeof ListRunsInputSchema>;
 export type ExtractStructuredInput = z.input<typeof ExtractStructuredInputSchema>;
+export type ExportBundleInput = z.input<typeof ExportBundleInputSchema>;
+export type VerifyBundleInput = z.input<typeof VerifyBundleInputSchema>;
 export type ClaimAnchor = z.infer<typeof ClaimAnchorSchema>;
 export type ClaimTaxonomy = z.infer<typeof ClaimTaxonomySchema>;

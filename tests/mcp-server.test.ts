@@ -285,6 +285,33 @@ describe("createMcpServer", () => {
     expect(res.openGraph["og:title"]).toBe("Acme");
     expect(res.jsonLd.length).toBe(1);
   });
+
+  it("farm_export_bundle + farm_verify_bundle round-trip and detect tampering", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-mcp-bundle-"));
+    dirs.push(dir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir: dir, sourceUrl: "https://example.com/", contextToken: "ctx", pageId: "p", captureId: "c", text: "bundle evidence"
+    });
+    const textRecord = records.find((record) => record.kind === "text");
+    if (!textRecord) {
+      throw new Error("expected a text artifact");
+    }
+
+    const tools = registeredTools(createMcpServer());
+    const exported = JSON.parse((await tools.farm_export_bundle.handler({ runDir: dir })).content[0].text) as {
+      manifest: { merkleRoot: string };
+    };
+    expect(exported.manifest.merkleRoot).toMatch(/^[0-9a-f]{64}$/);
+
+    const verified = await tools.farm_verify_bundle.handler({ runDir: dir, manifest: exported.manifest });
+    expect(verified.isError).toBeUndefined();
+    expect((JSON.parse(verified.content[0].text) as { ok: boolean }).ok).toBe(true);
+
+    await writeFile(join(dir, textRecord.path), "tampered", "utf8");
+    const reVerified = await tools.farm_verify_bundle.handler({ runDir: dir, manifest: exported.manifest });
+    expect(reVerified.isError).toBe(true);
+  });
 });
 
 function registeredTools(server: unknown): Record<string, { description?: string; handler: (input: unknown) => Promise<{ isError?: boolean; content: Array<{ text: string }> }> }> {

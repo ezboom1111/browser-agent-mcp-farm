@@ -10,6 +10,7 @@ import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
+import { buildBundleManifest, signManifest, verifyBundle as verifyEvidenceBundle, type BundleManifest } from "./evidence-bundle.js";
 import { LeaseManager, redactLease } from "./lease-manager.js";
 import {
   AcquireContextInputSchema,
@@ -36,6 +37,8 @@ import {
   AddClaimInputSchema,
   ListRunsInputSchema,
   ExtractStructuredInputSchema,
+  ExportBundleInputSchema,
+  VerifyBundleInputSchema,
   EvidenceKindSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
@@ -60,7 +63,9 @@ import {
   type RegisterEvidenceInput,
   type AddClaimInput,
   type ListRunsInput,
-  type ExtractStructuredInput
+  type ExtractStructuredInput,
+  type ExportBundleInput,
+  type VerifyBundleInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -408,6 +413,29 @@ export class FarmService {
       ...extractStructuredData(parsed.html),
       note: "Publisher markup (JSON-LD / Open Graph) is a site claim, not ground truth; cross-check against DOM/OCR."
     };
+  }
+
+  // Export a verifiable bundle manifest (Merkle root over artifact hashes +
+  // optional Ed25519 signature) for a run, so a second agent can re-verify it.
+  async exportBundle(input: ExportBundleInput) {
+    const parsed = ExportBundleInputSchema.parse(input);
+    const manifest = await buildBundleManifest(parsed.runDir);
+    if (parsed.privateKeyEnv !== undefined) {
+      const pem = process.env[parsed.privateKeyEnv];
+      if (pem !== undefined && pem.length > 0) {
+        manifest.signature = signManifest(manifest, pem);
+      }
+    }
+    return { ok: true as const, signed: manifest.signature !== undefined, manifest };
+  }
+
+  // Re-verify a bundle against the run's artifacts in place: re-hashes each file
+  // (detects tampered bytes), recomputes the Merkle root (detects a tampered
+  // manifest), and optionally checks the signature. No network.
+  async verifyBundle(input: VerifyBundleInput) {
+    const parsed = VerifyBundleInputSchema.parse(input);
+    const publicKeyPem = parsed.publicKeyEnv !== undefined ? process.env[parsed.publicKeyEnv] : undefined;
+    return verifyEvidenceBundle(parsed.runDir, parsed.manifest as BundleManifest, publicKeyPem);
   }
 
   async evidenceRun(input: EvidenceRunInput) {
