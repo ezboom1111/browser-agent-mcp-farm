@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSourceNavigationCalibrationBatchManifest,
-  expandSourceNavigationCalibrationBatchAttempts,
-  parseSourceNavigationCalibrationBatchTargets,
-  runSourceNavigationCalibrationBatchAttempts
-} from "../src/source-navigation-calibration-batch.js";
+import { buildSourceNavigationCalibrationBatchManifest, expandSourceNavigationCalibrationBatchAttempts, parseSourceNavigationCalibrationBatchTargets, runSourceNavigationCalibrationBatchAttempts } from "../src/source-navigation-calibration-batch.js";
 
 describe("parseSourceNavigationCalibrationBatchTargets", () => {
   it("parses newline targets with generated and explicit IDs", () => {
@@ -21,12 +16,14 @@ google https://www.google.com/search?q=tokyo+hotel
   });
 
   it("parses JSON targets and de-duplicates IDs", () => {
-    const targets = parseSourceNavigationCalibrationBatchTargets(JSON.stringify({
-      targets: [
-        { id: "naver", url: "https://search.naver.com/search.naver?query=hotel", note: "Korean search" },
-        { id: "naver", url: "https://map.naver.com/" }
-      ]
-    }));
+    const targets = parseSourceNavigationCalibrationBatchTargets(
+      JSON.stringify({
+        targets: [
+          { id: "naver", url: "https://search.naver.com/search.naver?query=hotel", note: "Korean search" },
+          { id: "naver", url: "https://map.naver.com/" }
+        ]
+      })
+    );
 
     expect(targets).toEqual([
       { id: "naver", url: "https://search.naver.com/search.naver?query=hotel", note: "Korean search" },
@@ -35,8 +32,7 @@ google https://www.google.com/search?q=tokyo+hotel
   });
 
   it("rejects non-web URLs", () => {
-    expect(() => parseSourceNavigationCalibrationBatchTargets("file:///tmp/test.html"))
-      .toThrow("http or https");
+    expect(() => parseSourceNavigationCalibrationBatchTargets("file:///tmp/test.html")).toThrow("http or https");
   });
 });
 
@@ -45,10 +41,7 @@ describe("source navigation calibration batch manifest", () => {
     const targets = parseSourceNavigationCalibrationBatchTargets("https://www.google.com/search?q=tokyo+hotel");
     const attempts = expandSourceNavigationCalibrationBatchAttempts({ targets, repeat: 2 });
 
-    expect(attempts).toEqual([
-      expect.objectContaining({ attemptId: "target-001-r1", repeatIndex: 1 }),
-      expect.objectContaining({ attemptId: "target-001-r2", repeatIndex: 2 })
-    ]);
+    expect(attempts).toEqual([expect.objectContaining({ attemptId: "target-001-r1", repeatIndex: 1 }), expect.objectContaining({ attemptId: "target-001-r2", repeatIndex: 2 })]);
 
     const manifest = buildSourceNavigationCalibrationBatchManifest({
       runRoot: "C:/runs",
@@ -116,10 +109,7 @@ describe("source navigation calibration batch manifest", () => {
           profileName: "travel-login",
           browserChannel: "chrome"
         },
-        runDirs: [
-          expect.stringContaining("target-001-r1"),
-          expect.stringContaining("target-001-r2")
-        ]
+        runDirs: [expect.stringContaining("target-001-r1"), expect.stringContaining("target-001-r2")]
       })
     ]);
     expect(manifest.catalogHints[0]?.catalogCommand).toContain("--calibration-run-dirs");
@@ -174,21 +164,23 @@ three https://example.com/three
     const attempts = expandSourceNavigationCalibrationBatchAttempts({ targets });
     const attempted: string[] = [];
 
-    await expect(runSourceNavigationCalibrationBatchAttempts({
-      attempts,
-      concurrency: 2,
-      stopOnError: true,
-      runAttempt: async (attempt) => {
-        attempted.push(attempt.targetId);
-        return {
-          ...attempt,
-          runDir: `C:/runs/${attempt.runDirName}`,
-          status: attempt.targetId === "one" ? "failed" : "succeeded",
-          calibrationArtifactPaths: [],
-          ...(attempt.targetId === "one" ? { error: "blocked" } : {})
-        };
-      }
-    })).rejects.toThrow("Calibration batch stopped after failed attempt one");
+    await expect(
+      runSourceNavigationCalibrationBatchAttempts({
+        attempts,
+        concurrency: 2,
+        stopOnError: true,
+        runAttempt: async (attempt) => {
+          attempted.push(attempt.targetId);
+          return {
+            ...attempt,
+            runDir: `C:/runs/${attempt.runDirName}`,
+            status: attempt.targetId === "one" ? "failed" : "succeeded",
+            calibrationArtifactPaths: [],
+            ...(attempt.targetId === "one" ? { error: "blocked" } : {})
+          };
+        }
+      })
+    ).rejects.toThrow("Calibration batch stopped after failed attempt one");
 
     expect(attempted).toEqual(["one", "two"]);
   });

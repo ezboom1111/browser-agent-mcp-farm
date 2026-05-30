@@ -63,9 +63,7 @@ describe("cli source-coverage-readiness format branches", () => {
 
   it("rejects an unknown --format with exit 1", async () => {
     const { out, exitCode } = await runCli(["source-coverage-readiness", "--format", "bogus"]);
-    expect(out).toContain(
-      "--format must be json, lines, targets, retry-commands, or retry-plan for source-coverage-readiness"
-    );
+    expect(out).toContain("--format must be json, lines, targets, retry-commands, or retry-plan for source-coverage-readiness");
     expect(exitCode).toBe(1);
   });
 });
@@ -107,9 +105,7 @@ describe("cli source-coverage-retry-plan command", () => {
   it("rejects an unknown --format with the retry-plan error message", async () => {
     const rp = await writeRetryPlanFixture("hello");
     const { out, exitCode } = await runCli(["source-coverage-retry-plan", "--retry-plan", rp, "--format", "bogus"]);
-    expect(out).toContain(
-      "--format must be json, check, markdown, commands, setup-commands, or retry-commands for source-coverage-retry-plan"
-    );
+    expect(out).toContain("--format must be json, check, markdown, commands, setup-commands, or retry-commands for source-coverage-retry-plan");
     expect(exitCode).toBe(1);
   });
 
@@ -128,9 +124,7 @@ describe("cli source-coverage-retry-plan command", () => {
 
   it("without --retry-plan throws the required-arg error", async () => {
     const { out, exitCode } = await runCli(["source-coverage-retry-plan"]);
-    expect(out).toContain(
-      "source-coverage-retry-plan requires --retry-plan <profile-headed-retry-plan.json>"
-    );
+    expect(out).toContain("source-coverage-retry-plan requires --retry-plan <profile-headed-retry-plan.json>");
     expect(exitCode).toBe(1);
   });
 });
@@ -166,9 +160,7 @@ describe("cli destination-recovery-plan command", () => {
   it("rejects an unknown --format with exit 1", async () => {
     const run = await makeRun(dirs);
     const { out, exitCode } = await runCli(["destination-recovery-plan", "--run-dir", run, "--format", "bogus"]);
-    expect(out).toContain(
-      "--format must be json, check, markdown, commands, setup-commands, or retry-commands for destination-recovery-plan"
-    );
+    expect(out).toContain("--format must be json, check, markdown, commands, setup-commands, or retry-commands for destination-recovery-plan");
     expect(exitCode).toBe(1);
   });
 

@@ -37,7 +37,7 @@ export interface PruneRunsResult {
 
 async function looksLikeRun(dir: string): Promise<boolean> {
   const info = await stat(join(dir, RUN_LEDGER)).catch(() => null);
-  return info !== null && info.isFile();
+  return info?.isFile() ?? false;
 }
 
 // Age of a run, measured from the most recent modification of its ledger (robust and
@@ -67,7 +67,7 @@ export async function pruneRuns(root: string, options: PruneRunsOptions): Promis
   const dryRun = options.dryRun === true;
   const result: PruneRunsResult = { root, scanned: 0, removed: [], kept: [], dryRun };
 
-  let entries;
+  let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(root, { withFileTypes: true });
   } catch {

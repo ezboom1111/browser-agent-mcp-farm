@@ -2,13 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  buildDestinationRecoveryPlanFromRunDir,
-  checkDestinationRecoveryPlan,
-  filterDestinationRecoveryPlanByCheck,
-  formatDestinationRecoveryPlanCommandsAsLines,
-  formatDestinationRecoveryPlanMarkdown
-} from "../src/destination-recovery-plan.js";
+import { buildDestinationRecoveryPlanFromRunDir, checkDestinationRecoveryPlan, filterDestinationRecoveryPlanByCheck, formatDestinationRecoveryPlanCommandsAsLines, formatDestinationRecoveryPlanMarkdown } from "../src/destination-recovery-plan.js";
 import type { DestinationBlockedChildRecoveryAdvice } from "../src/destination-triage.js";
 
 describe("destination recovery plan", () => {
@@ -17,23 +11,35 @@ describe("destination recovery plan", () => {
     await mkdir(join(runDir, "raw"), { recursive: true });
     const triagePath = join(runDir, "raw", "fixture-destination-triage.txt");
     const advice = recoveryAdvice();
-    await writeFile(triagePath, `${JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "bounded_destination_triage",
-      parentUrl: "https://map.example/search",
-      summary: {
-        blockedChildRecoveryAdvice: advice
-      }
-    }, null, 2)}\n`, "utf8");
-    await writeFile(join(runDir, "artifacts.jsonl"), `${JSON.stringify({
-      artifact_id: "triage-text",
-      path: "raw/fixture-destination-triage.txt",
-      kind: "text",
-      format: "txt",
-      source_url: "https://map.example/search",
-      tool_name: "destination_triage",
-      evidence_kind: "destination_triage"
-    })}\n`, "utf8");
+    await writeFile(
+      triagePath,
+      `${JSON.stringify(
+        {
+          schemaVersion: "1.0",
+          executionPolicy: "bounded_destination_triage",
+          parentUrl: "https://map.example/search",
+          summary: {
+            blockedChildRecoveryAdvice: advice
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+    await writeFile(
+      join(runDir, "artifacts.jsonl"),
+      `${JSON.stringify({
+        artifact_id: "triage-text",
+        path: "raw/fixture-destination-triage.txt",
+        kind: "text",
+        format: "txt",
+        source_url: "https://map.example/search",
+        tool_name: "destination_triage",
+        evidence_kind: "destination_triage"
+      })}\n`,
+      "utf8"
+    );
 
     const plan = await buildDestinationRecoveryPlanFromRunDir(runDir);
     const commands = formatDestinationRecoveryPlanCommandsAsLines(plan);
@@ -74,13 +80,21 @@ describe("destination recovery plan", () => {
   it("checks recovery command shape and optional profile readiness", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-destination-recovery-check-"));
     await mkdir(join(runDir, "raw"), { recursive: true });
-    await writeFile(join(runDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "bounded_destination_triage",
-      summary: {
-        blockedChildRecoveryAdvice: recoveryAdvice()
-      }
-    }, null, 2)}\n`, "utf8");
+    await writeFile(
+      join(runDir, "raw", "fixture-destination-triage.txt"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "1.0",
+          executionPolicy: "bounded_destination_triage",
+          summary: {
+            blockedChildRecoveryAdvice: recoveryAdvice()
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const plan = await buildDestinationRecoveryPlanFromRunDir(runDir);
     const okCheck = checkDestinationRecoveryPlan(plan, {
@@ -116,9 +130,7 @@ describe("destination recovery plan", () => {
     });
     expect(filtered).toMatchObject({
       itemCount: 0,
-      warnings: expect.arrayContaining([
-        "Recovery plan check filter removed 1 item(s) with preflight errors."
-      ])
+      warnings: expect.arrayContaining(["Recovery plan check filter removed 1 item(s) with preflight errors."])
     });
     expect(okMarkdown).toContain("## Preflight Check");
     expect(okMarkdown).toContain("- OK: yes");
@@ -131,81 +143,96 @@ describe("destination recovery plan", () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-destination-recovery-broken-"));
     await mkdir(join(runDir, "raw"), { recursive: true });
     const advice = recoveryAdvice();
-    advice.steps = advice.steps.map((step) => step.step === "recovery_evidence_run"
-      ? { ...step, powershellCommand: "'node' '.\\dist\\cli.js' 'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home'" }
-      : step);
-    await writeFile(join(runDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "bounded_destination_triage",
-      summary: {
-        blockedChildRecoveryAdvice: advice
-      }
-    }, null, 2)}\n`, "utf8");
+    advice.steps = advice.steps.map((step) => (step.step === "recovery_evidence_run" ? { ...step, powershellCommand: "'node' '.\\dist\\cli.js' 'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home'" } : step));
+    await writeFile(
+      join(runDir, "raw", "fixture-destination-triage.txt"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "1.0",
+          executionPolicy: "bounded_destination_triage",
+          summary: {
+            blockedChildRecoveryAdvice: advice
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const check = checkDestinationRecoveryPlan(await buildDestinationRecoveryPlanFromRunDir(runDir));
 
     expect(check.ok).toBe(false);
-    expect(check.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining([
-      "retry_command_missing_headed",
-      "retry_command_missing_browser_channel_flag",
-      "retry_command_missing_profile_flag",
-      "retry_command_missing_persistent_profile"
-    ]));
+    expect(check.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining(["retry_command_missing_headed", "retry_command_missing_browser_channel_flag", "retry_command_missing_profile_flag", "retry_command_missing_persistent_profile"]));
   });
 
   it("falls back to raw artifact discovery when the ledger is missing", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-destination-recovery-fallback-"));
     await mkdir(join(runDir, "raw"), { recursive: true });
-    await writeFile(join(runDir, "raw", "fixture-destination-triage.txt"), `${JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "bounded_destination_triage",
-      summary: {
-        blockedChildRecoveryAdvice: recoveryAdvice()
-      }
-    }, null, 2)}\n`, "utf8");
+    await writeFile(
+      join(runDir, "raw", "fixture-destination-triage.txt"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "1.0",
+          executionPolicy: "bounded_destination_triage",
+          summary: {
+            blockedChildRecoveryAdvice: recoveryAdvice()
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const plan = await buildDestinationRecoveryPlanFromRunDir(runDir);
 
     expect(plan.itemCount).toBe(1);
-    expect(plan.warnings).toEqual(expect.arrayContaining([
-      expect.stringContaining("falling back to raw/structured artifact discovery")
-    ]));
+    expect(plan.warnings).toEqual(expect.arrayContaining([expect.stringContaining("falling back to raw/structured artifact discovery")]));
   });
 
   it("synthesizes recovery advice from older triage artifacts with only recovery candidates", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-destination-recovery-synthesized-"));
     await mkdir(join(runDir, "raw"), { recursive: true });
-    await writeFile(join(runDir, "raw", "fixture-destination-triage.txt"), `\uFEFF${JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "bounded_destination_triage",
-      summary: {
-        blockedChildRecoveryCandidateCount: 2,
-        blockedChildRecoveryCandidates: [
-          {
-            sourceCandidateId: "destination-candidate-1",
-            actionKey: "destination-followup",
-            childUrl: "https://map.naver.com/p/entry/place/1790076538",
-            childUsefulness: "blocked",
-            url: "https://pcmap.place.naver.com/restaurant/1790076538/home?from=map",
-            domain: "pcmap.place.naver.com",
-            candidateKind: "map_place",
-            visibleText: "Naver Place home",
-            warnings: ["proposal_only_not_executed"]
-          },
-          {
-            sourceCandidateId: "destination-candidate-1",
-            actionKey: "destination-followup",
-            childUrl: "https://map.naver.com/p/entry/place/1790076538",
-            childUsefulness: "blocked",
-            url: "https://pcmap.place.naver.com/restaurant/1790076538/review",
-            domain: "pcmap.place.naver.com",
-            candidateKind: "review",
-            visibleText: "Naver Place reviews",
-            warnings: ["proposal_only_not_executed"]
+    await writeFile(
+      join(runDir, "raw", "fixture-destination-triage.txt"),
+      `\uFEFF${JSON.stringify(
+        {
+          schemaVersion: "1.0",
+          executionPolicy: "bounded_destination_triage",
+          summary: {
+            blockedChildRecoveryCandidateCount: 2,
+            blockedChildRecoveryCandidates: [
+              {
+                sourceCandidateId: "destination-candidate-1",
+                actionKey: "destination-followup",
+                childUrl: "https://map.naver.com/p/entry/place/1790076538",
+                childUsefulness: "blocked",
+                url: "https://pcmap.place.naver.com/restaurant/1790076538/home?from=map",
+                domain: "pcmap.place.naver.com",
+                candidateKind: "map_place",
+                visibleText: "Naver Place home",
+                warnings: ["proposal_only_not_executed"]
+              },
+              {
+                sourceCandidateId: "destination-candidate-1",
+                actionKey: "destination-followup",
+                childUrl: "https://map.naver.com/p/entry/place/1790076538",
+                childUsefulness: "blocked",
+                url: "https://pcmap.place.naver.com/restaurant/1790076538/review",
+                domain: "pcmap.place.naver.com",
+                candidateKind: "review",
+                visibleText: "Naver Place reviews",
+                warnings: ["proposal_only_not_executed"]
+              }
+            ]
           }
-        ]
-      }
-    }, null, 2)}\n`, "utf8");
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const plan = await buildDestinationRecoveryPlanFromRunDir(runDir);
     const check = checkDestinationRecoveryPlan(plan);
@@ -223,16 +250,11 @@ describe("destination recovery plan", () => {
           recoveryUrl: "https://pcmap.place.naver.com/restaurant/1790076538/home?from=map",
           advice: {
             recommendedAction: "profile_headed_retry",
-            sampleUrls: [
-              "https://pcmap.place.naver.com/restaurant/1790076538/home?from=map",
-              "https://pcmap.place.naver.com/restaurant/1790076538/review"
-            ]
+            sampleUrls: ["https://pcmap.place.naver.com/restaurant/1790076538/home?from=map", "https://pcmap.place.naver.com/restaurant/1790076538/review"]
           }
         }
       ],
-      warnings: expect.arrayContaining([
-        expect.stringContaining("Synthesized blocked child recovery advice")
-      ])
+      warnings: expect.arrayContaining([expect.stringContaining("Synthesized blocked child recovery advice")])
     });
     expect(commands).toContain("'auth-login' '--profile' 'pcmap.place.naver.com-recovery-profile'");
     expect(commands).toContain("'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home?from=map'");
@@ -283,10 +305,6 @@ function recoveryAdvice(): DestinationBlockedChildRecoveryAdvice {
     evidenceRunArgv: ["node", ".\\dist\\cli.js", "evidence-run", "--url", "https://pcmap.place.naver.com/restaurant/1790076538/home"],
     evidenceRunPowerShellCommand,
     commandHints: [profileSetupPowerShellCommand, evidenceRunPowerShellCommand],
-    reasons: [
-      "blocked_child_exposes_deeper_candidates",
-      "profile_headed_review_required",
-      "default_depth_2_execution_disabled"
-    ]
+    reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
   };
 }

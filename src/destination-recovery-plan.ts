@@ -3,10 +3,7 @@ import { unique as uniqueStrings } from "./util/collections.js";
 import { join, resolve, sep } from "node:path";
 import type { DestinationBlockedChildRecoveryAdvice, DestinationBlockedChildRecoveryCandidateSummary } from "./destination-triage.js";
 
-export type DestinationRecoveryPlanCommandFormat =
-  | "commands"
-  | "setup-commands"
-  | "retry-commands";
+export type DestinationRecoveryPlanCommandFormat = "commands" | "setup-commands" | "retry-commands";
 
 export interface DestinationRecoveryPlanItem {
   order: number;
@@ -134,10 +131,7 @@ export async function buildDestinationRecoveryPlanFromRunDir(runDir: string): Pr
   };
 }
 
-export function formatDestinationRecoveryPlanCommandsAsLines(
-  plan: DestinationRecoveryPlan,
-  format: DestinationRecoveryPlanCommandFormat = "commands"
-): string {
+export function formatDestinationRecoveryPlanCommandsAsLines(plan: DestinationRecoveryPlan, format: DestinationRecoveryPlanCommandFormat = "commands"): string {
   const lines: string[] = [];
   for (const item of plan.items) {
     for (const step of item.advice.steps) {
@@ -153,17 +147,8 @@ export function formatDestinationRecoveryPlanCommandsAsLines(
   return `${lines.join("\n")}${lines.length === 0 ? "" : "\n"}`;
 }
 
-export function formatDestinationRecoveryPlanMarkdown(
-  plan: DestinationRecoveryPlan,
-  check?: DestinationRecoveryPlanCheck | undefined
-): string {
-  const lines = [
-    "# Destination Blocked Child Recovery Plan",
-    "",
-    `Run dir: ${plan.runDir}`,
-    `Items: ${plan.itemCount}`,
-    ""
-  ];
+export function formatDestinationRecoveryPlanMarkdown(plan: DestinationRecoveryPlan, check?: DestinationRecoveryPlanCheck | undefined): string {
+  const lines = ["# Destination Blocked Child Recovery Plan", "", `Run dir: ${plan.runDir}`, `Items: ${plan.itemCount}`, ""];
   if (plan.items.length === 0) {
     lines.push("No blocked child recovery advice was found.", "");
   }
@@ -181,16 +166,7 @@ export function formatDestinationRecoveryPlanMarkdown(
       ""
     );
     for (const step of item.advice.steps) {
-      lines.push(
-        `### ${step.step}`,
-        "",
-        step.purpose,
-        "",
-        "```powershell",
-        step.powershellCommand,
-        "```",
-        ""
-      );
+      lines.push(`### ${step.step}`, "", step.purpose, "", "```powershell", step.powershellCommand, "```", "");
     }
   }
   if (plan.warnings.length > 0) {
@@ -203,10 +179,7 @@ export function formatDestinationRecoveryPlanMarkdown(
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-export function checkDestinationRecoveryPlan(
-  plan: DestinationRecoveryPlan,
-  options: DestinationRecoveryPlanCheckOptions = {}
-): DestinationRecoveryPlanCheck {
+export function checkDestinationRecoveryPlan(plan: DestinationRecoveryPlan, options: DestinationRecoveryPlanCheckOptions = {}): DestinationRecoveryPlanCheck {
   const issues: DestinationRecoveryPlanCheckIssue[] = [];
   plan.items.forEach((item, index) => {
     const expectedOrder = index + 1;
@@ -237,22 +210,13 @@ export function checkDestinationRecoveryPlan(
     errorCount,
     warningCount,
     issues,
-    warnings: [
-      "Destination recovery checks validate command handoffs only; they do not execute browser actions.",
-      "User-visible login, consent, or challenge handling still requires explicit user control.",
-      ...(options.profileExists === undefined ? [] : ["Saved browser profile existence was checked for this run."])
-    ]
+    warnings: ["Destination recovery checks validate command handoffs only; they do not execute browser actions.", "User-visible login, consent, or challenge handling still requires explicit user control.", ...(options.profileExists === undefined ? [] : ["Saved browser profile existence was checked for this run."])]
   };
 }
 
-export function filterDestinationRecoveryPlanByCheck(
-  plan: DestinationRecoveryPlan,
-  options: DestinationRecoveryPlanCheckOptions = {}
-): DestinationRecoveryPlan {
+export function filterDestinationRecoveryPlanByCheck(plan: DestinationRecoveryPlan, options: DestinationRecoveryPlanCheckOptions = {}): DestinationRecoveryPlan {
   const check = checkDestinationRecoveryPlan(plan, options);
-  const failingItemOrders = new Set(check.issues
-    .filter((issue) => issue.severity === "error" && issue.itemOrder !== undefined)
-    .map((issue) => issue.itemOrder!));
+  const failingItemOrders = new Set(check.issues.filter((issue) => issue.severity === "error" && issue.itemOrder !== undefined).map((issue) => issue.itemOrder!));
   const filteredItems = plan.items
     .filter((item) => !failingItemOrders.has(item.order))
     .map((item, index) => ({
@@ -263,23 +227,12 @@ export function filterDestinationRecoveryPlanByCheck(
     ...plan,
     itemCount: filteredItems.length,
     items: filteredItems,
-    warnings: [
-      ...plan.warnings,
-      `Recovery plan check filter removed ${plan.items.length - filteredItems.length} item(s) with preflight errors.`
-    ]
+    warnings: [...plan.warnings, `Recovery plan check filter removed ${plan.items.length - filteredItems.length} item(s) with preflight errors.`]
   };
 }
 
 function appendDestinationRecoveryPlanCheckMarkdown(lines: string[], check: DestinationRecoveryPlanCheck): void {
-  lines.push(
-    "## Preflight Check",
-    "",
-    `- OK: ${check.ok ? "yes" : "no"}`,
-    `- Items checked: ${check.itemCount}`,
-    `- Errors: ${check.errorCount}`,
-    `- Warnings: ${check.warningCount}`,
-    ""
-  );
+  lines.push("## Preflight Check", "", `- OK: ${check.ok ? "yes" : "no"}`, `- Items checked: ${check.itemCount}`, `- Errors: ${check.errorCount}`, `- Warnings: ${check.warningCount}`, "");
   if (check.issues.length === 0) {
     lines.push("No preflight check issues were found.", "");
   } else {
@@ -293,19 +246,11 @@ function appendDestinationRecoveryPlanCheckMarkdown(lines: string[], check: Dest
 }
 
 function formatDestinationRecoveryPlanCheckIssueMarkdown(issue: DestinationRecoveryPlanCheckIssue): string {
-  const details = [
-    issue.severity,
-    `\`${issue.code}\``,
-    ...(issue.itemOrder === undefined ? [] : [`item ${issue.itemOrder}`]),
-    ...(issue.profileName === undefined ? [] : [`profile \`${issue.profileName}\``])
-  ].join(" ");
+  const details = [issue.severity, `\`${issue.code}\``, ...(issue.itemOrder === undefined ? [] : [`item ${issue.itemOrder}`]), ...(issue.profileName === undefined ? [] : [`profile \`${issue.profileName}\``])].join(" ");
   return `- ${details}: ${issue.message}`;
 }
 
-async function candidateDestinationTriageArtifactPaths(
-  runDir: string,
-  warnings: string[]
-): Promise<Array<{ artifactId?: string; path: string; sourceUrl?: string }>> {
+async function candidateDestinationTriageArtifactPaths(runDir: string, warnings: string[]): Promise<Array<{ artifactId?: string; path: string; sourceUrl?: string }>> {
   const manifestCandidates = await candidateArtifactPathsFromManifest(runDir, warnings);
   if (manifestCandidates.length > 0) {
     return manifestCandidates;
@@ -313,10 +258,7 @@ async function candidateDestinationTriageArtifactPaths(
   return (await fallbackDestinationTriagePaths(runDir)).map((path) => ({ path }));
 }
 
-async function candidateArtifactPathsFromManifest(
-  runDir: string,
-  warnings: string[]
-): Promise<Array<{ artifactId?: string; path: string; sourceUrl?: string }>> {
+async function candidateArtifactPathsFromManifest(runDir: string, warnings: string[]): Promise<Array<{ artifactId?: string; path: string; sourceUrl?: string }>> {
   let text: string;
   const manifestPath = join(runDir, "artifacts.jsonl");
   try {
@@ -368,10 +310,7 @@ function isDestinationTriageRecord(record: ArtifactLedgerRecord): boolean {
 }
 
 async function fallbackDestinationTriagePaths(runDir: string): Promise<string[]> {
-  const paths = [
-    ...await findDestinationTriageFiles(join(runDir, "raw"), 0),
-    ...await findDestinationTriageFiles(join(runDir, "structured"), 0)
-  ];
+  const paths = [...(await findDestinationTriageFiles(join(runDir, "raw"), 0)), ...(await findDestinationTriageFiles(join(runDir, "structured"), 0))];
   const rawText = paths.filter((path) => path.toLowerCase().endsWith(".txt"));
   return uniqueStrings(rawText.length > 0 ? rawText : paths);
 }
@@ -380,7 +319,7 @@ async function findDestinationTriageFiles(dir: string, depth: number): Promise<s
   if (depth > 4) {
     return [];
   }
-  let entries;
+  let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
@@ -390,7 +329,7 @@ async function findDestinationTriageFiles(dir: string, depth: number): Promise<s
   for (const entry of entries) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
-      paths.push(...await findDestinationTriageFiles(path, depth + 1));
+      paths.push(...(await findDestinationTriageFiles(path, depth + 1)));
       continue;
     }
     if (!entry.isFile()) {
@@ -405,11 +344,7 @@ async function findDestinationTriageFiles(dir: string, depth: number): Promise<s
 }
 
 function extractBlockedChildRecoveryAdvice(value: unknown): ExtractedBlockedChildRecoveryAdvice | undefined {
-  const candidates = [
-    value,
-    recordValue(value, "destinationTriage"),
-    recordValue(recordValue(value, "metadata"), "destinationTriage")
-  ];
+  const candidates = [value, recordValue(value, "destinationTriage"), recordValue(recordValue(value, "metadata"), "destinationTriage")];
   for (const candidate of candidates) {
     const summary = recordValue(candidate, "summary");
     const advice = recordValue(summary, "blockedChildRecoveryAdvice");
@@ -435,43 +370,11 @@ function synthesizeBlockedChildRecoveryAdvice(summary: unknown): DestinationBloc
     return undefined;
   }
   const candidateCountValue = recordValue(summary, "blockedChildRecoveryCandidateCount");
-  const candidateCount = typeof candidateCountValue === "number" && Number.isFinite(candidateCountValue) && candidateCountValue > 0
-    ? candidateCountValue
-    : candidates.length;
+  const candidateCount = typeof candidateCountValue === "number" && Number.isFinite(candidateCountValue) && candidateCountValue > 0 ? candidateCountValue : candidates.length;
   const profileName = `${safeProfileName(first.domain)}-recovery-profile`;
   const sampleUrls = [...new Set(candidates.map((candidate) => candidate.url))].slice(0, 5);
-  const profileSetupArgv = [
-    "node",
-    ".\\dist\\cli.js",
-    "auth-login",
-    "--profile",
-    profileName,
-    "--url",
-    first.childUrl,
-    "--wait-ms",
-    "120000",
-    "--browser-channel",
-    "chrome",
-    "--persistent-profile"
-  ];
-  const evidenceRunArgv = [
-    "node",
-    ".\\dist\\cli.js",
-    "evidence-run",
-    "--url",
-    first.url,
-    "--wait-ms",
-    "3000",
-    "--timeout-ms",
-    "30000",
-    "--headed",
-    "--browser-channel",
-    "chrome",
-    "--profile",
-    profileName,
-    "--persistent-profile",
-    "--no-frames"
-  ];
+  const profileSetupArgv = ["node", ".\\dist\\cli.js", "auth-login", "--profile", profileName, "--url", first.childUrl, "--wait-ms", "120000", "--browser-channel", "chrome", "--persistent-profile"];
+  const evidenceRunArgv = ["node", ".\\dist\\cli.js", "evidence-run", "--url", first.url, "--wait-ms", "3000", "--timeout-ms", "30000", "--headed", "--browser-channel", "chrome", "--profile", profileName, "--persistent-profile", "--no-frames"];
   const profileSetupPowerShellCommand = profileSetupArgv.map(quotePowershellArgument).join(" ");
   const evidenceRunPowerShellCommand = evidenceRunArgv.map(quotePowershellArgument).join(" ");
   const steps: DestinationBlockedChildRecoveryAdvice["steps"] = [
@@ -503,11 +406,7 @@ function synthesizeBlockedChildRecoveryAdvice(summary: unknown): DestinationBloc
     evidenceRunArgv,
     evidenceRunPowerShellCommand,
     commandHints: steps.map((step) => step.powershellCommand),
-    reasons: [
-      "blocked_child_exposes_deeper_candidates",
-      "profile_headed_review_required",
-      "default_depth_2_execution_disabled"
-    ]
+    reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
   };
 }
 
@@ -515,49 +414,49 @@ function isDestinationBlockedChildRecoveryCandidateSummary(value: unknown): valu
   if (!isRecord(value)) {
     return false;
   }
-  return typeof value.sourceCandidateId === "string"
-    && typeof value.actionKey === "string"
-    && typeof value.childUrl === "string"
-    && typeof value.childUsefulness === "string"
-    && typeof value.url === "string"
-    && typeof value.domain === "string"
-    && typeof value.candidateKind === "string"
-    && typeof value.visibleText === "string"
-    && Array.isArray(value.warnings)
-    && value.warnings.every((warning) => typeof warning === "string");
+  return (
+    typeof value.sourceCandidateId === "string" &&
+    typeof value.actionKey === "string" &&
+    typeof value.childUrl === "string" &&
+    typeof value.childUsefulness === "string" &&
+    typeof value.url === "string" &&
+    typeof value.domain === "string" &&
+    typeof value.candidateKind === "string" &&
+    typeof value.visibleText === "string" &&
+    Array.isArray(value.warnings) &&
+    value.warnings.every((warning) => typeof warning === "string")
+  );
 }
 
 function isDestinationBlockedChildRecoveryAdvice(value: unknown): value is DestinationBlockedChildRecoveryAdvice {
   if (!isRecord(value)) {
     return false;
   }
-  return value.recommendedAction === "profile_headed_retry"
-    && typeof value.profileName === "string"
-    && value.storagePolicy === "persistent-profile"
-    && value.browserChannel === "chrome"
-    && typeof value.candidateCount === "number"
-    && Array.isArray(value.sampleUrls)
-    && typeof value.profileSetupUrl === "string"
-    && typeof value.recoveryUrl === "string"
-    && Array.isArray(value.steps)
-    && value.steps.every(isRecoveryCommandStep)
-    && Array.isArray(value.profileSetupArgv)
-    && typeof value.profileSetupPowerShellCommand === "string"
-    && Array.isArray(value.evidenceRunArgv)
-    && typeof value.evidenceRunPowerShellCommand === "string"
-    && Array.isArray(value.commandHints)
-    && Array.isArray(value.reasons);
+  return (
+    value.recommendedAction === "profile_headed_retry" &&
+    typeof value.profileName === "string" &&
+    value.storagePolicy === "persistent-profile" &&
+    value.browserChannel === "chrome" &&
+    typeof value.candidateCount === "number" &&
+    Array.isArray(value.sampleUrls) &&
+    typeof value.profileSetupUrl === "string" &&
+    typeof value.recoveryUrl === "string" &&
+    Array.isArray(value.steps) &&
+    value.steps.every(isRecoveryCommandStep) &&
+    Array.isArray(value.profileSetupArgv) &&
+    typeof value.profileSetupPowerShellCommand === "string" &&
+    Array.isArray(value.evidenceRunArgv) &&
+    typeof value.evidenceRunPowerShellCommand === "string" &&
+    Array.isArray(value.commandHints) &&
+    Array.isArray(value.reasons)
+  );
 }
 
 function isRecoveryCommandStep(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
   }
-  return (value.step === "profile_setup" || value.step === "recovery_evidence_run")
-    && typeof value.purpose === "string"
-    && Array.isArray(value.argv)
-    && value.argv.every((item) => typeof item === "string")
-    && typeof value.powershellCommand === "string";
+  return (value.step === "profile_setup" || value.step === "recovery_evidence_run") && typeof value.purpose === "string" && Array.isArray(value.argv) && value.argv.every((item) => typeof item === "string") && typeof value.powershellCommand === "string";
 }
 
 function recordValue(value: unknown, key: string): unknown {
@@ -577,7 +476,12 @@ function quotePowershellArgument(value: string): string {
 }
 
 function safeProfileName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "destination";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "destination"
+  );
 }
 
 function resolveInside(root: string, relPath: string): string {
@@ -602,11 +506,7 @@ function uniquePathItems<T extends { path: string }>(items: T[]): T[] {
   });
 }
 
-function checkRecoveryProfileExists(
-  item: DestinationRecoveryPlanItem,
-  issues: DestinationRecoveryPlanCheckIssue[],
-  options: DestinationRecoveryPlanCheckOptions
-): void {
+function checkRecoveryProfileExists(item: DestinationRecoveryPlanItem, issues: DestinationRecoveryPlanCheckIssue[], options: DestinationRecoveryPlanCheckOptions): void {
   if (options.profileExists === undefined || item.profileName.trim().length === 0) {
     return;
   }
@@ -615,10 +515,7 @@ function checkRecoveryProfileExists(
   }
 }
 
-function checkRecoverySetupStep(
-  item: DestinationRecoveryPlanItem,
-  issues: DestinationRecoveryPlanCheckIssue[]
-): void {
+function checkRecoverySetupStep(item: DestinationRecoveryPlanItem, issues: DestinationRecoveryPlanCheckIssue[]): void {
   const setup = item.advice.steps.find((step) => step.step === "profile_setup");
   if (setup === undefined) {
     issues.push(recoveryPlanIssue("error", "setup_step_missing", item, "Recovery item has no profile_setup step."));
@@ -634,10 +531,7 @@ function checkRecoverySetupStep(
   requireCommandPart(setup.powershellCommand, "--persistent-profile", "setup_command_missing_persistent_profile", item, issues);
 }
 
-function checkRecoveryEvidenceRunStep(
-  item: DestinationRecoveryPlanItem,
-  issues: DestinationRecoveryPlanCheckIssue[]
-): void {
+function checkRecoveryEvidenceRunStep(item: DestinationRecoveryPlanItem, issues: DestinationRecoveryPlanCheckIssue[]): void {
   const retry = item.advice.steps.find((step) => step.step === "recovery_evidence_run");
   if (retry === undefined) {
     issues.push(recoveryPlanIssue("error", "retry_step_missing", item, "Recovery item has no recovery_evidence_run step."));
@@ -654,24 +548,13 @@ function checkRecoveryEvidenceRunStep(
   requireCommandPart(retry.powershellCommand, "--persistent-profile", "retry_command_missing_persistent_profile", item, issues);
 }
 
-function requireCommandPart(
-  command: string,
-  expected: string,
-  code: string,
-  item: DestinationRecoveryPlanItem,
-  issues: DestinationRecoveryPlanCheckIssue[]
-): void {
+function requireCommandPart(command: string, expected: string, code: string, item: DestinationRecoveryPlanItem, issues: DestinationRecoveryPlanCheckIssue[]): void {
   if (!command.includes(expected)) {
     issues.push(recoveryPlanIssue("error", code, item, `Recovery command for ${item.profileName} is missing ${expected}.`));
   }
 }
 
-function recoveryPlanIssue(
-  severity: DestinationRecoveryPlanCheckSeverity,
-  code: string,
-  item: DestinationRecoveryPlanItem,
-  message: string
-): DestinationRecoveryPlanCheckIssue {
+function recoveryPlanIssue(severity: DestinationRecoveryPlanCheckSeverity, code: string, item: DestinationRecoveryPlanItem, message: string): DestinationRecoveryPlanCheckIssue {
   return {
     severity,
     code,

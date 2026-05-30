@@ -59,11 +59,7 @@ export function describeSourceNavigationRecipePlan(plan: SourceNavigationPlan): 
     executionPolicy: "manual_opt_in_only",
     verificationStatus: summarizeVerification(actionCandidates),
     actionCandidates,
-    warnings: [
-      "Recipe candidates are not executed by default.",
-      "Use these selectors only after live browser-visible calibration confirms they still match the intended page state.",
-      "Do not use candidates for login, CAPTCHA, booking, payment, app-open, or account-changing flows."
-    ]
+    warnings: ["Recipe candidates are not executed by default.", "Use these selectors only after live browser-visible calibration confirms they still match the intended page state.", "Do not use candidates for login, CAPTCHA, booking, payment, app-open, or account-changing flows."]
   };
 }
 
@@ -141,15 +137,7 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
   const isYahoo = platform === "yahoo_search";
   const isYahooJapan = platform === "yahoo_japan_search";
   const fixtureVerified = isNaver || isGoogle || isDaum || isBing || isYahoo || isYahooJapan;
-  const searchBlockedSignals = [
-    "Our systems have detected unusual traffic",
-    "unusual traffic from your computer network",
-    "not a robot",
-    "automated queries",
-    "captcha",
-    "CAPTCHA",
-    ...SECURITY_CHALLENGE_SIGNALS
-  ];
+  const searchBlockedSignals = ["Our systems have detected unusual traffic", "unusual traffic from your computer network", "not a robot", "automated queries", "captcha", "CAPTCHA", ...SECURITY_CHALLENGE_SIGNALS];
   const googleResultScopes = [
     fixture("#result-card"),
     fixture("#map-pack"),
@@ -202,7 +190,7 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
     real('#search div:has(a[href*="youtube.com/watch"])', "Google video-like result container with YouTube watch links."),
     real("#search g-img", "Google image/thumbnail module when visible inside Search."),
     real("#search img", "Google image or video thumbnails when visible inside Search."),
-    real('#search a[href]:has(img)', "Google image or thumbnail anchor candidates when visible."),
+    real("#search a[href]:has(img)", "Google image or thumbnail anchor candidates when visible."),
     real('#search a[href*="/imgres"]', "Google image-result links when visible inside Search."),
     real('#search [aria-label*="Images"]', "Google image module with English accessible label."),
     real('#search [aria-label*="\uC774\uBBF8\uC9C0"]', "Google image module with Korean accessible label."),
@@ -265,7 +253,7 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
     real('#search a[href*="youtube.com/shorts"]'),
     real('#search a[href*="youtu.be/"]'),
     real('#search a[href*="vimeo.com"]'),
-    real('#search a[href]:has(img)'),
+    real("#search a[href]:has(img)"),
     real('#search a[href*="/imgres"]'),
     real('#search a[href*="/travel/hotels"]'),
     real('#search a[href*="/travel/search"]')
@@ -609,38 +597,14 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
                 ? [fixture("#yahoo-japan-query"), real('input[name="p"]'), real('input[name="q"]'), real('input[type="search"]')]
                 : isYahoo
                   ? [fixture("#yahoo-query"), real('input[name="p"]'), real('input[name="q"]'), real('input[type="search"]')]
-                : [real('input[type="search"]'), real('input[name="q"]')],
+                  : [real('input[type="search"]'), real('input[name="q"]')],
       expectedTextSignals: ["query", "\uAC80\uC0C9\uC5B4", "Search"],
       blockedSignals: searchBlockedSignals,
       riskNotes: ["Changing query text changes result membership; capture query state before citing ranking."]
     }),
     candidate("vertical-tab", "click", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
-      selectors: isNaver
-        ? naverVerticalSelectors
-        : isGoogle
-          ? googleVerticalSelectors
-          : isDaum
-            ? daumVerticalSelectors
-            : isBing
-              ? bingVerticalSelectors
-              : isYahooJapan
-                ? yahooJapanVerticalSelectors
-                : isYahoo
-                  ? yahooVerticalSelectors
-                  : [real('[role="tab"]'), real("nav a")],
-      scopes: isDaum
-        ? [fixture("#daum-results"), ...daumResultScopes]
-        : isGoogle
-          ? googleResultScopes
-          : isNaver
-            ? naverResultScopes
-            : isBing
-              ? bingResultScopes
-              : isYahooJapan
-                ? yahooJapanResultScopes
-                : isYahoo
-                  ? yahooResultScopes
-                  : genericSearchResultScopes,
+      selectors: isNaver ? naverVerticalSelectors : isGoogle ? googleVerticalSelectors : isDaum ? daumVerticalSelectors : isBing ? bingVerticalSelectors : isYahooJapan ? yahooJapanVerticalSelectors : isYahoo ? yahooVerticalSelectors : [real('[role="tab"]'), real("nav a")],
+      scopes: isDaum ? [fixture("#daum-results"), ...daumResultScopes] : isGoogle ? googleResultScopes : isNaver ? naverResultScopes : isBing ? bingResultScopes : isYahooJapan ? yahooJapanResultScopes : isYahoo ? yahooResultScopes : genericSearchResultScopes,
       expectedTextSignals: ["blog", "cafe", "images", "news", "videos", "shopping", "map", "\uBE14\uB85C\uADF8", "\uCE74\uD398", "\uB274\uC2A4", "\uC774\uBBF8\uC9C0", "\uB3D9\uC601\uC0C1", "\uC9C0\uB3C4", "\uC1FC\uD551"],
       blockedSignals: searchBlockedSignals,
       riskNotes: ["Vertical tabs alter result scope; cite the active tab with the SERP."]
@@ -658,18 +622,18 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
                 ? [fixture("#yahoo-japan-filter"), real("nav a"), real('[role="button"]'), real('a[href*="fr2="]')]
                 : isYahoo
                   ? [fixture("#yahoo-filter"), real("nav a"), real('[role="button"]'), real('a[href*="fr2="]')]
-                : [real("button"), real('[role="button"]')],
+                  : [real("button"), real('[role="button"]')],
       scopes: isDaum
         ? [fixture("#daum-filter-state"), real("#schSearchFilter"), real("#mArticle"), real("#cMain")]
         : isNaver
           ? [fixture("#naver-integrated-filter-state"), fixture("#filter-panel"), real("#snb"), real("#main_pack")]
-        : isBing
-          ? [fixture("#bing-filter-state"), fixture("#bing-results"), real("#b_tween"), real("#b_results")]
-          : isYahooJapan
-            ? [fixture("#yahoo-japan-filter-state"), fixture("#yahoo-japan-contents"), real("#contents"), real("#web"), real("#results")]
-            : isYahoo
-              ? [fixture("#yahoo-filter-state"), fixture("#yahoo-results"), real("#web"), real("#results"), real("#main")]
-              : [fixture("#filter-panel"), real('[role="menu"]'), real("#snb"), real("#main_pack")],
+          : isBing
+            ? [fixture("#bing-filter-state"), fixture("#bing-results"), real("#b_tween"), real("#b_results")]
+            : isYahooJapan
+              ? [fixture("#yahoo-japan-filter-state"), fixture("#yahoo-japan-contents"), real("#contents"), real("#web"), real("#results")]
+              : isYahoo
+                ? [fixture("#yahoo-filter-state"), fixture("#yahoo-results"), real("#web"), real("#results"), real("#main")]
+                : [fixture("#filter-panel"), real('[role="menu"]'), real("#snb"), real("#main_pack")],
       expectedTextSignals: ["filter", "date", "recent", "\uAE30\uAC04", "\uC815\uB82C"],
       blockedSignals: searchBlockedSignals,
       riskNotes: ["Filter labels are locale-sensitive and must be verified from visible text."]
@@ -679,55 +643,43 @@ function searchRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         ? [fixture("#daum-next-page"), real('a[aria-label*="\uB2E4\uC74C"]'), real(".paging a"), real(".more_dynamic a")]
         : isNaver
           ? [fixture("#naver-integrated-more"), fixture("#more-results"), fixture("#next-page"), real('a[aria-label*="Next"]'), real('a[aria-label*="\uB2E4\uC74C"]')]
-        : isBing
-          ? [fixture("#bing-next-page"), real('a[title*="Next"]'), real('a[aria-label*="Next"]'), real(".sb_pagN")]
-          : isYahooJapan
-            ? [fixture("#yahoo-japan-next-page"), real('a[aria-label*="\u6B21"]'), real('a:has-text("\u6B21\u3078")'), real(".Pagenation a")]
-            : isYahoo
-              ? [fixture("#yahoo-next-page"), real('a[aria-label*="Next"]'), real('a.next'), real(".next a")]
-              : [fixture("#more-results"), fixture("#next-page"), real('a[aria-label*="Next"]'), real('a[aria-label*="\uB2E4\uC74C"]')],
+          : isBing
+            ? [fixture("#bing-next-page"), real('a[title*="Next"]'), real('a[aria-label*="Next"]'), real(".sb_pagN")]
+            : isYahooJapan
+              ? [fixture("#yahoo-japan-next-page"), real('a[aria-label*="\u6B21"]'), real('a:has-text("\u6B21\u3078")'), real(".Pagenation a")]
+              : isYahoo
+                ? [fixture("#yahoo-next-page"), real('a[aria-label*="Next"]'), real("a.next"), real(".next a")]
+                : [fixture("#more-results"), fixture("#next-page"), real('a[aria-label*="Next"]'), real('a[aria-label*="\uB2E4\uC74C"]')],
       scopes: isDaum
         ? [fixture("#daum-results"), real("#mArticle"), real("#cMain")]
         : isNaver
           ? [fixture("#naver-integrated-main"), fixture("#main_pack"), real("#main_pack"), real("#search")]
-        : isBing
-          ? [fixture("#bing-results"), real("#b_results")]
-          : isYahooJapan
-            ? [fixture("#yahoo-japan-contents"), real("#contents"), real("#web"), real("#results")]
-            : isYahoo
-              ? [fixture("#yahoo-results"), real("#web"), real("#results")]
-              : [fixture("#results"), real("#search"), real("#main_pack")],
+          : isBing
+            ? [fixture("#bing-results"), real("#b_results")]
+            : isYahooJapan
+              ? [fixture("#yahoo-japan-contents"), real("#contents"), real("#web"), real("#results")]
+              : isYahoo
+                ? [fixture("#yahoo-results"), real("#web"), real("#results")]
+                : [fixture("#results"), real("#search"), real("#main_pack")],
       expectedTextSignals: ["page", "more results", "\uB2E4\uC74C", "\uB354\uBCF4\uAE30"],
       blockedSignals: searchBlockedSignals,
       riskNotes: ["Pagination must stay bounded; do not crawl unbounded result pages."]
     }),
     candidate("result-selection", "capture", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
       selectors: isDaum
-          ? [fixture("#daum-result-card"), real("#mArticle a"), real("#cMain a")]
+        ? [fixture("#daum-result-card"), real("#mArticle a"), real("#cMain a")]
         : isGoogle
           ? [fixture("#result-card"), real("#rso a[href]:has(h3)"), real("#search a[href]:has(h3)"), real("#search a[data-ved][href]"), real("#search a")]
           : isNaver
             ? [fixture("#result-card"), fixture("#naver-integrated-main"), fixture("#naver-view-module"), fixture("#naver-news-module"), fixture("#naver-place-module"), fixture("#naver-shopping-module"), real("#main_pack a"), real("#main_pack [data-url]")]
-          : isBing
-            ? [fixture("#bing-result-card"), fixture("#bing-result-link"), real("#b_results h2 a[href]"), real("#b_results a[href]")]
-            : isYahooJapan
-              ? [fixture("#yahoo-japan-result-card"), fixture("#yahoo-japan-result-link"), real("#contents a[href]"), real("#web a[href]")]
-              : isYahoo
-                ? [fixture("#yahoo-result-card"), fixture("#yahoo-result-link"), real(".compTitle a[href]"), real("#web a[href]")]
-                : [fixture("#result-card"), real("#search a"), real("#main_pack a")],
-      scopes: isDaum
-        ? daumResultScopes
-        : isGoogle
-          ? googleResultScopes
-          : isNaver
-            ? naverResultScopes
             : isBing
-              ? bingResultScopes
+              ? [fixture("#bing-result-card"), fixture("#bing-result-link"), real("#b_results h2 a[href]"), real("#b_results a[href]")]
               : isYahooJapan
-                ? yahooJapanResultScopes
+                ? [fixture("#yahoo-japan-result-card"), fixture("#yahoo-japan-result-link"), real("#contents a[href]"), real("#web a[href]")]
                 : isYahoo
-                  ? yahooResultScopes
-                  : genericSearchResultScopes,
+                  ? [fixture("#yahoo-result-card"), fixture("#yahoo-result-link"), real(".compTitle a[href]"), real("#web a[href]")]
+                  : [fixture("#result-card"), real("#search a"), real("#main_pack a")],
+      scopes: isDaum ? daumResultScopes : isGoogle ? googleResultScopes : isNaver ? naverResultScopes : isBing ? bingResultScopes : isYahooJapan ? yahooJapanResultScopes : isYahoo ? yahooResultScopes : genericSearchResultScopes,
       expectedTextSignals: ["snippet", "result", "\uAD11\uACE0", "Sponsored", "Maps", "News", "Videos", "Images"],
       blockedSignals: searchBlockedSignals,
       riskNotes: ["Search snippets prove only portal display; destination claims require follow-up evidence."]
@@ -763,11 +715,7 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
     ...(platform === "kakao_map" ? [real("#search\\.keyword\\.query"), real('input[name="q"]')] : []),
     ...(platform === "google_maps" ? [real("#searchboxinput"), real('input[aria-label*="Search"]'), real('input[aria-label*="검색"]')] : []),
     ...(platform === "naver_map" ? [real("#root"), real('input[aria-label*="검색"]')] : []),
-    ...(platform === "apple_maps" ? [
-      real('input[aria-label*="Search Maps"]', "Apple Maps search input by accessible label."),
-      real('input[placeholder*="Search Maps"]', "Apple Maps search input by placeholder."),
-      real('input[id*="search"]', "Apple Maps search input fallback by id.")
-    ] : []),
+    ...(platform === "apple_maps" ? [real('input[aria-label*="Search Maps"]', "Apple Maps search input by accessible label."), real('input[placeholder*="Search Maps"]', "Apple Maps search input by placeholder."), real('input[id*="search"]', "Apple Maps search input fallback by id.")] : []),
     real('input[aria-label*="Search"]'),
     real('input[aria-label*="검색"]')
   ];
@@ -779,12 +727,7 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
     ...(platform === "naver_map" ? [real("#root")] : []),
     ...(platform === "kakao_map" ? [real("#view\\.mapContainer"), real("#view\\.map"), real("#view")] : []),
     ...(platform === "google_maps" ? [real(".lbMcOd"), real(".UL7Qtf")] : []),
-    ...(platform === "apple_maps" ? [
-      real("#maps-app", "Apple Maps app shell."),
-      real('[class*="maps"]', "Apple Maps map shell class fallback."),
-      real('[data-testid*="map"]', "Apple Maps map viewport/test-id fallback."),
-      real('[aria-label*="Map"]', "Apple Maps map viewport accessible label.")
-    ] : []),
+    ...(platform === "apple_maps" ? [real("#maps-app", "Apple Maps app shell."), real('[class*="maps"]', "Apple Maps map shell class fallback."), real('[data-testid*="map"]', "Apple Maps map viewport/test-id fallback."), real('[aria-label*="Map"]', "Apple Maps map viewport accessible label.")] : []),
     real('[aria-label*="Map"]'),
     real('[aria-label*="지도"]'),
     real('[role="main"]')
@@ -798,19 +741,17 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
     fixture("#google-review-list"),
     fixture("#google-photo-strip"),
     fixture("#apple-review-list"),
-    ...(platform === "kakao_map" ? [
-      real("#info\\.search"),
-      real("#info\\.search\\.place"),
-      real("#info\\.search\\.place\\.list")
-    ] : []),
+    ...(platform === "kakao_map" ? [real("#info\\.search"), real("#info\\.search\\.place"), real("#info\\.search\\.place\\.list")] : []),
     ...(platform === "naver_map" ? [real("#root")] : []),
     ...(platform === "google_maps" ? [real(".m6QErb"), real(".Nv2PK"), real(".hfpxzc"), real(".lbMcOd")] : []),
-    ...(platform === "apple_maps" ? [
-      real('[data-testid*="place-card"]', "Apple Maps selected place card/test-id fallback."),
-      real('[class*="place-card"]', "Apple Maps selected place card class fallback."),
-      real('[aria-label*="place"]', "Apple Maps selected place accessible label fallback."),
-      real('[aria-label*="rating"]', "Apple Maps rating/review accessible label fallback.")
-    ] : []),
+    ...(platform === "apple_maps"
+      ? [
+          real('[data-testid*="place-card"]', "Apple Maps selected place card/test-id fallback."),
+          real('[class*="place-card"]', "Apple Maps selected place card class fallback."),
+          real('[aria-label*="place"]', "Apple Maps selected place accessible label fallback."),
+          real('[aria-label*="rating"]', "Apple Maps rating/review accessible label fallback.")
+        ]
+      : []),
     real('[role="main"]')
   ];
   const destinationSelectors = [
@@ -824,67 +765,75 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
     fixture("#apple-place-website-link", "Fixture Apple Maps selected-place website destination."),
     fixture("#apple-place-menu-link", "Fixture Apple Maps selected-place menu destination."),
     fixture("#apple-place-review-link", "Fixture Apple Maps selected-place review destination."),
-    ...(platform === "naver_map" ? [
-      real('#root [data-place-url*="place.naver.com/restaurant"]', "Naver Map SPA restaurant cards with explicit Naver Place destination attributes."),
-      real('#root [data-place-url*="place.naver.com/hospital"]', "Naver Map SPA hospital cards with explicit Naver Place destination attributes."),
-      real('#root [data-place-url*="place.naver.com/place"]', "Naver Map SPA generic place cards with explicit Naver Place destination attributes."),
-      real('#root [data-place-url*="place.naver.com/accommodation"]', "Naver Map SPA accommodation cards with explicit Naver Place destination attributes."),
-      real('#root [data-url*="place.naver.com/restaurant"]', "Naver Map SPA cards with restaurant Naver Place URL attributes."),
-      real('#root [data-url*="place.naver.com/hospital"]', "Naver Map SPA cards with hospital Naver Place URL attributes."),
-      real('#root [data-url*="place.naver.com/place"]', "Naver Map SPA cards with generic Naver Place URL attributes."),
-      real('#root [data-url*="place.naver.com/accommodation"]', "Naver Map SPA cards with accommodation Naver Place URL attributes."),
-      real('#root a[href*="place.naver.com/restaurant"]', "Naver Place restaurant detail links visible in the map shell."),
-      real('#root a[href*="place.naver.com/hospital"]', "Naver Place hospital detail links visible in the map shell."),
-      real('#root a[href*="place.naver.com/place"]', "Naver Place generic detail links visible in the map shell."),
-      real('#root a[href*="place.naver.com/accommodation"]', "Naver Place accommodation detail links visible in the map shell."),
-      real('#root [data-place-url*="place.naver.com"]', "Naver Map SPA place cards with explicit Naver Place URL attributes."),
-      real('#root [data-url*="place.naver.com"]', "Naver Map SPA cards with Naver Place URL attributes."),
-      real('#root [data-url*="map.naver.com/p/entry/place"]', "Naver Map SPA cards with entry-place URL attributes."),
-      real('#root [data-url*="map.naver.com/v5/entry/place"]', "Naver Map SPA cards with legacy entry-place URL attributes."),
-      real('#root [data-target-url*="booking.naver.com"]', "Naver Map SPA cards with Naver Booking target URL attributes."),
-      real('#root [data-source-url*="smartplace.naver.com"]', "Naver Map SPA cards with SmartPlace source URL attributes."),
-      real('#root a[href*="place.naver.com"]', "Naver Place detail or place-home destination links visible in the map shell."),
-      real('#root a[href*="map.naver.com/p/entry/place"]', "Naver Map entry-place links visible in result or selected-place surfaces."),
-      real('#root a[href*="map.naver.com/v5/entry/place"]', "Legacy Naver Map entry-place links visible in result or selected-place surfaces."),
-      real('#root a[href*="map.naver.com"]', "Naver Map place/detail links visible in list or panel surfaces."),
-      real('#root a[href*="booking.naver.com"]', "Naver Booking links are extracted as evidence candidates only; booking actions remain unsupported."),
-      real('#root a[href*="smartplace.naver.com"]', "Naver SmartPlace business-profile links visible from place panels."),
-      real('#root a[href^="http"]', "Fallback Naver Map HTTP(S) links after narrower place/website/menu/review selectors fail.")
-    ] : []),
-    ...(platform === "kakao_map" ? [
-      real('#info\\.search\\.place\\.list [data-url*="place.map.kakao.com"]', "KakaoMap SPA place-list cards with place URL attributes."),
-      real('#info\\.search\\.place [data-url*="place.map.kakao.com"]', "KakaoMap selected-place cards with place URL attributes."),
-      real('#view [data-url*="place.map.kakao.com"]', "KakaoMap view cards with place URL attributes."),
-      real("#info\\.search\\.place\\.list a[href]", "KakaoMap visible place-list links."),
-      real("#info\\.search\\.place a[href]", "KakaoMap selected place links."),
-      real("#info\\.search a[href]", "KakaoMap search panel links before falling back to the full view."),
-      real("#view a[href]", "KakaoMap visible page-shell HTTP(S) links."),
-      real('a[href*="place.map.kakao.com"]', "Kakao place detail links.")
-    ] : []),
-    ...(platform === "google_maps" ? [
-      real('[role="main"] [data-url*="/maps/place"]', "Google Maps SPA place cards with place URL attributes."),
-      real('[role="main"] [data-href*="/maps/place"]', "Google Maps SPA place cards with href-like place attributes."),
-      real('[role="main"] [data-place-url]', "Google Maps selected-place cards with explicit place URL attributes."),
-      real('[role="main"] [data-target-url]', "Google Maps selected-place buttons with target URL attributes."),
-      real('a[href*="google.com/maps/place"]', "Google Maps place detail links."),
-      real('a[href*="/maps/place"]', "Google Maps relative place links."),
-      real('a[data-item-id*="authority"]', "Google Maps website authority links from selected-place panels."),
-      real('a[href^="http"][aria-label*="Website"]', "Google Maps selected-place website links by accessible label."),
-      real('a[href^="http"][aria-label*="Menu"]', "Google Maps selected-place menu links by accessible label."),
-      real('a[href^="http"][aria-label*="Reviews"]', "Google Maps selected-place review links by accessible label."),
-      real('[role="main"] a[href^="http"]', "Fallback Google Maps visible HTTP(S) links scoped to the main map/place surface.")
-    ] : []),
-    ...(platform === "apple_maps" ? [
-      real('[data-place-url*="maps.apple.com"]', "Apple Maps SPA place cards with explicit Apple Maps destination attributes."),
-      real('[data-url*="maps.apple.com"]', "Apple Maps SPA place cards with URL attributes."),
-      real('[data-target-url*="maps.apple.com"]', "Apple Maps selected-place controls with target URL attributes."),
-      real('a[href*="maps.apple.com/place"]', "Apple Maps place detail links."),
-      real('a[href*="maps.apple.com/?address"]', "Apple Maps address/place links."),
-      real('a[href^="http"][aria-label*="Website"]', "Apple Maps selected-place website links by accessible label."),
-      real('a[href^="http"][aria-label*="Menu"]', "Apple Maps selected-place menu links by accessible label."),
-      real('a[href^="http"][aria-label*="Reviews"]', "Apple Maps selected-place review links by accessible label."),
-      real('[role="main"] a[href^="http"]', "Fallback Apple Maps visible HTTP(S) links scoped to the main map/place surface.")
-    ] : [])
+    ...(platform === "naver_map"
+      ? [
+          real('#root [data-place-url*="place.naver.com/restaurant"]', "Naver Map SPA restaurant cards with explicit Naver Place destination attributes."),
+          real('#root [data-place-url*="place.naver.com/hospital"]', "Naver Map SPA hospital cards with explicit Naver Place destination attributes."),
+          real('#root [data-place-url*="place.naver.com/place"]', "Naver Map SPA generic place cards with explicit Naver Place destination attributes."),
+          real('#root [data-place-url*="place.naver.com/accommodation"]', "Naver Map SPA accommodation cards with explicit Naver Place destination attributes."),
+          real('#root [data-url*="place.naver.com/restaurant"]', "Naver Map SPA cards with restaurant Naver Place URL attributes."),
+          real('#root [data-url*="place.naver.com/hospital"]', "Naver Map SPA cards with hospital Naver Place URL attributes."),
+          real('#root [data-url*="place.naver.com/place"]', "Naver Map SPA cards with generic Naver Place URL attributes."),
+          real('#root [data-url*="place.naver.com/accommodation"]', "Naver Map SPA cards with accommodation Naver Place URL attributes."),
+          real('#root a[href*="place.naver.com/restaurant"]', "Naver Place restaurant detail links visible in the map shell."),
+          real('#root a[href*="place.naver.com/hospital"]', "Naver Place hospital detail links visible in the map shell."),
+          real('#root a[href*="place.naver.com/place"]', "Naver Place generic detail links visible in the map shell."),
+          real('#root a[href*="place.naver.com/accommodation"]', "Naver Place accommodation detail links visible in the map shell."),
+          real('#root [data-place-url*="place.naver.com"]', "Naver Map SPA place cards with explicit Naver Place URL attributes."),
+          real('#root [data-url*="place.naver.com"]', "Naver Map SPA cards with Naver Place URL attributes."),
+          real('#root [data-url*="map.naver.com/p/entry/place"]', "Naver Map SPA cards with entry-place URL attributes."),
+          real('#root [data-url*="map.naver.com/v5/entry/place"]', "Naver Map SPA cards with legacy entry-place URL attributes."),
+          real('#root [data-target-url*="booking.naver.com"]', "Naver Map SPA cards with Naver Booking target URL attributes."),
+          real('#root [data-source-url*="smartplace.naver.com"]', "Naver Map SPA cards with SmartPlace source URL attributes."),
+          real('#root a[href*="place.naver.com"]', "Naver Place detail or place-home destination links visible in the map shell."),
+          real('#root a[href*="map.naver.com/p/entry/place"]', "Naver Map entry-place links visible in result or selected-place surfaces."),
+          real('#root a[href*="map.naver.com/v5/entry/place"]', "Legacy Naver Map entry-place links visible in result or selected-place surfaces."),
+          real('#root a[href*="map.naver.com"]', "Naver Map place/detail links visible in list or panel surfaces."),
+          real('#root a[href*="booking.naver.com"]', "Naver Booking links are extracted as evidence candidates only; booking actions remain unsupported."),
+          real('#root a[href*="smartplace.naver.com"]', "Naver SmartPlace business-profile links visible from place panels."),
+          real('#root a[href^="http"]', "Fallback Naver Map HTTP(S) links after narrower place/website/menu/review selectors fail.")
+        ]
+      : []),
+    ...(platform === "kakao_map"
+      ? [
+          real('#info\\.search\\.place\\.list [data-url*="place.map.kakao.com"]', "KakaoMap SPA place-list cards with place URL attributes."),
+          real('#info\\.search\\.place [data-url*="place.map.kakao.com"]', "KakaoMap selected-place cards with place URL attributes."),
+          real('#view [data-url*="place.map.kakao.com"]', "KakaoMap view cards with place URL attributes."),
+          real("#info\\.search\\.place\\.list a[href]", "KakaoMap visible place-list links."),
+          real("#info\\.search\\.place a[href]", "KakaoMap selected place links."),
+          real("#info\\.search a[href]", "KakaoMap search panel links before falling back to the full view."),
+          real("#view a[href]", "KakaoMap visible page-shell HTTP(S) links."),
+          real('a[href*="place.map.kakao.com"]', "Kakao place detail links.")
+        ]
+      : []),
+    ...(platform === "google_maps"
+      ? [
+          real('[role="main"] [data-url*="/maps/place"]', "Google Maps SPA place cards with place URL attributes."),
+          real('[role="main"] [data-href*="/maps/place"]', "Google Maps SPA place cards with href-like place attributes."),
+          real('[role="main"] [data-place-url]', "Google Maps selected-place cards with explicit place URL attributes."),
+          real('[role="main"] [data-target-url]', "Google Maps selected-place buttons with target URL attributes."),
+          real('a[href*="google.com/maps/place"]', "Google Maps place detail links."),
+          real('a[href*="/maps/place"]', "Google Maps relative place links."),
+          real('a[data-item-id*="authority"]', "Google Maps website authority links from selected-place panels."),
+          real('a[href^="http"][aria-label*="Website"]', "Google Maps selected-place website links by accessible label."),
+          real('a[href^="http"][aria-label*="Menu"]', "Google Maps selected-place menu links by accessible label."),
+          real('a[href^="http"][aria-label*="Reviews"]', "Google Maps selected-place review links by accessible label."),
+          real('[role="main"] a[href^="http"]', "Fallback Google Maps visible HTTP(S) links scoped to the main map/place surface.")
+        ]
+      : []),
+    ...(platform === "apple_maps"
+      ? [
+          real('[data-place-url*="maps.apple.com"]', "Apple Maps SPA place cards with explicit Apple Maps destination attributes."),
+          real('[data-url*="maps.apple.com"]', "Apple Maps SPA place cards with URL attributes."),
+          real('[data-target-url*="maps.apple.com"]', "Apple Maps selected-place controls with target URL attributes."),
+          real('a[href*="maps.apple.com/place"]', "Apple Maps place detail links."),
+          real('a[href*="maps.apple.com/?address"]', "Apple Maps address/place links."),
+          real('a[href^="http"][aria-label*="Website"]', "Apple Maps selected-place website links by accessible label."),
+          real('a[href^="http"][aria-label*="Menu"]', "Apple Maps selected-place menu links by accessible label."),
+          real('a[href^="http"][aria-label*="Reviews"]', "Apple Maps selected-place review links by accessible label."),
+          real('[role="main"] a[href^="http"]', "Fallback Apple Maps visible HTTP(S) links scoped to the main map/place surface.")
+        ]
+      : [])
   ];
   return [
     candidate("query-state", "fill", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
@@ -911,15 +860,7 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
       riskNotes: ["Place selection must not click route, call, reservation, or booking controls."]
     }),
     candidate("map-ocr", "capture", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
-      selectors: [
-        fixture("#map-viewport"),
-        fixture("#kakao-map-viewport"),
-        fixture("#google-map-label"),
-        fixture("#google-map-viewport"),
-        fixture("#apple-map-label"),
-        fixture("#apple-map-viewport"),
-        ...mapViewportScopes
-      ],
+      selectors: [fixture("#map-viewport"), fixture("#kakao-map-viewport"), fixture("#google-map-label"), fixture("#google-map-viewport"), fixture("#apple-map-label"), fixture("#apple-map-viewport"), ...mapViewportScopes],
       scopes: [fixture("#google-map-label"), fixture("#apple-map-label"), ...mapViewportScopes],
       expectedTextSignals: ["pin", "label", "\uC9C0\uB3C4"],
       riskNotes: ["OCR is derivative evidence and must cite the screenshot artifact."]
@@ -932,54 +873,40 @@ function mapRecipeCandidates(platform: SourceNavigationPlan["platform"]): Source
         "Route, call, reservation, booking, login, and account-changing controls remain unsupported; extracted links still pass through bounded destination triage before child evidence runs."
       ]
     }),
-    ...(platform === "naver_map" ? [
-      candidate("destination-followup", "extract_client_state_destinations", "fixture_verified", {
-        selectors: [
-          fixture("#root", "Fixture Naver Map shell with browser-received Apollo place state."),
-          fixture("#app-root", "Fixture Naver Place list iframe root with Apollo place state."),
-          real("#app-root", "Naver Map result iframe root; validate before reading browser-received Apollo state."),
-          real("#_pcmap_list_scroll_container", "Naver Map place-list scroll container when Apollo state backs visible cards."),
-          real("#_pcmap_list_scroll_container li", "Naver Map visible place-list cards backed by client state."),
-          real("#root", "Fallback Naver Map shell; use only when visible place-list state is present.")
-        ],
-        expectedTextSignals: ["\uB9AC\uBDF0", "\uC8FC\uC18C", "\uCE74\uD398", "\uC74C\uC2DD\uC810", "review", "address"],
-        blockedSignals: SECURITY_CHALLENGE_SIGNALS,
-        riskNotes: [
-          "Reads browser-received Naver Place Apollo state without clicking result cards.",
-          "Use only when visible cards expose place text but no usable href or SPA destination attribute.",
-          "Child runs execute map.naver.com/p/entry/place/<id> while preserving canonical place.naver.com provenance."
-        ],
-        clientStateExtraction: {
-          stateKey: "__APOLLO_STATE__",
-          extractor: "naver_place_apollo",
-          destinationPath: "restaurant",
-          maxLinks: 10
-        }
-      })
-    ] : [])
+    ...(platform === "naver_map"
+      ? [
+          candidate("destination-followup", "extract_client_state_destinations", "fixture_verified", {
+            selectors: [
+              fixture("#root", "Fixture Naver Map shell with browser-received Apollo place state."),
+              fixture("#app-root", "Fixture Naver Place list iframe root with Apollo place state."),
+              real("#app-root", "Naver Map result iframe root; validate before reading browser-received Apollo state."),
+              real("#_pcmap_list_scroll_container", "Naver Map place-list scroll container when Apollo state backs visible cards."),
+              real("#_pcmap_list_scroll_container li", "Naver Map visible place-list cards backed by client state."),
+              real("#root", "Fallback Naver Map shell; use only when visible place-list state is present.")
+            ],
+            expectedTextSignals: ["\uB9AC\uBDF0", "\uC8FC\uC18C", "\uCE74\uD398", "\uC74C\uC2DD\uC810", "review", "address"],
+            blockedSignals: SECURITY_CHALLENGE_SIGNALS,
+            riskNotes: ["Reads browser-received Naver Place Apollo state without clicking result cards.", "Use only when visible cards expose place text but no usable href or SPA destination attribute.", "Child runs execute map.naver.com/p/entry/place/<id> while preserving canonical place.naver.com provenance."],
+            clientStateExtraction: {
+              stateKey: "__APOLLO_STATE__",
+              extractor: "naver_place_apollo",
+              destinationPath: "restaurant",
+              maxLinks: 10
+            }
+          })
+        ]
+      : [])
   ];
 }
 
 function blogRecipeCandidates(platform: SourceNavigationPlan["platform"]): SourceNavigationRecipeActionCandidate[] {
   const fixtureVerified = platform === "naver_blog" || platform === "naver_cafe";
-  const naverPageStateCandidates = platform === "naver_blog"
-    ? [
-      real("#content"),
-      real("#app"),
-      real(".post_list_wrap"),
-      real('[data-innerhtml="postList"]'),
-      real(".BlogId_content"),
-      real("body", "Fallback page-shell candidate; prefer narrower Naver Blog scopes when present.")
-    ]
-    : platform === "naver_cafe"
-      ? [
-        real("#app"),
-        real("#main-area"),
-        real(".ArticleContentBox"),
-        real(".article-board"),
-        real("body", "Fallback page-shell candidate; prefer narrower Naver Cafe scopes when present.")
-      ]
-      : [];
+  const naverPageStateCandidates =
+    platform === "naver_blog"
+      ? [real("#content"), real("#app"), real(".post_list_wrap"), real('[data-innerhtml="postList"]'), real(".BlogId_content"), real("body", "Fallback page-shell candidate; prefer narrower Naver Blog scopes when present.")]
+      : platform === "naver_cafe"
+        ? [real("#app"), real("#main-area"), real(".ArticleContentBox"), real(".article-board"), real("body", "Fallback page-shell candidate; prefer narrower Naver Cafe scopes when present.")]
+        : [];
   const membershipBlockedSignals = [
     "\uBE44\uACF5\uAC1C",
     "\uBE44\uACF5\uAC1C \uAE00",
@@ -999,42 +926,33 @@ function blogRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sourc
     fixture("#related-post-link", "Fixture visible related article destination."),
     fixture("#profile-link", "Fixture visible author/profile destination."),
     fixture("#official-link", "Fixture visible official/external destination."),
-    ...(platform === "naver_blog" ? [
-      real("#postViewArea a[href]", "Naver Blog post body links."),
-      real(".se-main-container a[href]", "Naver SmartEditor body links."),
-      real(".BlogId_content a[href]", "Naver Blog page-shell content links."),
-      real('a[href*="blog.naver.com"]', "Naver Blog related post or author links."),
-      real('a[href*="naver.me"]', "Naver shortened outbound links visible in blog posts."),
-      real('article a[href^="http"]', "Fallback article HTTP(S) links.")
-    ] : []),
-    ...(platform === "naver_cafe" ? [
-      real("#main-area a[href]", "Naver Cafe article area links."),
-      real(".ArticleContentBox a[href]", "Naver Cafe article body links."),
-      real(".article-board a[href]", "Naver Cafe board/article links."),
-      real('a[href*="cafe.naver.com"]', "Naver Cafe related post or board links."),
-      real('a[href*="naver.me"]', "Naver shortened outbound links visible in cafe posts."),
-      real('article a[href^="http"]', "Fallback article HTTP(S) links.")
-    ] : []),
+    ...(platform === "naver_blog"
+      ? [
+          real("#postViewArea a[href]", "Naver Blog post body links."),
+          real(".se-main-container a[href]", "Naver SmartEditor body links."),
+          real(".BlogId_content a[href]", "Naver Blog page-shell content links."),
+          real('a[href*="blog.naver.com"]', "Naver Blog related post or author links."),
+          real('a[href*="naver.me"]', "Naver shortened outbound links visible in blog posts."),
+          real('article a[href^="http"]', "Fallback article HTTP(S) links.")
+        ]
+      : []),
+    ...(platform === "naver_cafe"
+      ? [
+          real("#main-area a[href]", "Naver Cafe article area links."),
+          real(".ArticleContentBox a[href]", "Naver Cafe article body links."),
+          real(".article-board a[href]", "Naver Cafe board/article links."),
+          real('a[href*="cafe.naver.com"]', "Naver Cafe related post or board links."),
+          real('a[href*="naver.me"]', "Naver shortened outbound links visible in cafe posts."),
+          real('article a[href^="http"]', "Fallback article HTTP(S) links.")
+        ]
+      : []),
     real("main a[href]", "Generic visible main-content links."),
     real("article a[href]", "Generic article links.")
   ];
   return [
     candidate("article-capture", "capture", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
-      selectors: [
-        fixture("#article"),
-        fixture("#cafe-article"),
-        real("article"),
-        real("#postViewArea"),
-        real(".se-main-container"),
-        ...naverPageStateCandidates
-      ],
-      scopes: [
-        fixture("#article"),
-        fixture("#cafe-article"),
-        real("article"),
-        real(".se-main-container"),
-        ...naverPageStateCandidates
-      ],
+      selectors: [fixture("#article"), fixture("#cafe-article"), real("article"), real("#postViewArea"), real(".se-main-container"), ...naverPageStateCandidates],
+      scopes: [fixture("#article"), fixture("#cafe-article"), real("article"), real(".se-main-container"), ...naverPageStateCandidates],
       expectedTextSignals: ["author", "date", "\uBCF8\uBB38", "\uB313\uAE00"],
       riskNotes: ["Do not summarize member-only or login-walled content as if it was visible."]
     }),
@@ -1098,165 +1016,70 @@ function travelRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
   const travelQuerySelectors = [
     fixture("#destination"),
     fixture("#rate-destination"),
-    ...(isBooking ? [
-      real('input[name="ss"]'),
-      real('[data-testid="destination-container"]'),
-      real('[data-testid="destination-container"] input'),
-      real('[data-testid="date-display-field-start"]'),
-      real('[data-testid="occupancy-config"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('input[data-selenium="textInput"]'),
-      real('[data-selenium*="destination"]'),
-      real('[data-selenium*="checkIn"]'),
-      real('[data-selenium*="occupancy"]')
-    ] : []),
-    ...(isTrip ? [
-      real('input[name="keyword"]'),
-      real('[data-testid*="destination"]'),
-      real('[class*="destination"] input'),
-      real('[class*="search-box"] input')
-    ] : []),
-    ...(isExpedia ? [
-      real('input[name="destination"]'),
-      real('[data-stid="destination_form_field-menu-trigger"]'),
-      real('[data-stid*="destination"]'),
-      real('[aria-label*="Going to"]')
-    ] : []),
+    ...(isBooking ? [real('input[name="ss"]'), real('[data-testid="destination-container"]'), real('[data-testid="destination-container"] input'), real('[data-testid="date-display-field-start"]'), real('[data-testid="occupancy-config"]')] : []),
+    ...(isAgoda ? [real('input[data-selenium="textInput"]'), real('[data-selenium*="destination"]'), real('[data-selenium*="checkIn"]'), real('[data-selenium*="occupancy"]')] : []),
+    ...(isTrip ? [real('input[name="keyword"]'), real('[data-testid*="destination"]'), real('[class*="destination"] input'), real('[class*="search-box"] input')] : []),
+    ...(isExpedia ? [real('input[name="destination"]'), real('[data-stid="destination_form_field-menu-trigger"]'), real('[data-stid*="destination"]'), real('[aria-label*="Going to"]')] : []),
     real('input[name*="destination"]'),
     real('input[type="search"]')
   ];
   const travelFilterSelectors = [
     fixture("#breakfast-filter"),
     fixture("#refundable-filter"),
-    ...(isBooking ? [
-      real('[data-testid*="filter"]'),
-      real('[data-testid="filters-group-label-content"]'),
-      real('button[data-testid*="filter"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium*="filter"]'),
-      real('[data-element-name*="filter"]'),
-      real('button[data-selenium*="filter"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[data-testid*="filter"]'),
-      real('[class*="filter"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="filter"]'),
-      real('[data-stid*="amenity"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid*="filter"]'), real('[data-testid="filters-group-label-content"]'), real('button[data-testid*="filter"]')] : []),
+    ...(isAgoda ? [real('[data-selenium*="filter"]'), real('[data-element-name*="filter"]'), real('button[data-selenium*="filter"]')] : []),
+    ...(isTrip ? [real('[data-testid*="filter"]'), real('[class*="filter"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="filter"]'), real('[data-stid*="amenity"]')] : []),
     real("button"),
     real('[role="checkbox"]'),
     real('input[type="checkbox"]')
   ];
   const travelFilterScopes = [
     fixture("#filter-state"),
-    ...(isBooking ? [
-      real('[data-testid*="filter"]'),
-      real('[data-testid="filters-sidebar"]'),
-      real('[data-testid="property-card-container"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium*="filter"]'),
-      real('[data-selenium="hotel-item"]'),
-      real("#contentContainer")
-    ] : []),
-    ...(isTrip ? [
-      real('[class*="filter"]'),
-      real('[class*="hotel-list"]'),
-      real('[data-testid*="hotel"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="filter"]'),
-      real('[data-stid*="section-results"]'),
-      real('[data-stid*="property-listing"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid*="filter"]'), real('[data-testid="filters-sidebar"]'), real('[data-testid="property-card-container"]')] : []),
+    ...(isAgoda ? [real('[data-selenium*="filter"]'), real('[data-selenium="hotel-item"]'), real("#contentContainer")] : []),
+    ...(isTrip ? [real('[class*="filter"]'), real('[class*="hotel-list"]'), real('[data-testid*="hotel"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="filter"]'), real('[data-stid*="section-results"]'), real('[data-stid*="property-listing"]')] : []),
     real('[data-testid*="filter"]'),
     real("aside")
   ];
   const travelSortSelectors = [
     fixture("#sort"),
     fixture("#rate-sort"),
-    ...(isBooking ? [
-      real('[data-testid*="sort"]'),
-      real('[data-testid="sorters-dropdown-trigger"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium*="sort"]'),
-      real('[data-element-name*="sort"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[data-testid*="sort"]'),
-      real('[class*="sort"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="sort"]'),
-      real('[data-stid*="sort-filter"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid*="sort"]'), real('[data-testid="sorters-dropdown-trigger"]')] : []),
+    ...(isAgoda ? [real('[data-selenium*="sort"]'), real('[data-element-name*="sort"]')] : []),
+    ...(isTrip ? [real('[data-testid*="sort"]'), real('[class*="sort"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="sort"]'), real('[data-stid*="sort-filter"]')] : []),
     real("select"),
     real('[role="button"]')
   ];
   const travelListScopes = [
     fixture("#room-list"),
-    ...(isBooking ? [
-      real('[data-testid="property-card"]'),
-      real('[data-testid*="property-card"]'),
-      real('[data-testid="property-card-container"]'),
-      real('[data-testid="title"]'),
-      real('[data-testid="availability-cta"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium="hotel-item"]'),
-      real('[data-selenium="property-card"]'),
-      real('[data-element-name*="property-card"]'),
-      real('[data-element-name="geo-carousel-card"]'),
-      real('[data-selenium="base-card"]'),
-      real(".base-card.property-details"),
-      real('[data-selenium="hotel-name"]'),
-      real("#contentContainer")
-    ] : []),
-    ...(isTrip ? [
-      real('[class*="hotel-card"]'),
-      real('[class*="HotelCard"]'),
-      real('[class*="list-card"]'),
-      real('[class*="hotel-list"]'),
-      real('[data-testid*="hotel"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="property-listing"]'),
-      real('[data-stid*="property-card"]'),
-      real('[data-stid*="section-results"]'),
-      real('[data-stid*="lodging-card-responsive"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid="property-card"]'), real('[data-testid*="property-card"]'), real('[data-testid="property-card-container"]'), real('[data-testid="title"]'), real('[data-testid="availability-cta"]')] : []),
+    ...(isAgoda
+      ? [
+          real('[data-selenium="hotel-item"]'),
+          real('[data-selenium="property-card"]'),
+          real('[data-element-name*="property-card"]'),
+          real('[data-element-name="geo-carousel-card"]'),
+          real('[data-selenium="base-card"]'),
+          real(".base-card.property-details"),
+          real('[data-selenium="hotel-name"]'),
+          real("#contentContainer")
+        ]
+      : []),
+    ...(isTrip ? [real('[class*="hotel-card"]'), real('[class*="HotelCard"]'), real('[class*="list-card"]'), real('[class*="hotel-list"]'), real('[data-testid*="hotel"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="property-listing"]'), real('[data-stid*="property-card"]'), real('[data-stid*="section-results"]'), real('[data-stid*="lodging-card-responsive"]')] : []),
     real('[data-testid*="property-card"]'),
     real('[data-testid*="hotel"]')
   ];
   const travelOfferSelectors = [
     fixture("#offer-detail"),
     fixture("#show-rate-terms"),
-    ...(isBooking ? [
-      real('[data-testid="availability-cta"]'),
-      real('[data-testid*="availability"]'),
-      real('[data-testid="property-card"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium="room-card"]'),
-      real('[data-selenium*="room"]'),
-      real('[data-element-name*="room"]'),
-      real('[data-selenium="hotel-item"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[class*="room"]'),
-      real('[class*="HotelCard"]'),
-      real('[data-testid*="room"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="open-hotel-information"]'),
-      real('[data-stid*="property-listing"]'),
-      real('[data-stid*="room-card"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid="availability-cta"]'), real('[data-testid*="availability"]'), real('[data-testid="property-card"]')] : []),
+    ...(isAgoda ? [real('[data-selenium="room-card"]'), real('[data-selenium*="room"]'), real('[data-element-name*="room"]'), real('[data-selenium="hotel-item"]')] : []),
+    ...(isTrip ? [real('[class*="room"]'), real('[class*="HotelCard"]'), real('[data-testid*="room"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="open-hotel-information"]'), real('[data-stid*="property-listing"]'), real('[data-stid*="room-card"]')] : []),
     real('[data-testid*="availability"]'),
     real("button")
   ];
@@ -1264,81 +1087,28 @@ function travelRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
     fixture("#rate-panel"),
     fixture("#rate-terms"),
     fixture("#price-card"),
-    ...(isBooking ? [
-      real('[data-testid="property-card"]'),
-      real('[data-testid*="property-card"]'),
-      real('[data-testid="availability-cta"]'),
-      real('[data-testid*="room"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium="room-card"]'),
-      real('[data-selenium*="room"]'),
-      real('[data-selenium*="cancellation"]'),
-      real('[data-selenium="hotel-item"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[class*="room"]'),
-      real('[class*="cancel"]'),
-      real('[class*="HotelCard"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="room-card"]'),
-      real('[data-stid*="property-listing"]'),
-      real('[data-stid*="price-summary"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid="property-card"]'), real('[data-testid*="property-card"]'), real('[data-testid="availability-cta"]'), real('[data-testid*="room"]')] : []),
+    ...(isAgoda ? [real('[data-selenium="room-card"]'), real('[data-selenium*="room"]'), real('[data-selenium*="cancellation"]'), real('[data-selenium="hotel-item"]')] : []),
+    ...(isTrip ? [real('[class*="room"]'), real('[class*="cancel"]'), real('[class*="HotelCard"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="room-card"]'), real('[data-stid*="property-listing"]'), real('[data-stid*="price-summary"]')] : []),
     real('[data-testid*="property-card"]')
   ];
   const travelPriceScopes = [
     fixture("#price-card"),
     fixture("#rate-price-card"),
-    ...(isBooking ? [
-      real('[data-testid="price-and-discounted-price"]'),
-      real('[data-testid="taxes-and-charges"]'),
-      real('[data-testid*="price"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium="display-price"]'),
-      real('[data-selenium*="price"]'),
-      real('[data-element-name*="price"]'),
-      real('[data-element-name="geo-dateless-search-property-card"]'),
-      real('[class*="PriceCurrency"]'),
-      real('[class*="DatelessPropertyCard"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[data-testid*="price"]'),
-      real('[class*="price"]'),
-      real('[class*="tax"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="price-summary"]'),
-      real('[data-stid*="price"]'),
-      real('[data-stid*="lodging-card-price"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid="price-and-discounted-price"]'), real('[data-testid="taxes-and-charges"]'), real('[data-testid*="price"]')] : []),
+    ...(isAgoda ? [real('[data-selenium="display-price"]'), real('[data-selenium*="price"]'), real('[data-element-name*="price"]'), real('[data-element-name="geo-dateless-search-property-card"]'), real('[class*="PriceCurrency"]'), real('[class*="DatelessPropertyCard"]')] : []),
+    ...(isTrip ? [real('[data-testid*="price"]'), real('[class*="price"]'), real('[class*="tax"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="price-summary"]'), real('[data-stid*="price"]'), real('[data-stid*="lodging-card-price"]')] : []),
     real('[data-testid*="price"]'),
     real('[data-testid*="property-card"]')
   ];
   const travelPaginationSelectors = [
     fixture("#show-more-rates"),
-    ...(isBooking ? [
-      real('[data-testid*="pagination"]'),
-      real('button[aria-label*="Next"]'),
-      real('a[aria-label*="Next"]')
-    ] : []),
-    ...(isAgoda ? [
-      real('[data-selenium*="pagination"]'),
-      real('[data-element-name*="pagination"]'),
-      real('button[aria-label*="Next"]')
-    ] : []),
-    ...(isTrip ? [
-      real('[class*="pagination"]'),
-      real('[class*="loadMore"]'),
-      real('button[aria-label*="Next"]')
-    ] : []),
-    ...(isExpedia ? [
-      real('[data-stid*="pagination"]'),
-      real('[data-stid*="show-more"]'),
-      real('button[aria-label*="Next"]')
-    ] : []),
+    ...(isBooking ? [real('[data-testid*="pagination"]'), real('button[aria-label*="Next"]'), real('a[aria-label*="Next"]')] : []),
+    ...(isAgoda ? [real('[data-selenium*="pagination"]'), real('[data-element-name*="pagination"]'), real('button[aria-label*="Next"]')] : []),
+    ...(isTrip ? [real('[class*="pagination"]'), real('[class*="loadMore"]'), real('button[aria-label*="Next"]')] : []),
+    ...(isExpedia ? [real('[data-stid*="pagination"]'), real('[data-stid*="show-more"]'), real('button[aria-label*="Next"]')] : []),
     real('button[aria-label*="Next"]'),
     real('a[aria-label*="Next"]'),
     real("button")
@@ -1411,9 +1181,7 @@ function commerceRecipeCandidates(platform: SourceNavigationPlan["platform"]): S
   const isWalmart = platform === "walmart";
   const isEbay = platform === "ebay";
   const fixturePrefix = commerceFixturePrefixFor(platform);
-  const platformFixture = (suffix: string, note: string): SourceNavigationSelectorCandidate[] => fixturePrefix === undefined
-    ? []
-    : [fixture(`#${fixturePrefix}-${suffix}`, note)];
+  const platformFixture = (suffix: string, note: string): SourceNavigationSelectorCandidate[] => (fixturePrefix === undefined ? [] : [fixture(`#${fixturePrefix}-${suffix}`, note)]);
   const commerceBlockedSignals = [
     "Access Denied",
     "permission to access",
@@ -1434,60 +1202,23 @@ function commerceRecipeCandidates(platform: SourceNavigationPlan["platform"]): S
   const commerceListScopes = [
     ...platformFixture("product-list", "Provider-specific local commerce fixture product list."),
     ...platformFixture("product-card", "Provider-specific local commerce fixture product card."),
-    ...(isAmazon ? [
-      real('[data-component-type*="s-search-result"]', "Amazon search-result product card."),
-      real('[data-component-type*="search-result"]', "Amazon search-result component fallback."),
-      real(".s-result-item", "Amazon result item card."),
-      real("[data-asin]", "Amazon product card with ASIN metadata.")
-    ] : []),
-    ...(isCoupang ? [
-      real("#product-list", "Coupang search result list container observed in live calibration."),
-      real("#productList"),
-      real(".search-product"),
-      real(".search-product-list"),
-      real(".search-product-wrap"),
-      real(".search-product-link")
-    ] : []),
-    ...(isNaverShopping ? [
-      real("#content"),
-      real("#container"),
-      real('[class*="basicList"]'),
-      real('[class*="product_item"]'),
-      real('[class*="productCard"]'),
-      real('[class*="product_list"]'),
-      real('a[href*="/catalog/"]'),
-      real('a[href*="/products/"]')
-    ] : []),
-    ...(isGmarket ? [
-      real("#section__inner-content-body-container"),
-      real(".box__component"),
-      real(".box__item"),
-      real(".box__item-container"),
-      real(".box__information"),
-      real(".list-item"),
-      real(".itemcard"),
-      real('a[href*="item.gmarket.co.kr"]')
-    ] : []),
-    ...(isElevenst ? [
-      real('[class*="search_content"]', "11st search content container."),
-      real('[class*="c_prd"]', "11st product card container."),
-      real('[class*="product"]', "11st product-card fallback."),
-      real('a[href*="/products/"]', "11st product detail links.")
-    ] : []),
-    ...(isWalmart ? [
-      real('[data-testid="item-stack"]', "Walmart search result stack."),
-      real('[data-item-id]', "Walmart product cards with item IDs."),
-      real('[data-testid*="list-view"]', "Walmart list-view product container."),
-      real('[data-testid*="product"]', "Walmart product-card test-id fallback."),
-      real('a[href*="/ip/"]', "Walmart product detail links.")
-    ] : []),
-    ...(isEbay ? [
-      real(".srp-results", "eBay search result list."),
-      real(".s-item", "eBay search-result item card."),
-      real(".s-item__info", "eBay item information block."),
-      real(".s-card", "eBay card layout fallback."),
-      real('a[href*="/itm/"]', "eBay item detail links.")
-    ] : []),
+    ...(isAmazon
+      ? [real('[data-component-type*="s-search-result"]', "Amazon search-result product card."), real('[data-component-type*="search-result"]', "Amazon search-result component fallback."), real(".s-result-item", "Amazon result item card."), real("[data-asin]", "Amazon product card with ASIN metadata.")]
+      : []),
+    ...(isCoupang ? [real("#product-list", "Coupang search result list container observed in live calibration."), real("#productList"), real(".search-product"), real(".search-product-list"), real(".search-product-wrap"), real(".search-product-link")] : []),
+    ...(isNaverShopping ? [real("#content"), real("#container"), real('[class*="basicList"]'), real('[class*="product_item"]'), real('[class*="productCard"]'), real('[class*="product_list"]'), real('a[href*="/catalog/"]'), real('a[href*="/products/"]')] : []),
+    ...(isGmarket ? [real("#section__inner-content-body-container"), real(".box__component"), real(".box__item"), real(".box__item-container"), real(".box__information"), real(".list-item"), real(".itemcard"), real('a[href*="item.gmarket.co.kr"]')] : []),
+    ...(isElevenst ? [real('[class*="search_content"]', "11st search content container."), real('[class*="c_prd"]', "11st product card container."), real('[class*="product"]', "11st product-card fallback."), real('a[href*="/products/"]', "11st product detail links.")] : []),
+    ...(isWalmart
+      ? [
+          real('[data-testid="item-stack"]', "Walmart search result stack."),
+          real("[data-item-id]", "Walmart product cards with item IDs."),
+          real('[data-testid*="list-view"]', "Walmart list-view product container."),
+          real('[data-testid*="product"]', "Walmart product-card test-id fallback."),
+          real('a[href*="/ip/"]', "Walmart product detail links.")
+        ]
+      : []),
+    ...(isEbay ? [real(".srp-results", "eBay search result list."), real(".s-item", "eBay search-result item card."), real(".s-item__info", "eBay item information block."), real(".s-card", "eBay card layout fallback."), real('a[href*="/itm/"]', "eBay item detail links.")] : []),
     real('[data-component-type*="search-result"]'),
     real(".product-list"),
     real('[class*="product"]'),
@@ -1495,47 +1226,13 @@ function commerceRecipeCandidates(platform: SourceNavigationPlan["platform"]): S
   ];
   const commercePriceScopes = [
     ...platformFixture("price-badge", "Provider-specific local commerce fixture price/coupon/shipping badge."),
-    ...(isAmazon ? [
-      real(".a-price", "Amazon visible price block."),
-      real(".a-price-whole", "Amazon visible whole-price text."),
-      real('[data-a-color="price"]', "Amazon price-colored block.")
-    ] : []),
-    ...(isCoupang ? [
-      real('[class*="price"]'),
-      real('[class*="Price"]'),
-      real(".price-value"),
-      real(".sale-price")
-    ] : []),
-    ...(isNaverShopping ? [
-      real('[class*="price"]'),
-      real('[class*="Price"]'),
-      real('[class*="price_num"]'),
-      real('[class*="product_price"]')
-    ] : []),
-    ...(isGmarket ? [
-      real('[class*="price"]'),
-      real('[class*="Price"]'),
-      real(".box__price"),
-      real(".text__price"),
-      real(".box__item-price")
-    ] : []),
-    ...(isElevenst ? [
-      real('[class*="price"]'),
-      real('[class*="Price"]'),
-      real('[class*="salePrice"]'),
-      real('[class*="c_prd_price"]')
-    ] : []),
-    ...(isWalmart ? [
-      real('[data-automation-id="product-price"]', "Walmart product price block."),
-      real('[data-testid*="price"]', "Walmart price test-id block."),
-      real('[itemprop="price"]', "Walmart structured visible price value."),
-      real('[class*="price"]')
-    ] : []),
-    ...(isEbay ? [
-      real(".s-item__price", "eBay search result price."),
-      real(".x-price-primary", "eBay item primary price."),
-      real('[class*="price"]')
-    ] : []),
+    ...(isAmazon ? [real(".a-price", "Amazon visible price block."), real(".a-price-whole", "Amazon visible whole-price text."), real('[data-a-color="price"]', "Amazon price-colored block.")] : []),
+    ...(isCoupang ? [real('[class*="price"]'), real('[class*="Price"]'), real(".price-value"), real(".sale-price")] : []),
+    ...(isNaverShopping ? [real('[class*="price"]'), real('[class*="Price"]'), real('[class*="price_num"]'), real('[class*="product_price"]')] : []),
+    ...(isGmarket ? [real('[class*="price"]'), real('[class*="Price"]'), real(".box__price"), real(".text__price"), real(".box__item-price")] : []),
+    ...(isElevenst ? [real('[class*="price"]'), real('[class*="Price"]'), real('[class*="salePrice"]'), real('[class*="c_prd_price"]')] : []),
+    ...(isWalmart ? [real('[data-automation-id="product-price"]', "Walmart product price block."), real('[data-testid*="price"]', "Walmart price test-id block."), real('[itemprop="price"]', "Walmart structured visible price value."), real('[class*="price"]')] : []),
+    ...(isEbay ? [real(".s-item__price", "eBay search result price."), real(".x-price-primary", "eBay item primary price."), real('[class*="price"]')] : []),
     real('[data-testid*="price"]')
   ];
   const commerceDestinationSelectors = [
@@ -1549,71 +1246,85 @@ function commerceRecipeCandidates(platform: SourceNavigationPlan["platform"]): S
     fixture("#product-review-link", "Fixture product review destination."),
     fixture("#seller-profile-link", "Fixture seller profile destination."),
     fixture("#brand-store-link", "Fixture brand/store destination."),
-    ...(isAmazon ? [
-      real('[data-component-type*="search-result"] [data-asin][data-url]', "Amazon product cards exposing URL attributes."),
-      real('[data-component-type*="search-result"] [data-product-url]', "Amazon product cards exposing product URL attributes."),
-      real('a[href*="/dp/"]', "Amazon product detail links."),
-      real('a[href*="/gp/product/"]', "Amazon product links using gp/product paths."),
-      real('a[href*="customerReviews"]', "Amazon product review links."),
-      real('a[href*="/sp?"]', "Amazon seller profile links."),
-      real('[data-component-type*="search-result"] a[href]', "Amazon visible search-result links.")
-    ] : []),
-    ...(isCoupang ? [
-      real('[data-product-id][data-url]', "Coupang product cards exposing URL attributes."),
-      real('[data-product-url]', "Coupang product cards exposing product URL attributes."),
-      real('[data-item-url]', "Coupang item cards exposing item URL attributes."),
-      real('a[href*="/vp/products/"]', "Coupang product detail links."),
-      real('a[href*="/np/products/"]', "Coupang product links visible from list cards."),
-      real('a[href*="itemId="]', "Coupang item-specific links."),
-      real('a[href*="vendorItemId="]', "Coupang vendor-item links."),
-      real(".search-product-link", "Coupang search product anchors.")
-    ] : []),
-    ...(isNaverShopping ? [
-      real('[data-product-url]', "Naver Shopping product cards exposing product URL attributes."),
-      real('[data-item-url]', "Naver Shopping item cards exposing item URL attributes."),
-      real('[data-brand-url]', "Naver Shopping brand/store cards exposing brand URL attributes."),
-      real('a[href*="/catalog/"]', "Naver Shopping catalog detail links."),
-      real('a[href*="/products/"]', "Naver Shopping product detail links."),
-      real('a[href*="smartstore.naver.com"]', "Naver SmartStore seller/product links."),
-      real('a[href*="brand.naver.com"]', "Naver brand-store links."),
-      real('[class*="product"] a[href]', "Naver Shopping visible product-card links.")
-    ] : []),
-    ...(isGmarket ? [
-      real('[data-item-url]', "Gmarket item cards exposing item URL attributes."),
-      real('[data-product-url]', "Gmarket product cards exposing product URL attributes."),
-      real('[data-seller-url]', "Gmarket seller cards exposing seller URL attributes."),
-      real('a[href*="item.gmarket.co.kr"]', "Gmarket item detail links."),
-      real('a[href*="goodsCode="]', "Gmarket item-code links."),
-      real('a[href*="seller"]', "Gmarket seller links when visible."),
-      real(".box__item a[href]", "Gmarket item-card links."),
-      real(".itemcard a[href]", "Gmarket item-card fallback links.")
-    ] : []),
-    ...(isElevenst ? [
-      real('[data-item-url]', "11st item cards exposing item URL attributes."),
-      real('[data-product-url]', "11st product cards exposing product URL attributes."),
-      real('[data-seller-url]', "11st seller cards exposing seller URL attributes."),
-      real('a[href*="/products/"]', "11st product detail links."),
-      real('a[href*="prdNo="]', "11st product-number links."),
-      real('a[href*="seller"]', "11st seller links when visible."),
-      real('[class*="product"] a[href]', "11st product-card links.")
-    ] : []),
-    ...(isWalmart ? [
-      real('[data-product-url]', "Walmart product cards exposing product URL attributes."),
-      real('[data-item-url]', "Walmart item cards exposing item URL attributes."),
-      real('[data-seller-url]', "Walmart seller cards exposing seller URL attributes."),
-      real('a[href*="/ip/"]', "Walmart product detail links."),
-      real('a[href*="sellerId="]', "Walmart seller profile links when visible."),
-      real('[data-testid*="product"] a[href]', "Walmart product-card links.")
-    ] : []),
-    ...(isEbay ? [
-      real('[data-item-url]', "eBay item cards exposing item URL attributes."),
-      real('[data-product-url]', "eBay product cards exposing product URL attributes."),
-      real('[data-seller-url]', "eBay seller cards exposing seller URL attributes."),
-      real('a[href*="/itm/"]', "eBay item detail links."),
-      real('a[href*="seller"]', "eBay seller links when visible."),
-      real(".s-item a[href]", "eBay item-card links."),
-      real(".s-card a[href]", "eBay card fallback links.")
-    ] : []),
+    ...(isAmazon
+      ? [
+          real('[data-component-type*="search-result"] [data-asin][data-url]', "Amazon product cards exposing URL attributes."),
+          real('[data-component-type*="search-result"] [data-product-url]', "Amazon product cards exposing product URL attributes."),
+          real('a[href*="/dp/"]', "Amazon product detail links."),
+          real('a[href*="/gp/product/"]', "Amazon product links using gp/product paths."),
+          real('a[href*="customerReviews"]', "Amazon product review links."),
+          real('a[href*="/sp?"]', "Amazon seller profile links."),
+          real('[data-component-type*="search-result"] a[href]', "Amazon visible search-result links.")
+        ]
+      : []),
+    ...(isCoupang
+      ? [
+          real("[data-product-id][data-url]", "Coupang product cards exposing URL attributes."),
+          real("[data-product-url]", "Coupang product cards exposing product URL attributes."),
+          real("[data-item-url]", "Coupang item cards exposing item URL attributes."),
+          real('a[href*="/vp/products/"]', "Coupang product detail links."),
+          real('a[href*="/np/products/"]', "Coupang product links visible from list cards."),
+          real('a[href*="itemId="]', "Coupang item-specific links."),
+          real('a[href*="vendorItemId="]', "Coupang vendor-item links."),
+          real(".search-product-link", "Coupang search product anchors.")
+        ]
+      : []),
+    ...(isNaverShopping
+      ? [
+          real("[data-product-url]", "Naver Shopping product cards exposing product URL attributes."),
+          real("[data-item-url]", "Naver Shopping item cards exposing item URL attributes."),
+          real("[data-brand-url]", "Naver Shopping brand/store cards exposing brand URL attributes."),
+          real('a[href*="/catalog/"]', "Naver Shopping catalog detail links."),
+          real('a[href*="/products/"]', "Naver Shopping product detail links."),
+          real('a[href*="smartstore.naver.com"]', "Naver SmartStore seller/product links."),
+          real('a[href*="brand.naver.com"]', "Naver brand-store links."),
+          real('[class*="product"] a[href]', "Naver Shopping visible product-card links.")
+        ]
+      : []),
+    ...(isGmarket
+      ? [
+          real("[data-item-url]", "Gmarket item cards exposing item URL attributes."),
+          real("[data-product-url]", "Gmarket product cards exposing product URL attributes."),
+          real("[data-seller-url]", "Gmarket seller cards exposing seller URL attributes."),
+          real('a[href*="item.gmarket.co.kr"]', "Gmarket item detail links."),
+          real('a[href*="goodsCode="]', "Gmarket item-code links."),
+          real('a[href*="seller"]', "Gmarket seller links when visible."),
+          real(".box__item a[href]", "Gmarket item-card links."),
+          real(".itemcard a[href]", "Gmarket item-card fallback links.")
+        ]
+      : []),
+    ...(isElevenst
+      ? [
+          real("[data-item-url]", "11st item cards exposing item URL attributes."),
+          real("[data-product-url]", "11st product cards exposing product URL attributes."),
+          real("[data-seller-url]", "11st seller cards exposing seller URL attributes."),
+          real('a[href*="/products/"]', "11st product detail links."),
+          real('a[href*="prdNo="]', "11st product-number links."),
+          real('a[href*="seller"]', "11st seller links when visible."),
+          real('[class*="product"] a[href]', "11st product-card links.")
+        ]
+      : []),
+    ...(isWalmart
+      ? [
+          real("[data-product-url]", "Walmart product cards exposing product URL attributes."),
+          real("[data-item-url]", "Walmart item cards exposing item URL attributes."),
+          real("[data-seller-url]", "Walmart seller cards exposing seller URL attributes."),
+          real('a[href*="/ip/"]', "Walmart product detail links."),
+          real('a[href*="sellerId="]', "Walmart seller profile links when visible."),
+          real('[data-testid*="product"] a[href]', "Walmart product-card links.")
+        ]
+      : []),
+    ...(isEbay
+      ? [
+          real("[data-item-url]", "eBay item cards exposing item URL attributes."),
+          real("[data-product-url]", "eBay product cards exposing product URL attributes."),
+          real("[data-seller-url]", "eBay seller cards exposing seller URL attributes."),
+          real('a[href*="/itm/"]', "eBay item detail links."),
+          real('a[href*="seller"]', "eBay seller links when visible."),
+          real(".s-item a[href]", "eBay item-card links."),
+          real(".s-card a[href]", "eBay card fallback links.")
+        ]
+      : []),
     real('[class*="product"] a[href]', "Fallback visible product-card HTTP(S) links."),
     real('[class*="item"] a[href]', "Fallback visible item-card HTTP(S) links.")
   ];
@@ -1660,7 +1371,14 @@ function commerceRecipeCandidates(platform: SourceNavigationPlan["platform"]): S
     }),
     candidate("seller-terms", "click", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
       selectors: [...platformFixture("seller-terms-button", "Provider-specific local commerce fixture seller/shipping terms control."), fixture("#seller-terms-button"), real("button"), real("a")],
-      scopes: [...platformFixture("seller-terms", "Provider-specific local commerce fixture seller/return terms."), ...platformFixture("shipping-panel", "Provider-specific local commerce fixture shipping panel."), fixture("#seller-terms"), fixture("#shipping-panel"), real('[data-testid*="seller"]'), real('[data-testid*="shipping"]')],
+      scopes: [
+        ...platformFixture("seller-terms", "Provider-specific local commerce fixture seller/return terms."),
+        ...platformFixture("shipping-panel", "Provider-specific local commerce fixture shipping panel."),
+        fixture("#seller-terms"),
+        fixture("#shipping-panel"),
+        real('[data-testid*="seller"]'),
+        real('[data-testid*="shipping"]')
+      ],
       expectedTextSignals: ["seller", "shipping", "return", "coupon", "\uD310\uB9E4\uC790", "\uBC18\uD488"],
       blockedSignals: commerceBlockedSignals,
       riskNotes: ["Do not click cart, buy, subscribe, address, membership, or checkout controls."]
@@ -1707,59 +1425,42 @@ function commerceFixturePrefixFor(platform: SourceNavigationPlan["platform"]): s
 
 function videoSocialRecipeCandidates(platform: SourceNavigationPlan["platform"]): SourceNavigationRecipeActionCandidate[] {
   const fixtureVerified = platform === "youtube" || platform === "instagram" || platform === "tiktok" || platform === "x_twitter";
-  const youtubeMetadataSelectors = platform === "youtube"
-    ? [real("ytd-video-renderer"), real("ytd-rich-item-renderer"), real("#video-title"), real("#contents")]
-    : [];
-  const youtubeMetadataScopes = platform === "youtube"
-    ? [real("ytd-video-renderer"), real("ytd-rich-item-renderer"), real("#contents")]
-    : [];
-  const youtubeOverlaySelectors = platform === "youtube"
-    ? [real("#overlay-text"), real("ytd-thumbnail-overlay-time-status-renderer"), real("ytd-thumbnail")]
-    : [];
-  const xMetadataSelectors = platform === "x_twitter"
-    ? [fixture("#x-visible-post"), fixture("#x-post-metadata"), real('article[data-testid="tweet"]'), real('[data-testid="tweetText"]'), real('[data-testid="User-Name"]'), real("time")]
-    : [];
-  const xMetadataScopes = platform === "x_twitter"
-    ? [fixture("#x-visible-post"), fixture("#x-post-metadata"), fixture("#x-profile-card"), fixture("#x-thread-context"), fixture("#x-engagement-state"), fixture("#x-reply-list"), real('article[data-testid="tweet"]'), real('[data-testid="tweetText"]'), real('[data-testid="User-Name"]')]
-    : [];
-  const publicPostMetadataScopes = platform === "instagram" || platform === "tiktok"
-    ? [fixture("#visible-post"), fixture("#post-metadata"), fixture("#profile-card"), fixture("#caption-body"), fixture("#engagement-state"), fixture("#comment-preview-list")]
-    : [];
-  const tiktokMetadataSelectors = platform === "tiktok"
-    ? [
-        fixture("#tiktok-visible-post", "Fixture TikTok public post shell."),
-        fixture("#tiktok-post-metadata", "Fixture TikTok visible metadata block."),
-        real('[data-e2e="browse-video"]', "TikTok public visible video/post shell when rendered."),
-        real('[data-e2e="user-post-item"]', "TikTok public user post item card."),
-        real('[data-e2e="video-desc"]', "TikTok visible caption/body text."),
-        real('a[href*="/@"]', "TikTok visible public profile handle links.")
-      ]
-    : [];
-  const tiktokMetadataScopes = platform === "tiktok"
-    ? [
-        fixture("#tiktok-visible-post"),
-        fixture("#tiktok-post-metadata"),
-        fixture("#tiktok-profile-card"),
-        fixture("#tiktok-caption-body"),
-        fixture("#tiktok-engagement-state"),
-        fixture("#tiktok-comment-preview-list"),
-        real('[data-e2e="browse-video"]'),
-        real('[data-e2e="user-post-item"]'),
-        real('[data-e2e="video-desc"]')
-      ]
-    : [];
-  const xFrameSelectors = platform === "x_twitter"
-    ? [fixture("#x-media-frame"), real('[data-testid="videoPlayer"]'), real('[data-testid="tweetPhoto"]')]
-    : [];
-  const xOverlaySelectors = platform === "x_twitter"
-    ? [fixture("#x-overlay-text"), real('[data-testid="videoPlayer"]'), real('[data-testid="tweetPhoto"]')]
-    : [];
-  const tiktokFrameSelectors = platform === "tiktok"
-    ? [fixture("#tiktok-video-frame"), real('[data-e2e="video-player"]'), real("video")]
-    : [];
-  const tiktokOverlaySelectors = platform === "tiktok"
-    ? [fixture("#tiktok-overlay-text"), fixture("#tiktok-video-frame"), real('[data-e2e="video-player"]'), real('[data-e2e="video-desc"]')]
-    : [];
+  const youtubeMetadataSelectors = platform === "youtube" ? [real("ytd-video-renderer"), real("ytd-rich-item-renderer"), real("#video-title"), real("#contents")] : [];
+  const youtubeMetadataScopes = platform === "youtube" ? [real("ytd-video-renderer"), real("ytd-rich-item-renderer"), real("#contents")] : [];
+  const youtubeOverlaySelectors = platform === "youtube" ? [real("#overlay-text"), real("ytd-thumbnail-overlay-time-status-renderer"), real("ytd-thumbnail")] : [];
+  const xMetadataSelectors = platform === "x_twitter" ? [fixture("#x-visible-post"), fixture("#x-post-metadata"), real('article[data-testid="tweet"]'), real('[data-testid="tweetText"]'), real('[data-testid="User-Name"]'), real("time")] : [];
+  const xMetadataScopes =
+    platform === "x_twitter" ? [fixture("#x-visible-post"), fixture("#x-post-metadata"), fixture("#x-profile-card"), fixture("#x-thread-context"), fixture("#x-engagement-state"), fixture("#x-reply-list"), real('article[data-testid="tweet"]'), real('[data-testid="tweetText"]'), real('[data-testid="User-Name"]')] : [];
+  const publicPostMetadataScopes = platform === "instagram" || platform === "tiktok" ? [fixture("#visible-post"), fixture("#post-metadata"), fixture("#profile-card"), fixture("#caption-body"), fixture("#engagement-state"), fixture("#comment-preview-list")] : [];
+  const tiktokMetadataSelectors =
+    platform === "tiktok"
+      ? [
+          fixture("#tiktok-visible-post", "Fixture TikTok public post shell."),
+          fixture("#tiktok-post-metadata", "Fixture TikTok visible metadata block."),
+          real('[data-e2e="browse-video"]', "TikTok public visible video/post shell when rendered."),
+          real('[data-e2e="user-post-item"]', "TikTok public user post item card."),
+          real('[data-e2e="video-desc"]', "TikTok visible caption/body text."),
+          real('a[href*="/@"]', "TikTok visible public profile handle links.")
+        ]
+      : [];
+  const tiktokMetadataScopes =
+    platform === "tiktok"
+      ? [
+          fixture("#tiktok-visible-post"),
+          fixture("#tiktok-post-metadata"),
+          fixture("#tiktok-profile-card"),
+          fixture("#tiktok-caption-body"),
+          fixture("#tiktok-engagement-state"),
+          fixture("#tiktok-comment-preview-list"),
+          real('[data-e2e="browse-video"]'),
+          real('[data-e2e="user-post-item"]'),
+          real('[data-e2e="video-desc"]')
+        ]
+      : [];
+  const xFrameSelectors = platform === "x_twitter" ? [fixture("#x-media-frame"), real('[data-testid="videoPlayer"]'), real('[data-testid="tweetPhoto"]')] : [];
+  const xOverlaySelectors = platform === "x_twitter" ? [fixture("#x-overlay-text"), real('[data-testid="videoPlayer"]'), real('[data-testid="tweetPhoto"]')] : [];
+  const tiktokFrameSelectors = platform === "tiktok" ? [fixture("#tiktok-video-frame"), real('[data-e2e="video-player"]'), real("video")] : [];
+  const tiktokOverlaySelectors = platform === "tiktok" ? [fixture("#tiktok-overlay-text"), fixture("#tiktok-video-frame"), real('[data-e2e="video-player"]'), real('[data-e2e="video-desc"]')] : [];
   const socialBlockedSignals = [
     "captcha",
     "please log in",
@@ -1790,50 +1491,58 @@ function videoSocialRecipeCandidates(platform: SourceNavigationPlan["platform"])
     fixture("#tiktok-external-link", "Fixture TikTok visible external source destination."),
     fixture("#tiktok-video-watch-link", "Fixture TikTok visible canonical media destination."),
     fixture("#x-profile-link", "Fixture visible X/Twitter profile destination."),
-    ...(platform === "youtube" ? [
-      real('#contents [data-media-url]', "YouTube visible media cards exposing canonical media URL attributes."),
-      real('#contents [data-channel-url]', "YouTube visible media cards exposing channel URL attributes."),
-      real('ytd-video-renderer a#video-title[href*="/watch"]', "YouTube search-result title links for canonical watch pages."),
-      real('ytd-video-renderer a#video-title[href*="/shorts"]', "YouTube search-result title links for Shorts pages."),
-      real('ytd-rich-item-renderer a#video-title-link[href*="/watch"]', "YouTube rich-grid title links for canonical watch pages."),
-      real('ytd-rich-item-renderer a#thumbnail[href*="/watch"]', "YouTube rich-grid thumbnail links for canonical watch pages."),
-      real('ytd-rich-item-renderer a#thumbnail[href*="/shorts"]', "YouTube rich-grid thumbnail links for Shorts pages."),
-      real('ytd-channel-name a[href*="/channel/"]', "YouTube visible channel-name links."),
-      real('ytd-channel-name a[href*="/@"]', "YouTube visible handle links."),
-      real('a#channel-thumbnail[href*="/channel/"]', "YouTube visible channel thumbnail links."),
-      real('a#channel-thumbnail[href*="/@"]', "YouTube visible handle thumbnail links."),
-      real('#contents a[href*="/watch"]', "YouTube visible watch-page links in search or related media surfaces."),
-      real('#contents a[href*="/shorts"]', "YouTube visible Shorts links."),
-      real('#contents a[href*="/channel/"]', "YouTube channel links."),
-      real('#contents a[href*="/@"]', "YouTube handle/channel links."),
-      real('ytd-video-renderer a[href]', "YouTube video-renderer links."),
-      real('ytd-rich-item-renderer a[href]', "YouTube rich-item links.")
-    ] : []),
-    ...(platform === "instagram" ? [
-      real('article [data-media-url]', "Instagram visible media cards exposing canonical media URL attributes."),
-      real('article [data-profile-url]', "Instagram visible profile cards exposing profile URL attributes."),
-      real('article [data-target-url]', "Instagram visible cards exposing target URL attributes."),
-      real('article a[href^="/p/"]', "Instagram public post links when visible."),
-      real('article a[href^="/reel/"]', "Instagram public reel links when visible."),
-      real('article a[href^="/stories/"]', "Instagram story links are extracted only as evidence candidates; login gates remain unsupported."),
-      real('article a[href^="/"]', "Instagram visible profile or post links."),
-      real('a[href^="http"]', "Instagram visible external profile/bio links.")
-    ] : []),
-    ...(platform === "tiktok" ? [
-      real('[data-media-url]', "TikTok visible media cards exposing canonical media URL attributes."),
-      real('[data-profile-url]', "TikTok visible profile cards exposing profile URL attributes."),
-      real('a[href*="/video/"]', "TikTok public video links when visible."),
-      real('a[href*="/@"]', "TikTok public profile links when visible."),
-      real('a[href^="http"]', "TikTok visible external links.")
-    ] : []),
-    ...(platform === "x_twitter" ? [
-      real('[data-testid="tweet"] [data-media-url]', "X/Twitter visible media cards exposing media URL attributes."),
-      real('[data-testid="tweet"] [data-profile-url]', "X/Twitter visible profile cards exposing profile URL attributes."),
-      real('[data-testid="tweet"] a[href*="/status/"]', "X/Twitter public status links in a visible post or thread."),
-      real('[data-testid="tweet"] a[href^="/"]', "X/Twitter visible profile, thread, or media links."),
-      real('article[data-testid="tweet"] a[href]', "X/Twitter article links."),
-      real('[data-testid="User-Name"] a[href]', "X/Twitter visible author/profile links.")
-    ] : []),
+    ...(platform === "youtube"
+      ? [
+          real("#contents [data-media-url]", "YouTube visible media cards exposing canonical media URL attributes."),
+          real("#contents [data-channel-url]", "YouTube visible media cards exposing channel URL attributes."),
+          real('ytd-video-renderer a#video-title[href*="/watch"]', "YouTube search-result title links for canonical watch pages."),
+          real('ytd-video-renderer a#video-title[href*="/shorts"]', "YouTube search-result title links for Shorts pages."),
+          real('ytd-rich-item-renderer a#video-title-link[href*="/watch"]', "YouTube rich-grid title links for canonical watch pages."),
+          real('ytd-rich-item-renderer a#thumbnail[href*="/watch"]', "YouTube rich-grid thumbnail links for canonical watch pages."),
+          real('ytd-rich-item-renderer a#thumbnail[href*="/shorts"]', "YouTube rich-grid thumbnail links for Shorts pages."),
+          real('ytd-channel-name a[href*="/channel/"]', "YouTube visible channel-name links."),
+          real('ytd-channel-name a[href*="/@"]', "YouTube visible handle links."),
+          real('a#channel-thumbnail[href*="/channel/"]', "YouTube visible channel thumbnail links."),
+          real('a#channel-thumbnail[href*="/@"]', "YouTube visible handle thumbnail links."),
+          real('#contents a[href*="/watch"]', "YouTube visible watch-page links in search or related media surfaces."),
+          real('#contents a[href*="/shorts"]', "YouTube visible Shorts links."),
+          real('#contents a[href*="/channel/"]', "YouTube channel links."),
+          real('#contents a[href*="/@"]', "YouTube handle/channel links."),
+          real("ytd-video-renderer a[href]", "YouTube video-renderer links."),
+          real("ytd-rich-item-renderer a[href]", "YouTube rich-item links.")
+        ]
+      : []),
+    ...(platform === "instagram"
+      ? [
+          real("article [data-media-url]", "Instagram visible media cards exposing canonical media URL attributes."),
+          real("article [data-profile-url]", "Instagram visible profile cards exposing profile URL attributes."),
+          real("article [data-target-url]", "Instagram visible cards exposing target URL attributes."),
+          real('article a[href^="/p/"]', "Instagram public post links when visible."),
+          real('article a[href^="/reel/"]', "Instagram public reel links when visible."),
+          real('article a[href^="/stories/"]', "Instagram story links are extracted only as evidence candidates; login gates remain unsupported."),
+          real('article a[href^="/"]', "Instagram visible profile or post links."),
+          real('a[href^="http"]', "Instagram visible external profile/bio links.")
+        ]
+      : []),
+    ...(platform === "tiktok"
+      ? [
+          real("[data-media-url]", "TikTok visible media cards exposing canonical media URL attributes."),
+          real("[data-profile-url]", "TikTok visible profile cards exposing profile URL attributes."),
+          real('a[href*="/video/"]', "TikTok public video links when visible."),
+          real('a[href*="/@"]', "TikTok public profile links when visible."),
+          real('a[href^="http"]', "TikTok visible external links.")
+        ]
+      : []),
+    ...(platform === "x_twitter"
+      ? [
+          real('[data-testid="tweet"] [data-media-url]', "X/Twitter visible media cards exposing media URL attributes."),
+          real('[data-testid="tweet"] [data-profile-url]', "X/Twitter visible profile cards exposing profile URL attributes."),
+          real('[data-testid="tweet"] a[href*="/status/"]', "X/Twitter public status links in a visible post or thread."),
+          real('[data-testid="tweet"] a[href^="/"]', "X/Twitter visible profile, thread, or media links."),
+          real('article[data-testid="tweet"] a[href]', "X/Twitter article links."),
+          real('[data-testid="User-Name"] a[href]', "X/Twitter visible author/profile links.")
+        ]
+      : []),
     real("article a[href]", "Generic visible social/media article links."),
     real("main a[href]", "Generic visible social/media main-content links.")
   ];
@@ -1893,77 +1602,24 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
   const isQuora = platform === "quora";
   const isStackOverflow = platform === "stack_overflow";
   const isCommunityForum = isDcinside || isNaverKin || isReddit || isQuora || isStackOverflow;
-  const communityQueryFixtures = isDcinside
-    ? [fixture("#dcinside-query")]
-    : isNaverKin
-      ? [fixture("#naver-kin-query")]
-      : isReddit
-        ? [fixture("#reddit-query")]
-        : isQuora
-          ? [fixture("#quora-query")]
-          : isStackOverflow
-            ? [fixture("#stack-overflow-query")]
-            : [];
-  const communityModuleFixtures = isCommunityForum
-    ? [fixture("#community-module"), fixture("#thread-card"), fixture("#community-meta")]
-    : [];
-  const communityDestinationFixtures = isCommunityForum
-    ? [
-        fixture("#community-destination"),
-        fixture("#destination-meta"),
-        fixture("#question-body"),
-        fixture("#thread-body"),
-        fixture("#answer-body"),
-        fixture("#accepted-answer"),
-        fixture("#comment-list")
-      ]
-    : [];
-  const communitySectionFixtures = isCommunityForum
-    ? [fixture("#community-section"), fixture("#community-section-state")]
-    : [];
-  const communityFilterFixtures = isCommunityForum
-    ? [fixture("#community-recent"), fixture("#community-filter-state")]
-    : [];
-  const communityPaginationFixtures = isCommunityForum
-    ? [fixture("#community-more")]
-    : [];
-  const communityFollowupFixtures = isCommunityForum
-    ? [fixture("#community-link")]
-    : [];
-  const communityObstructionFixtures = isCommunityForum
-    ? [fixture("#community-obstruction-state")]
-    : [];
-  const communityDestinationObstructionFixtures = isCommunityForum
-    ? [fixture("#destination-obstruction-state")]
-    : [];
-  const reviewQueryFixtures = isReviewPortal
-    ? [fixture("#review-query"), fixture("#review-location")]
-    : [];
-  const reviewModuleFixtures = isReviewPortal
-    ? [fixture("#review-module"), fixture("#review-card"), fixture("#review-meta")]
-    : [];
-  const reviewSectionFixtures = isReviewPortal
-    ? [fixture("#review-category"), fixture("#review-section-state")]
-    : [];
-  const reviewFilterFixtures = isReviewPortal
-    ? [fixture("#review-filter"), fixture("#review-filter-state")]
-    : [];
-  const reviewPaginationFixtures = isReviewPortal
-    ? [fixture("#review-more")]
-    : [];
-  const reviewFollowupFixtures = isReviewPortal
-    ? [fixture("#review-destination-links"), fixture("#review-listing-link"), fixture("#review-menu-link"), fixture("#review-external-link")]
-    : [];
-  const reviewObstructionFixtures = isReviewPortal
-    ? [fixture("#review-obstruction-state")]
-    : [];
+  const communityQueryFixtures = isDcinside ? [fixture("#dcinside-query")] : isNaverKin ? [fixture("#naver-kin-query")] : isReddit ? [fixture("#reddit-query")] : isQuora ? [fixture("#quora-query")] : isStackOverflow ? [fixture("#stack-overflow-query")] : [];
+  const communityModuleFixtures = isCommunityForum ? [fixture("#community-module"), fixture("#thread-card"), fixture("#community-meta")] : [];
+  const communityDestinationFixtures = isCommunityForum ? [fixture("#community-destination"), fixture("#destination-meta"), fixture("#question-body"), fixture("#thread-body"), fixture("#answer-body"), fixture("#accepted-answer"), fixture("#comment-list")] : [];
+  const communitySectionFixtures = isCommunityForum ? [fixture("#community-section"), fixture("#community-section-state")] : [];
+  const communityFilterFixtures = isCommunityForum ? [fixture("#community-recent"), fixture("#community-filter-state")] : [];
+  const communityPaginationFixtures = isCommunityForum ? [fixture("#community-more")] : [];
+  const communityFollowupFixtures = isCommunityForum ? [fixture("#community-link")] : [];
+  const communityObstructionFixtures = isCommunityForum ? [fixture("#community-obstruction-state")] : [];
+  const communityDestinationObstructionFixtures = isCommunityForum ? [fixture("#destination-obstruction-state")] : [];
+  const reviewQueryFixtures = isReviewPortal ? [fixture("#review-query"), fixture("#review-location")] : [];
+  const reviewModuleFixtures = isReviewPortal ? [fixture("#review-module"), fixture("#review-card"), fixture("#review-meta")] : [];
+  const reviewSectionFixtures = isReviewPortal ? [fixture("#review-category"), fixture("#review-section-state")] : [];
+  const reviewFilterFixtures = isReviewPortal ? [fixture("#review-filter"), fixture("#review-filter-state")] : [];
+  const reviewPaginationFixtures = isReviewPortal ? [fixture("#review-more")] : [];
+  const reviewFollowupFixtures = isReviewPortal ? [fixture("#review-destination-links"), fixture("#review-listing-link"), fixture("#review-menu-link"), fixture("#review-external-link")] : [];
+  const reviewObstructionFixtures = isReviewPortal ? [fixture("#review-obstruction-state")] : [];
   const googleNewsQuerySelectors = isGoogleNews
-    ? [
-        fixture("#google-news-query", "Fixture Google News query field."),
-        real('input[aria-label*="Search"]', "Google News search input when exposed."),
-        real('input[type="search"]', "Google News search input fallback."),
-        real('input[type="text"]', "Google News text input fallback.")
-      ]
+    ? [fixture("#google-news-query", "Fixture Google News query field."), real('input[aria-label*="Search"]', "Google News search input when exposed."), real('input[type="search"]', "Google News search input fallback."), real('input[type="text"]', "Google News text input fallback.")]
     : [];
   const googleNewsSectionSelectors = isGoogleNews
     ? [
@@ -1975,12 +1631,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
       ]
     : [];
   const googleNewsFilterSelectors = isGoogleNews
-    ? [
-        fixture("#google-news-recent", "Fixture Google News recency/filter state."),
-        real('a[href*="when:"]', "Google News query operator link when visible."),
-        real('button:has-text("Latest")', "Google News latest filter button."),
-        real('button:has-text("Recent")', "Google News recent filter button.")
-      ]
+    ? [fixture("#google-news-recent", "Fixture Google News recency/filter state."), real('a[href*="when:"]', "Google News query operator link when visible."), real('button:has-text("Latest")', "Google News latest filter button."), real('button:has-text("Recent")', "Google News recent filter button.")]
     : [];
   const googleNewsModuleSelectors = isGoogleNews
     ? [
@@ -2002,14 +1653,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real('a[href*="news.google.com/articles/"]', "Google News article links when exposed with articles path.")
       ]
     : [];
-  const yahooNewsQuerySelectors = isYahooNews
-    ? [
-        fixture("#yahoo-news-query", "Fixture Yahoo News query field."),
-        real('input[name="p"]', "Yahoo News search query field."),
-        real("#ybar-sbq", "Yahoo News/Yahoo header search box."),
-        real('input[type="search"]', "Yahoo News search input fallback.")
-      ]
-    : [];
+  const yahooNewsQuerySelectors = isYahooNews ? [fixture("#yahoo-news-query", "Fixture Yahoo News query field."), real('input[name="p"]', "Yahoo News search query field."), real("#ybar-sbq", "Yahoo News/Yahoo header search box."), real('input[type="search"]', "Yahoo News search input fallback.")] : [];
   const yahooNewsSectionSelectors = isYahooNews
     ? [
         fixture("#yahoo-news-section", "Fixture Yahoo News section control."),
@@ -2020,12 +1664,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
       ]
     : [];
   const yahooNewsFilterSelectors = isYahooNews
-    ? [
-        fixture("#yahoo-news-recent", "Fixture Yahoo News recency filter control."),
-        real('a[href*="sort="]', "Yahoo News sort/filter links when visible."),
-        real('button:has-text("Latest")', "Yahoo News latest filter button."),
-        real('button:has-text("Most Recent")', "Yahoo News most-recent filter button.")
-      ]
+    ? [fixture("#yahoo-news-recent", "Fixture Yahoo News recency filter control."), real('a[href*="sort="]', "Yahoo News sort/filter links when visible."), real('button:has-text("Latest")', "Yahoo News latest filter button."), real('button:has-text("Most Recent")', "Yahoo News most-recent filter button.")]
     : [];
   const yahooNewsModuleSelectors = isYahooNews
     ? [
@@ -2045,14 +1684,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real('a[href*="news.yahoo.com"]', "Yahoo News visible article links.")
       ]
     : [];
-  const reutersQuerySelectors = isReuters
-    ? [
-        fixture("#reuters-query", "Fixture Reuters query/topic field."),
-        real('input[name="q"]', "Reuters search query field."),
-        real('input[type="search"]', "Reuters search input fallback."),
-        real('[data-testid*="search"] input', "Reuters data-testid search field.")
-      ]
-    : [];
+  const reutersQuerySelectors = isReuters ? [fixture("#reuters-query", "Fixture Reuters query/topic field."), real('input[name="q"]', "Reuters search query field."), real('input[type="search"]', "Reuters search input fallback."), real('[data-testid*="search"] input', "Reuters data-testid search field.")] : [];
   const reutersSectionSelectors = isReuters
     ? [
         fixture("#reuters-section", "Fixture Reuters section control."),
@@ -2062,14 +1694,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real('nav a[href*="reuters.com"]', "Reuters navigation links.")
       ]
     : [];
-  const reutersFilterSelectors = isReuters
-    ? [
-        fixture("#reuters-recent", "Fixture Reuters latest filter control."),
-        real('button:has-text("Latest")', "Reuters latest filter button."),
-        real('a[href*="/latest/"]', "Reuters latest news links."),
-        real('a[href*="sort="]', "Reuters sort/filter links when visible.")
-      ]
-    : [];
+  const reutersFilterSelectors = isReuters ? [fixture("#reuters-recent", "Fixture Reuters latest filter control."), real('button:has-text("Latest")', "Reuters latest filter button."), real('a[href*="/latest/"]', "Reuters latest news links."), real('a[href*="sort="]', "Reuters sort/filter links when visible.")] : [];
   const reutersModuleSelectors = isReuters
     ? [
         fixture("#reuters-news-module", "Fixture Reuters news module."),
@@ -2100,9 +1725,7 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real('[data-testid*="MediaStoryCard"] a[href]', "Reuters broad story-card links.")
       ]
     : [];
-  const scholarQuerySelectors = isGoogleScholar
-    ? [real('input[name="q"]'), real("#gs_hdr_tsi"), real("#gs_asd_q"), real('input[type="search"]')]
-    : [];
+  const scholarQuerySelectors = isGoogleScholar ? [real('input[name="q"]'), real("#gs_hdr_tsi"), real("#gs_asd_q"), real('input[type="search"]')] : [];
   const scholarSectionSelectors = isGoogleScholar
     ? [
         real('a[href*="scholar?hl="]', "Google Scholar all-results navigation."),
@@ -2133,180 +1756,131 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real(".gs_fl a[href]", "Google Scholar citation, related, or versions links."),
         real('a[href*="scholar?cites="]', "Google Scholar cited-by links."),
         real('a[href*="scholar?cluster="]', "Google Scholar versions/cluster links."),
-        real('#gs_res_ccl_mid a[href]', "Google Scholar visible result-list links.")
+        real("#gs_res_ccl_mid a[href]", "Google Scholar visible result-list links.")
       ]
     : [];
   const reviewQuerySelectors = [
-    ...(isYelp ? [
-      real('input[name="find_desc"]', "Yelp search keyword field."),
-      real("#find_desc", "Yelp search keyword input."),
-      real('input[name="find_loc"]', "Yelp location field."),
-      real("#dropperText_Mast", "Yelp location/input surface when exposed."),
-      real('input[placeholder*="Search"]', "Yelp search input fallback."),
-      real('input[placeholder*="Restaurants"]', "Yelp restaurant search input fallback.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real('input[name="q"]', "TripAdvisor search keyword field."),
-      real('input[type="search"]', "TripAdvisor search box."),
-      real('input[placeholder*="Search"]', "TripAdvisor search input fallback."),
-      real('input[placeholder*="Where to"]', "TripAdvisor destination search input."),
-      real('[data-test-target*="search"] input', "TripAdvisor search input in data-test search container.")
-    ] : [])
+    ...(isYelp
+      ? [
+          real('input[name="find_desc"]', "Yelp search keyword field."),
+          real("#find_desc", "Yelp search keyword input."),
+          real('input[name="find_loc"]', "Yelp location field."),
+          real("#dropperText_Mast", "Yelp location/input surface when exposed."),
+          real('input[placeholder*="Search"]', "Yelp search input fallback."),
+          real('input[placeholder*="Restaurants"]', "Yelp restaurant search input fallback.")
+        ]
+      : []),
+    ...(isTripadvisor
+      ? [
+          real('input[name="q"]', "TripAdvisor search keyword field."),
+          real('input[type="search"]', "TripAdvisor search box."),
+          real('input[placeholder*="Search"]', "TripAdvisor search input fallback."),
+          real('input[placeholder*="Where to"]', "TripAdvisor destination search input."),
+          real('[data-test-target*="search"] input', "TripAdvisor search input in data-test search container.")
+        ]
+      : [])
   ];
   const reviewSectionSelectors = [
-    ...(isYelp ? [
-      real('a[href*="/c/"]', "Yelp category navigation links."),
-      real('a[href*="find_desc=Restaurants"]', "Yelp restaurant category/search link."),
-      real('a[href*="find_desc=Coffee"]', "Yelp coffee category/search link."),
-      real('button[aria-label*="Filter"]', "Yelp filter controls."),
-      real('[data-testid*="filter"]', "Yelp data-testid filter controls.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real('a[href*="/Restaurants-"]', "TripAdvisor restaurant vertical links."),
-      real('a[href*="/Hotels-"]', "TripAdvisor hotel vertical links."),
-      real('a[href*="/Attractions-"]', "TripAdvisor attraction vertical links."),
-      real('a[href*="/Tourism-"]', "TripAdvisor destination/tourism links."),
-      real('[data-test-target*="nav"] a[href]', "TripAdvisor navigation tabs."),
-      real('[role="tab"]', "TripAdvisor tab control fallback.")
-    ] : [])
+    ...(isYelp
+      ? [
+          real('a[href*="/c/"]', "Yelp category navigation links."),
+          real('a[href*="find_desc=Restaurants"]', "Yelp restaurant category/search link."),
+          real('a[href*="find_desc=Coffee"]', "Yelp coffee category/search link."),
+          real('button[aria-label*="Filter"]', "Yelp filter controls."),
+          real('[data-testid*="filter"]', "Yelp data-testid filter controls.")
+        ]
+      : []),
+    ...(isTripadvisor
+      ? [
+          real('a[href*="/Restaurants-"]', "TripAdvisor restaurant vertical links."),
+          real('a[href*="/Hotels-"]', "TripAdvisor hotel vertical links."),
+          real('a[href*="/Attractions-"]', "TripAdvisor attraction vertical links."),
+          real('a[href*="/Tourism-"]', "TripAdvisor destination/tourism links."),
+          real('[data-test-target*="nav"] a[href]', "TripAdvisor navigation tabs."),
+          real('[role="tab"]', "TripAdvisor tab control fallback.")
+        ]
+      : [])
   ];
   const reviewFilterSelectors = [
-    ...(isYelp ? [
-      real('button:has-text("Filters")', "Yelp filter button."),
-      real('button:has-text("Price")', "Yelp price filter button."),
-      real('button:has-text("Open Now")', "Yelp open-now filter button."),
-      real('button:has-text("Sort")', "Yelp sort control."),
-      real('label:has-text("Rating")', "Yelp rating filter label.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real('button:has-text("Sort")', "TripAdvisor sort control."),
-      real('button:has-text("Rating")', "TripAdvisor rating filter control."),
-      real('button:has-text("Traveler rating")', "TripAdvisor traveler-rating filter control."),
-      real('button:has-text("Price")', "TripAdvisor price filter control."),
-      real('[data-test-target*="filter"]', "TripAdvisor filter panel."),
-      real('[data-test-target*="sort"]', "TripAdvisor sort panel.")
-    ] : [])
+    ...(isYelp
+      ? [real('button:has-text("Filters")', "Yelp filter button."), real('button:has-text("Price")', "Yelp price filter button."), real('button:has-text("Open Now")', "Yelp open-now filter button."), real('button:has-text("Sort")', "Yelp sort control."), real('label:has-text("Rating")', "Yelp rating filter label.")]
+      : []),
+    ...(isTripadvisor
+      ? [
+          real('button:has-text("Sort")', "TripAdvisor sort control."),
+          real('button:has-text("Rating")', "TripAdvisor rating filter control."),
+          real('button:has-text("Traveler rating")', "TripAdvisor traveler-rating filter control."),
+          real('button:has-text("Price")', "TripAdvisor price filter control."),
+          real('[data-test-target*="filter"]', "TripAdvisor filter panel."),
+          real('[data-test-target*="sort"]', "TripAdvisor sort panel.")
+        ]
+      : [])
   ];
   const reviewPaginationSelectors = [
-    ...(isYelp ? [
-      real('a[aria-label*="Next"]', "Yelp next page link."),
-      real('a[href*="start="]', "Yelp paginated result links."),
-      real('button[aria-label*="Next"]', "Yelp next page button.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real('a[aria-label*="Next"]', "TripAdvisor next page link."),
-      real('a[href*="-oa"]', "TripAdvisor offset pagination links."),
-      real('button[aria-label*="Next"]', "TripAdvisor next page button."),
-      real('[data-smoke-attr*="pagination"] a[href]', "TripAdvisor pagination region links.")
-    ] : [])
+    ...(isYelp ? [real('a[aria-label*="Next"]', "Yelp next page link."), real('a[href*="start="]', "Yelp paginated result links."), real('button[aria-label*="Next"]', "Yelp next page button.")] : []),
+    ...(isTripadvisor ? [real('a[aria-label*="Next"]', "TripAdvisor next page link."), real('a[href*="-oa"]', "TripAdvisor offset pagination links."), real('button[aria-label*="Next"]', "TripAdvisor next page button."), real('[data-smoke-attr*="pagination"] a[href]', "TripAdvisor pagination region links.")] : [])
   ];
   const reviewArticleSelectors = [
-    ...(isYelp ? [
-      real("#main-content", "Yelp main content region."),
-      real("main", "Yelp semantic main content fallback."),
-      real('[data-testid*="serp"]', "Yelp search result card region."),
-      real('[data-testid*="business"]', "Yelp business card or detail region."),
-      real('[class*="businessName"]', "Yelp business-name region."),
-      real('a[href*="/biz/"]', "Yelp visible business detail links."),
-      real('[aria-label*="rating"]', "Yelp rating text or star region."),
-      real('[aria-label*="reviews"]', "Yelp review count or review section region.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real("#BODYCON", "TripAdvisor body/content shell."),
-      real("main", "TripAdvisor semantic main content fallback."),
-      real('[data-automation*="searchResults"]', "TripAdvisor search results region."),
-      real('[data-test-target*="search-results"]', "TripAdvisor search results region."),
-      real('[data-test-target*="reviews"]', "TripAdvisor review section region."),
-      real('[data-test-target*="rating"]', "TripAdvisor rating region."),
-      real('a[href*="/Restaurant_Review-"]', "TripAdvisor restaurant listing links."),
-      real('a[href*="/Hotel_Review-"]', "TripAdvisor hotel listing links."),
-      real('a[href*="/Attraction_Review-"]', "TripAdvisor attraction listing links."),
-      real('a[href*="/ShowUserReviews-"]', "TripAdvisor user review links."),
-      real('[class*="rating"]', "TripAdvisor rating class fallback."),
-      real('[class*="review"]', "TripAdvisor review class fallback.")
-    ] : [])
+    ...(isYelp
+      ? [
+          real("#main-content", "Yelp main content region."),
+          real("main", "Yelp semantic main content fallback."),
+          real('[data-testid*="serp"]', "Yelp search result card region."),
+          real('[data-testid*="business"]', "Yelp business card or detail region."),
+          real('[class*="businessName"]', "Yelp business-name region."),
+          real('a[href*="/biz/"]', "Yelp visible business detail links."),
+          real('[aria-label*="rating"]', "Yelp rating text or star region."),
+          real('[aria-label*="reviews"]', "Yelp review count or review section region.")
+        ]
+      : []),
+    ...(isTripadvisor
+      ? [
+          real("#BODYCON", "TripAdvisor body/content shell."),
+          real("main", "TripAdvisor semantic main content fallback."),
+          real('[data-automation*="searchResults"]', "TripAdvisor search results region."),
+          real('[data-test-target*="search-results"]', "TripAdvisor search results region."),
+          real('[data-test-target*="reviews"]', "TripAdvisor review section region."),
+          real('[data-test-target*="rating"]', "TripAdvisor rating region."),
+          real('a[href*="/Restaurant_Review-"]', "TripAdvisor restaurant listing links."),
+          real('a[href*="/Hotel_Review-"]', "TripAdvisor hotel listing links."),
+          real('a[href*="/Attraction_Review-"]', "TripAdvisor attraction listing links."),
+          real('a[href*="/ShowUserReviews-"]', "TripAdvisor user review links."),
+          real('[class*="rating"]', "TripAdvisor rating class fallback."),
+          real('[class*="review"]', "TripAdvisor review class fallback.")
+        ]
+      : [])
   ];
   const reviewDestinationSelectors = [
-    ...(isYelp ? [
-      real('main a[href*="/biz/"]', "Yelp business detail links from visible results."),
-      real('#main-content a[href*="/biz/"]', "Yelp main-content business detail links."),
-      real('a[href*="yelp.com/biz/"]', "Absolute Yelp business detail links."),
-      real('a[href*="/menu/"]', "Yelp menu links when visible."),
-      real('a[href*="/reviews"]', "Yelp review links when visible."),
-      real('a[href*="biz_redir"]', "Yelp external website redirect links when visible.")
-    ] : []),
-    ...(isTripadvisor ? [
-      real('main a[href*="/Restaurant_Review-"]', "TripAdvisor restaurant listing detail links."),
-      real('main a[href*="/Hotel_Review-"]', "TripAdvisor hotel listing detail links."),
-      real('main a[href*="/Attraction_Review-"]', "TripAdvisor attraction listing detail links."),
-      real('main a[href*="/VacationRentalReview-"]', "TripAdvisor vacation-rental review links."),
-      real('main a[href*="/ShowUserReviews-"]', "TripAdvisor user review links."),
-      real('main a[href*="/Tourism-"]', "TripAdvisor destination/tourism links."),
-      real('[data-automation*="searchResults"] a[href]', "TripAdvisor search-result links."),
-      real('[data-test-target*="search-results"] a[href]', "TripAdvisor search-result links.")
-    ] : [])
+    ...(isYelp
+      ? [
+          real('main a[href*="/biz/"]', "Yelp business detail links from visible results."),
+          real('#main-content a[href*="/biz/"]', "Yelp main-content business detail links."),
+          real('a[href*="yelp.com/biz/"]', "Absolute Yelp business detail links."),
+          real('a[href*="/menu/"]', "Yelp menu links when visible."),
+          real('a[href*="/reviews"]', "Yelp review links when visible."),
+          real('a[href*="biz_redir"]', "Yelp external website redirect links when visible.")
+        ]
+      : []),
+    ...(isTripadvisor
+      ? [
+          real('main a[href*="/Restaurant_Review-"]', "TripAdvisor restaurant listing detail links."),
+          real('main a[href*="/Hotel_Review-"]', "TripAdvisor hotel listing detail links."),
+          real('main a[href*="/Attraction_Review-"]', "TripAdvisor attraction listing detail links."),
+          real('main a[href*="/VacationRentalReview-"]', "TripAdvisor vacation-rental review links."),
+          real('main a[href*="/ShowUserReviews-"]', "TripAdvisor user review links."),
+          real('main a[href*="/Tourism-"]', "TripAdvisor destination/tourism links."),
+          real('[data-automation*="searchResults"] a[href]', "TripAdvisor search-result links."),
+          real('[data-test-target*="search-results"] a[href]', "TripAdvisor search-result links.")
+        ]
+      : [])
   ];
-  const reviewObstructionSelectors = isReviewPortal
-    ? [
-        real('[role="dialog"]', "Review/local login, cookie, app, or region dialog."),
-        real('[aria-modal="true"]', "Review/local modal obstruction."),
-        real("#px-captcha", "PerimeterX or bot-check captcha region."),
-        real("body", "Full-page obstruction fallback.")
-      ]
-    : [];
+  const reviewObstructionSelectors = isReviewPortal ? [real('[role="dialog"]', "Review/local login, cookie, app, or region dialog."), real('[aria-modal="true"]', "Review/local modal obstruction."), real("#px-captcha", "PerimeterX or bot-check captcha region."), real("body", "Full-page obstruction fallback.")] : [];
   const communityArticleSelectors = [
-    ...(isDcinside ? [
-      real("#container"),
-      real(".sch_result"),
-      real(".result_list"),
-      real(".search_result"),
-      real('a[href*="board/view"]'),
-      real(".writing_view_box"),
-      real(".view_content_wrap"),
-      real(".gallview_contents"),
-      real(".comment_box")
-    ] : []),
-    ...(isNaverKin ? [
-      real("#s_content"),
-      real("#content"),
-      real(".basic1"),
-      real(".question_group"),
-      real(".question"),
-      real(".kin_wrap"),
-      real(".question-content"),
-      real(".answer-content"),
-      real(".answer_wrap"),
-      real(".c-heading__content")
-    ] : []),
-    ...(isReddit ? [
-      real("shreddit-post"),
-      real('[data-testid="post-container"]'),
-      real('[slot="title"]'),
-      real('[slot="text-body"]'),
-      real('[data-testid="comment"]'),
-      real("shreddit-comment"),
-      real('a[href*="/comments/"]')
-    ] : []),
-    ...(isQuora ? [
-      real(".q-box"),
-      real('[class*="Question"]'),
-      real('[class*="question"]'),
-      real('[class*="Answer"]'),
-      real('[class*="answer"]'),
-      real('[role="main"]')
-    ] : []),
-    ...(isStackOverflow ? [
-      real("#questions"),
-      real("#question"),
-      real("#answers"),
-      real(".s-post-summary"),
-      real(".question-summary"),
-      real(".js-post-summary"),
-      real(".js-post-body"),
-      real(".answer"),
-      real(".accepted-answer"),
-      real("a.question-hyperlink")
-    ] : [])
+    ...(isDcinside ? [real("#container"), real(".sch_result"), real(".result_list"), real(".search_result"), real('a[href*="board/view"]'), real(".writing_view_box"), real(".view_content_wrap"), real(".gallview_contents"), real(".comment_box")] : []),
+    ...(isNaverKin ? [real("#s_content"), real("#content"), real(".basic1"), real(".question_group"), real(".question"), real(".kin_wrap"), real(".question-content"), real(".answer-content"), real(".answer_wrap"), real(".c-heading__content")] : []),
+    ...(isReddit ? [real("shreddit-post"), real('[data-testid="post-container"]'), real('[slot="title"]'), real('[slot="text-body"]'), real('[data-testid="comment"]'), real("shreddit-comment"), real('a[href*="/comments/"]')] : []),
+    ...(isQuora ? [real(".q-box"), real('[class*="Question"]'), real('[class*="question"]'), real('[class*="Answer"]'), real('[class*="answer"]'), real('[role="main"]')] : []),
+    ...(isStackOverflow ? [real("#questions"), real("#question"), real("#answers"), real(".s-post-summary"), real(".question-summary"), real(".js-post-summary"), real(".js-post-body"), real(".answer"), real(".accepted-answer"), real("a.question-hyperlink")] : [])
   ];
   const communityFollowupSelectors = [
     ...(isDcinside ? [real('a[href*="board/view"]'), real(".sch_result a[href]")] : []),
@@ -2333,36 +1907,10 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
     "\uC0AD\uC81C\uB41C \uAE00",
     "\uBE44\uACF5\uAC1C"
   ];
-  const reviewBlockedSignals = isReviewPortal ? [
-    "verify you are human",
-    "are you a human",
-    "please enable cookies",
-    "enable location services",
-    "access denied",
-    "temporarily unavailable",
-    "unusual traffic",
-    "captcha",
-    "CAPTCHA",
-    "sign in to continue",
-    "log in to continue",
-    "open in app",
-    ...SECURITY_CHALLENGE_SIGNALS
-  ] : [];
-  const portalBlockedSignals = [
-    "paywall",
-    "subscriber only",
-    "not available",
-    "unavailable",
-    "unusual traffic",
-    "not a robot",
-    "automated queries",
-    "captcha",
-    "\uAD6C\uB3C5 \uD6C4",
-    "\uAD6C\uB3C5\uC790 \uC804\uC6A9",
-    "\uD398\uC774\uC9C0\uAC00 \uC5C6\uC5B4\uC694",
-    ...communityBlockedSignals,
-    ...reviewBlockedSignals
-  ];
+  const reviewBlockedSignals = isReviewPortal
+    ? ["verify you are human", "are you a human", "please enable cookies", "enable location services", "access denied", "temporarily unavailable", "unusual traffic", "captcha", "CAPTCHA", "sign in to continue", "log in to continue", "open in app", ...SECURITY_CHALLENGE_SIGNALS]
+    : [];
+  const portalBlockedSignals = ["paywall", "subscriber only", "not available", "unavailable", "unusual traffic", "not a robot", "automated queries", "captcha", "\uAD6C\uB3C5 \uD6C4", "\uAD6C\uB3C5\uC790 \uC804\uC6A9", "\uD398\uC774\uC9C0\uAC00 \uC5C6\uC5B4\uC694", ...communityBlockedSignals, ...reviewBlockedSignals];
   return [
     candidate("query-state", "fill", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
       selectors: [
@@ -2405,7 +1953,21 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real("nav a"),
         real('[role="tab"]')
       ],
-      scopes: [fixture("#news-section-state"), fixture("#news-module"), ...communityModuleFixtures, ...communityDestinationFixtures, ...reviewModuleFixtures, ...reviewSectionFixtures, ...googleNewsModuleSelectors, ...yahooNewsModuleSelectors, ...reutersModuleSelectors, ...scholarModuleSelectors, ...reviewArticleSelectors, real("main"), real('[role="main"]')],
+      scopes: [
+        fixture("#news-section-state"),
+        fixture("#news-module"),
+        ...communityModuleFixtures,
+        ...communityDestinationFixtures,
+        ...reviewModuleFixtures,
+        ...reviewSectionFixtures,
+        ...googleNewsModuleSelectors,
+        ...yahooNewsModuleSelectors,
+        ...reutersModuleSelectors,
+        ...scholarModuleSelectors,
+        ...reviewArticleSelectors,
+        real("main"),
+        real('[role="main"]')
+      ],
       expectedTextSignals: ["section", "society", "politics", "forum", "thread", "category", "restaurant", "hotel", "attraction", "\uC0AC\uD68C", "\uC815\uCE58", "\uC9C8\uBB38"],
       blockedSignals: portalBlockedSignals,
       riskNotes: ["Section switches alter headline or thread membership; cite the active section with the module."]
@@ -2427,13 +1989,37 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
         real("button"),
         real("a")
       ],
-      scopes: [fixture("#news-filter-state"), fixture("#news-module"), ...communityModuleFixtures, ...communityDestinationFixtures, ...reviewModuleFixtures, ...reviewFilterFixtures, ...googleNewsModuleSelectors, ...yahooNewsModuleSelectors, ...reutersModuleSelectors, ...scholarModuleSelectors, ...reviewArticleSelectors, real("main")],
+      scopes: [
+        fixture("#news-filter-state"),
+        fixture("#news-module"),
+        ...communityModuleFixtures,
+        ...communityDestinationFixtures,
+        ...reviewModuleFixtures,
+        ...reviewFilterFixtures,
+        ...googleNewsModuleSelectors,
+        ...yahooNewsModuleSelectors,
+        ...reutersModuleSelectors,
+        ...scholarModuleSelectors,
+        ...reviewArticleSelectors,
+        real("main")
+      ],
       expectedTextSignals: ["recent", "latest", "sort", "rating", "price", "open now", "traveler rating", "\uCD5C\uC2E0", "\uC815\uB82C", "\uC815\uD655\uB3C4"],
       blockedSignals: portalBlockedSignals,
       riskNotes: ["Recency and source filters change ranking and must be visible in evidence."]
     }),
     candidate("result-pagination", "click", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
-      selectors: [fixture("#naver-news-more"), fixture("#daum-news-more"), fixture("#yahoo-news-more", "Fixture Yahoo News more-results control."), fixture("#reuters-more", "Fixture Reuters more-results control."), ...communityPaginationFixtures, ...reviewPaginationFixtures, ...reviewPaginationSelectors, real('a[aria-label*="Next"]'), real('a[aria-label*="\uB2E4\uC74C"]'), real("button")],
+      selectors: [
+        fixture("#naver-news-more"),
+        fixture("#daum-news-more"),
+        fixture("#yahoo-news-more", "Fixture Yahoo News more-results control."),
+        fixture("#reuters-more", "Fixture Reuters more-results control."),
+        ...communityPaginationFixtures,
+        ...reviewPaginationFixtures,
+        ...reviewPaginationSelectors,
+        real('a[aria-label*="Next"]'),
+        real('a[aria-label*="\uB2E4\uC74C"]'),
+        real("button")
+      ],
       scopes: [fixture("#news-module"), ...communityModuleFixtures, ...communityDestinationFixtures, ...reviewModuleFixtures, ...googleNewsModuleSelectors, ...yahooNewsModuleSelectors, ...reutersModuleSelectors, ...scholarModuleSelectors, ...reviewArticleSelectors, real("main"), real('[role="main"]')],
       expectedTextSignals: ["more", "page", "\uB354\uBCF4\uAE30", "\uB2E4\uC74C"],
       blockedSignals: portalBlockedSignals,
@@ -2481,7 +2067,11 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
       ],
       expectedTextSignals: ["headline", "publisher", "timestamp", "thread", "question", "answer", "comment", "accepted", "rating", "review", "reviews", "price", "address", "hours", "\uAE30\uC0AC", "\uC5B8\uB860\uC0AC", "\uC9C8\uBB38", "\uB2F5\uBCC0", "\uB313\uAE00"],
       blockedSignals: portalBlockedSignals,
-      riskNotes: ["Headline/thread/review cards prove portal display only; destination article or listing claims need follow-up evidence.", "Destination thread scopes preserve browser-visible question, answer, and comment context without posting, joining, or bypassing access controls.", "Review and rating surfaces are volatile and may be personalized by location, locale, time, or profile state."]
+      riskNotes: [
+        "Headline/thread/review cards prove portal display only; destination article or listing claims need follow-up evidence.",
+        "Destination thread scopes preserve browser-visible question, answer, and comment context without posting, joining, or bypassing access controls.",
+        "Review and rating surfaces are volatile and may be personalized by location, locale, time, or profile state."
+      ]
     }),
     candidate("destination-followup", "extract_destinations", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
       selectors: [
@@ -2509,7 +2099,11 @@ function portalRecipeCandidates(platform: SourceNavigationPlan["platform"]): Sou
       ],
       expectedTextSignals: ["http", "https", "review", "rating", "restaurant", "hotel", "business", "menu", "website"],
       blockedSignals: portalBlockedSignals,
-      riskNotes: ["Extract publisher/article/thread/listing destinations without navigating the parent portal page.", "Destination triage must keep headline/thread/review-card evidence separate from child destination evidence.", "Review/local destination extraction may include listing, official-site redirect, menu, tourism, or user-review links; child evidence must remain bounded and cited separately."]
+      riskNotes: [
+        "Extract publisher/article/thread/listing destinations without navigating the parent portal page.",
+        "Destination triage must keep headline/thread/review-card evidence separate from child destination evidence.",
+        "Review/local destination extraction may include listing, official-site redirect, menu, tourism, or user-review links; child evidence must remain bounded and cited separately."
+      ]
     }),
     candidate("obstruction-check", "capture", fixtureVerified ? "fixture_verified" : "candidate_unverified", {
       selectors: [fixture("#news-obstruction-state"), ...communityObstructionFixtures, ...communityDestinationObstructionFixtures, ...reviewObstructionFixtures, ...reviewObstructionSelectors, real('[role="dialog"]'), real("body")],
@@ -2529,132 +2123,97 @@ function knowledgeDatabaseRecipeCandidates(platform: SourceNavigationPlan["platf
   const isKosis = platform === "kosis";
   const isRiss = platform === "riss";
   const isKipris = platform === "kipris";
-  const knowledgeBlockedSignals = [
-    "login required",
-    "access denied",
-    "permission denied",
-    "subscriber only",
-    "institutional access",
-    "forbidden",
-    ...SECURITY_CHALLENGE_SIGNALS,
-    "\uB85C\uADF8\uC778",
-    "\uC811\uADFC \uAD8C\uD55C",
-    "\uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"
-  ];
+  const knowledgeBlockedSignals = ["login required", "access denied", "permission denied", "subscriber only", "institutional access", "forbidden", ...SECURITY_CHALLENGE_SIGNALS, "\uB85C\uADF8\uC778", "\uC811\uADFC \uAD8C\uD55C", "\uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"];
   const articleSelectors = [
-    ...(isWikipedia ? [
-      real("#firstHeading", "Wikipedia article title."),
-      real("#content", "Wikipedia article shell."),
-      real("#mw-content-text", "Wikipedia article body."),
-      real(".mw-parser-output", "Wikipedia parsed article content."),
-      real(".infobox", "Wikipedia infobox structured summary."),
-      real(".reflist", "Wikipedia references list."),
-      real("ol.references", "Wikipedia citation list.")
-    ] : []),
-    ...(isNamuwiki ? [
-      real("#app", "Namuwiki app shell."),
-      real("article", "Namuwiki article body when exposed semantically."),
-      real(".wiki-heading-content", "Namuwiki section heading content."),
-      real(".wiki-paragraph", "Namuwiki paragraph content."),
-      real('[class*="wiki-table"]', "Namuwiki table content."),
-      real('[class*="wiki-link"]', "Namuwiki internal/external link surfaces.")
-    ] : []),
-    ...(isPubMed ? [
-      real("#search-results", "PubMed search results container."),
-      real(".docsum-content", "PubMed result summary content."),
-      real(".full-docsum", "PubMed full document summary."),
-      real("article.full-docsum", "PubMed article result card."),
-      real("#enc-abstract", "PubMed abstract panel."),
-      real(".abstract", "PubMed abstract text."),
-      real(".cit", "PubMed citation metadata."),
-      real("#article-details", "PubMed article details region.")
-    ] : []),
-    ...(isDataGoKr ? [
-      real("#contents", "data.go.kr contents region."),
-      real("#content", "data.go.kr content region."),
-      real(".result-list", "data.go.kr dataset result list."),
-      real(".data-list", "data.go.kr dataset list."),
-      real(".dataset-list", "data.go.kr dataset list."),
-      real(".list-data", "data.go.kr list data region."),
-      real(".detail-info", "data.go.kr dataset detail information.")
-    ] : []),
-    ...(isKosis ? [
-      real("#contents", "KOSIS contents region."),
-      real("#content", "KOSIS content region."),
-      real(".search-result", "KOSIS search result region."),
-      real(".tbl-list", "KOSIS table/list region."),
-      real(".table", "KOSIS table region."),
-      real("[class*=\"stat\"]", "KOSIS statistic-related content region.")
-    ] : []),
-    ...(isRiss ? [
-      real("#divContent", "RISS content region."),
-      real("#content", "RISS content region."),
-      real(".srchResultListW", "RISS search result list."),
-      real(".cont", "RISS result content region."),
-      real(".metadata", "RISS metadata region when visible."),
-      real(".recordDetail", "RISS record detail region.")
-    ] : []),
-    ...(isKipris ? [
-      real("#content", "KIPRIS content region."),
-      real("#contents", "KIPRIS contents region."),
-      real(".search-result", "KIPRIS search result region."),
-      real(".result-list", "KIPRIS result list."),
-      real(".patentView", "KIPRIS patent detail view."),
-      real(".detail", "KIPRIS detail metadata region.")
-    ] : []),
+    ...(isWikipedia
+      ? [
+          real("#firstHeading", "Wikipedia article title."),
+          real("#content", "Wikipedia article shell."),
+          real("#mw-content-text", "Wikipedia article body."),
+          real(".mw-parser-output", "Wikipedia parsed article content."),
+          real(".infobox", "Wikipedia infobox structured summary."),
+          real(".reflist", "Wikipedia references list."),
+          real("ol.references", "Wikipedia citation list.")
+        ]
+      : []),
+    ...(isNamuwiki
+      ? [
+          real("#app", "Namuwiki app shell."),
+          real("article", "Namuwiki article body when exposed semantically."),
+          real(".wiki-heading-content", "Namuwiki section heading content."),
+          real(".wiki-paragraph", "Namuwiki paragraph content."),
+          real('[class*="wiki-table"]', "Namuwiki table content."),
+          real('[class*="wiki-link"]', "Namuwiki internal/external link surfaces.")
+        ]
+      : []),
+    ...(isPubMed
+      ? [
+          real("#search-results", "PubMed search results container."),
+          real(".docsum-content", "PubMed result summary content."),
+          real(".full-docsum", "PubMed full document summary."),
+          real("article.full-docsum", "PubMed article result card."),
+          real("#enc-abstract", "PubMed abstract panel."),
+          real(".abstract", "PubMed abstract text."),
+          real(".cit", "PubMed citation metadata."),
+          real("#article-details", "PubMed article details region.")
+        ]
+      : []),
+    ...(isDataGoKr
+      ? [
+          real("#contents", "data.go.kr contents region."),
+          real("#content", "data.go.kr content region."),
+          real(".result-list", "data.go.kr dataset result list."),
+          real(".data-list", "data.go.kr dataset list."),
+          real(".dataset-list", "data.go.kr dataset list."),
+          real(".list-data", "data.go.kr list data region."),
+          real(".detail-info", "data.go.kr dataset detail information.")
+        ]
+      : []),
+    ...(isKosis
+      ? [real("#contents", "KOSIS contents region."), real("#content", "KOSIS content region."), real(".search-result", "KOSIS search result region."), real(".tbl-list", "KOSIS table/list region."), real(".table", "KOSIS table region."), real('[class*="stat"]', "KOSIS statistic-related content region.")]
+      : []),
+    ...(isRiss
+      ? [real("#divContent", "RISS content region."), real("#content", "RISS content region."), real(".srchResultListW", "RISS search result list."), real(".cont", "RISS result content region."), real(".metadata", "RISS metadata region when visible."), real(".recordDetail", "RISS record detail region.")]
+      : []),
+    ...(isKipris ? [real("#content", "KIPRIS content region."), real("#contents", "KIPRIS contents region."), real(".search-result", "KIPRIS search result region."), real(".result-list", "KIPRIS result list."), real(".patentView", "KIPRIS patent detail view."), real(".detail", "KIPRIS detail metadata region.")] : []),
     real("main", "Generic knowledge database main content fallback."),
     real("article", "Generic article/record content fallback.")
   ];
   const destinationSelectors = [
-    ...(isWikipedia ? [
-      real("#mw-content-text a[href]", "Wikipedia body links."),
-      real(".mw-parser-output a[href]", "Wikipedia parsed-content links."),
-      real("ol.references a[href]", "Wikipedia citation links."),
-      real(".reflist a[href]", "Wikipedia reference links."),
-      real('a[href*="Special:BookSources"]', "Wikipedia book-source links.")
-    ] : []),
-    ...(isNamuwiki ? [
-      real("article a[href]", "Namuwiki article links."),
-      real(".wiki-paragraph a[href]", "Namuwiki paragraph links."),
-      real('[class*="wiki-link"] a[href]', "Namuwiki wiki-link anchors."),
-      real('a[href^="http"]', "Namuwiki visible external links.")
-    ] : []),
-    ...(isPubMed ? [
-      real(".docsum-title[href]", "PubMed result detail links."),
-      real(".docsum-content a[href]", "PubMed result-summary links."),
-      real("#article-details a[href]", "PubMed article detail links."),
-      real(".full-view a[href]", "PubMed full-view links."),
-      real('a[href*="pmc.ncbi.nlm.nih.gov"]', "PubMed Central full-text links."),
-      real('a[href*="doi.org"]', "DOI destination links.")
-    ] : []),
-    ...(isDataGoKr ? [
-      real("#contents a[href]", "data.go.kr contents links."),
-      real(".result-list a[href]", "data.go.kr dataset result links."),
-      real(".data-list a[href]", "data.go.kr dataset links."),
-      real('a[href*="selectDataSetList"]', "data.go.kr dataset list links."),
-      real('a[href*="selectDataSetDetail"]', "data.go.kr dataset detail links.")
-    ] : []),
-    ...(isKosis ? [
-      real("#contents a[href]", "KOSIS contents links."),
-      real(".search-result a[href]", "KOSIS search result links."),
-      real(".tbl-list a[href]", "KOSIS table/list links."),
-      real('a[href*="statisticsList"]', "KOSIS statistics list links."),
-      real('a[href*="statHtml"]', "KOSIS statistic table links.")
-    ] : []),
-    ...(isRiss ? [
-      real("#divContent a[href]", "RISS content links."),
-      real(".srchResultListW a[href]", "RISS result list links."),
-      real(".cont a[href]", "RISS result content links."),
-      real('a[href*="DetailView"]', "RISS record detail links."),
-      real('a[href*="search/Search.do"]', "RISS search links.")
-    ] : []),
-    ...(isKipris ? [
-      real("#content a[href]", "KIPRIS content links."),
-      real(".search-result a[href]", "KIPRIS search result links."),
-      real(".result-list a[href]", "KIPRIS result list links."),
-      real('a[href*="khome/search"]', "KIPRIS search links."),
-      real('a[href*="patent"]', "KIPRIS patent detail links.")
-    ] : []),
+    ...(isWikipedia
+      ? [
+          real("#mw-content-text a[href]", "Wikipedia body links."),
+          real(".mw-parser-output a[href]", "Wikipedia parsed-content links."),
+          real("ol.references a[href]", "Wikipedia citation links."),
+          real(".reflist a[href]", "Wikipedia reference links."),
+          real('a[href*="Special:BookSources"]', "Wikipedia book-source links.")
+        ]
+      : []),
+    ...(isNamuwiki ? [real("article a[href]", "Namuwiki article links."), real(".wiki-paragraph a[href]", "Namuwiki paragraph links."), real('[class*="wiki-link"] a[href]', "Namuwiki wiki-link anchors."), real('a[href^="http"]', "Namuwiki visible external links.")] : []),
+    ...(isPubMed
+      ? [
+          real(".docsum-title[href]", "PubMed result detail links."),
+          real(".docsum-content a[href]", "PubMed result-summary links."),
+          real("#article-details a[href]", "PubMed article detail links."),
+          real(".full-view a[href]", "PubMed full-view links."),
+          real('a[href*="pmc.ncbi.nlm.nih.gov"]', "PubMed Central full-text links."),
+          real('a[href*="doi.org"]', "DOI destination links.")
+        ]
+      : []),
+    ...(isDataGoKr
+      ? [
+          real("#contents a[href]", "data.go.kr contents links."),
+          real(".result-list a[href]", "data.go.kr dataset result links."),
+          real(".data-list a[href]", "data.go.kr dataset links."),
+          real('a[href*="selectDataSetList"]', "data.go.kr dataset list links."),
+          real('a[href*="selectDataSetDetail"]', "data.go.kr dataset detail links.")
+        ]
+      : []),
+    ...(isKosis
+      ? [real("#contents a[href]", "KOSIS contents links."), real(".search-result a[href]", "KOSIS search result links."), real(".tbl-list a[href]", "KOSIS table/list links."), real('a[href*="statisticsList"]', "KOSIS statistics list links."), real('a[href*="statHtml"]', "KOSIS statistic table links.")]
+      : []),
+    ...(isRiss ? [real("#divContent a[href]", "RISS content links."), real(".srchResultListW a[href]", "RISS result list links."), real(".cont a[href]", "RISS result content links."), real('a[href*="DetailView"]', "RISS record detail links."), real('a[href*="search/Search.do"]', "RISS search links.")] : []),
+    ...(isKipris ? [real("#content a[href]", "KIPRIS content links."), real(".search-result a[href]", "KIPRIS search result links."), real(".result-list a[href]", "KIPRIS result list links."), real('a[href*="khome/search"]', "KIPRIS search links."), real('a[href*="patent"]', "KIPRIS patent detail links.")] : []),
     real("main a[href]", "Generic main-content knowledge database links."),
     real("article a[href]", "Generic article/record links.")
   ];
@@ -2664,10 +2223,7 @@ function knowledgeDatabaseRecipeCandidates(platform: SourceNavigationPlan["platf
       scopes: articleSelectors,
       expectedTextSignals: ["title", "abstract", "record", "dataset", "citation", "references", "\uCD9C\uCC98", "\uC778\uC6A9"],
       blockedSignals: knowledgeBlockedSignals,
-      riskNotes: [
-        "Knowledge/database pages are read-only evidence surfaces; capture record fields, update date, citations, and visible tables before deriving claims.",
-        "Do not click edit, login, download-restricted, paid full text, or institutional-access controls."
-      ]
+      riskNotes: ["Knowledge/database pages are read-only evidence surfaces; capture record fields, update date, citations, and visible tables before deriving claims.", "Do not click edit, login, download-restricted, paid full text, or institutional-access controls."]
     }),
     candidate("bounded-scroll", "scroll", "fixture_verified", {
       selectors: [],
@@ -2710,13 +2266,7 @@ function genericRecipeCandidates(): SourceNavigationRecipeActionCandidate[] {
 }
 
 function isKnowledgeDatabasePlatform(platform: SourceNavigationPlan["platform"]): boolean {
-  return platform === "wikipedia"
-    || platform === "namuwiki"
-    || platform === "pubmed"
-    || platform === "data_go_kr"
-    || platform === "kosis"
-    || platform === "riss"
-    || platform === "kipris";
+  return platform === "wikipedia" || platform === "namuwiki" || platform === "pubmed" || platform === "data_go_kr" || platform === "kosis" || platform === "riss" || platform === "kipris";
 }
 
 function candidate(
@@ -2740,10 +2290,7 @@ function candidate(
     captureScopeCandidates: uniqueCandidates(input.scopes ?? []),
     expectedTextSignals: uniqueStrings(input.expectedTextSignals ?? []),
     blockedSignals: uniqueStrings(input.blockedSignals ?? []),
-    riskNotes: uniqueStrings([
-      "Manual opt-in only; candidates are not executed by evidence-run unless explicitly supplied as recipes.",
-      ...(input.riskNotes ?? [])
-    ]),
+    riskNotes: uniqueStrings(["Manual opt-in only; candidates are not executed by evidence-run unless explicitly supplied as recipes.", ...(input.riskNotes ?? [])]),
     ...(input.clientStateExtraction === undefined ? {} : { clientStateExtraction: input.clientStateExtraction })
   };
 }

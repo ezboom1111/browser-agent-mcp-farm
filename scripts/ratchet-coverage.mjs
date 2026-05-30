@@ -31,8 +31,4 @@ for (const key of ["lines", "statements", "functions", "branches"]) {
 }
 
 writeFileSync(thresholdsPath, `${JSON.stringify(current, null, 2)}\n`);
-console.log(
-  raised
-    ? `ratchet: raised coverage thresholds -> ${JSON.stringify(current)}`
-    : `ratchet: coverage thresholds unchanged (${JSON.stringify(current)})`,
-);
+console.log(raised ? `ratchet: raised coverage thresholds -> ${JSON.stringify(current)}` : `ratchet: coverage thresholds unchanged (${JSON.stringify(current)})`);

@@ -84,59 +84,61 @@ export async function runOcrForFrameArtifacts(input: {
   const writer = input.writer ?? new ArtifactWriter();
   const records: ArtifactRecord[] = [];
   const warnings: string[] = [];
-  const frameScreenshots = input.frameRecords
-    .filter((record) => record.kind === "screenshot" && record.evidence_kind === "frame_screenshot")
-    .slice(0, options.maxFrames);
+  const frameScreenshots = input.frameRecords.filter((record) => record.kind === "screenshot" && record.evidence_kind === "frame_screenshot").slice(0, options.maxFrames);
 
   if (frameScreenshots.length === 0) {
-    records.push(...await writer.writeCaptureBundle({
-      runDir: input.runDir,
-      sourceUrl: input.sourceUrl,
-      contextToken: input.contextToken,
-      pageId: input.pageId,
-      captureId: `${input.baseCaptureId}-ocr-no-frames`,
-      status: "partial",
-      metadata: {
-        ocr: {
-          status: "no_frames",
-          language: options.language,
-          minConfidence: options.minConfidence,
-          requestedFrames: 0,
-          reason: "no sampled frame screenshots were available for OCR"
-        } satisfies OcrEvidenceMetadata
-      },
-      captureMethod: "browser-agent-mcp-farm ocr",
-      toolName: "evidence_run_ocr",
-      evidenceKind: "ocr_text",
-      note: "OCR skipped; no sampled frame screenshots were available."
-    }));
+    records.push(
+      ...(await writer.writeCaptureBundle({
+        runDir: input.runDir,
+        sourceUrl: input.sourceUrl,
+        contextToken: input.contextToken,
+        pageId: input.pageId,
+        captureId: `${input.baseCaptureId}-ocr-no-frames`,
+        status: "partial",
+        metadata: {
+          ocr: {
+            status: "no_frames",
+            language: options.language,
+            minConfidence: options.minConfidence,
+            requestedFrames: 0,
+            reason: "no sampled frame screenshots were available for OCR"
+          } satisfies OcrEvidenceMetadata
+        },
+        captureMethod: "browser-agent-mcp-farm ocr",
+        toolName: "evidence_run_ocr",
+        evidenceKind: "ocr_text",
+        note: "OCR skipped; no sampled frame screenshots were available."
+      }))
+    );
     return { records, warnings };
   }
 
   const worker = await (input.workerFactory ?? createOptionalTesseractWorker)(options.language);
   if (worker === undefined) {
     warnings.push("OCR skipped because optional dependency tesseract.js is not installed or could not initialize.");
-    records.push(...await writer.writeCaptureBundle({
-      runDir: input.runDir,
-      sourceUrl: input.sourceUrl,
-      contextToken: input.contextToken,
-      pageId: input.pageId,
-      captureId: `${input.baseCaptureId}-ocr-unavailable`,
-      status: "partial",
-      metadata: {
-        ocr: {
-          status: "unavailable",
-          language: options.language,
-          minConfidence: options.minConfidence,
-          reason: "optional dependency tesseract.js is not installed or could not initialize",
-          requestedFrames: frameScreenshots.length
-        } satisfies OcrEvidenceMetadata
-      },
-      captureMethod: "browser-agent-mcp-farm ocr",
-      toolName: "evidence_run_ocr",
-      evidenceKind: "ocr_text",
-      note: "OCR unavailable; no visible text was extracted."
-    }));
+    records.push(
+      ...(await writer.writeCaptureBundle({
+        runDir: input.runDir,
+        sourceUrl: input.sourceUrl,
+        contextToken: input.contextToken,
+        pageId: input.pageId,
+        captureId: `${input.baseCaptureId}-ocr-unavailable`,
+        status: "partial",
+        metadata: {
+          ocr: {
+            status: "unavailable",
+            language: options.language,
+            minConfidence: options.minConfidence,
+            reason: "optional dependency tesseract.js is not installed or could not initialize",
+            requestedFrames: frameScreenshots.length
+          } satisfies OcrEvidenceMetadata
+        },
+        captureMethod: "browser-agent-mcp-farm ocr",
+        toolName: "evidence_run_ocr",
+        evidenceKind: "ocr_text",
+        note: "OCR unavailable; no visible text was extracted."
+      }))
+    );
     return { records, warnings };
   }
 
@@ -158,26 +160,28 @@ export async function runOcrForFrameArtifacts(input: {
           const failureStatus = ocrFailureStatus(error);
           const reason = errorMessage(error);
           warnings.push(`OCR ${failureStatus} for ${frame.artifact_id}: ${reason}`);
-          records.push(...await writer.writeCaptureBundle({
-            runDir: input.runDir,
-            sourceUrl: frame.source_url,
-            contextToken: input.contextToken,
-            pageId: input.pageId,
-            captureId: `${input.baseCaptureId}-ocr-${String(index + 1).padStart(3, "0")}-${sanitizeFileBase(frame.artifact_id)}-${failureStatus}`,
-            status: "partial",
-            metadata: {
-              ocr: buildFailedOcrMetadata({
-                status: failureStatus,
-                options,
-                frame,
-                reason
-              })
-            },
-            captureMethod: "browser-agent-mcp-farm ocr",
-            toolName: "evidence_run_ocr",
-            evidenceKind: "ocr_text",
-            note: `OCR ${failureStatus}: ${reason}`
-          }));
+          records.push(
+            ...(await writer.writeCaptureBundle({
+              runDir: input.runDir,
+              sourceUrl: frame.source_url,
+              contextToken: input.contextToken,
+              pageId: input.pageId,
+              captureId: `${input.baseCaptureId}-ocr-${String(index + 1).padStart(3, "0")}-${sanitizeFileBase(frame.artifact_id)}-${failureStatus}`,
+              status: "partial",
+              metadata: {
+                ocr: buildFailedOcrMetadata({
+                  status: failureStatus,
+                  options,
+                  frame,
+                  reason
+                })
+              },
+              captureMethod: "browser-agent-mcp-farm ocr",
+              toolName: "evidence_run_ocr",
+              evidenceKind: "ocr_text",
+              note: `OCR ${failureStatus}: ${reason}`
+            }))
+          );
           continue;
         }
         cache.set(frame.sha256, extraction);
@@ -192,20 +196,22 @@ export async function runOcrForFrameArtifacts(input: {
         extraction,
         words
       });
-      records.push(...await writer.writeCaptureBundle({
-        runDir: input.runDir,
-        sourceUrl: frame.source_url,
-        contextToken: input.contextToken,
-        pageId: input.pageId,
-        captureId: `${input.baseCaptureId}-ocr-${String(index + 1).padStart(3, "0")}-${sanitizeFileBase(frame.artifact_id)}`,
-        status: status.artifactStatus,
-        text: extraction.text,
-        metadata: { ocr: metadata },
-        captureMethod: "browser-agent-mcp-farm ocr",
-        toolName: "evidence_run_ocr",
-        evidenceKind: "ocr_text",
-        ...(status.note === undefined ? {} : { note: status.note })
-      }));
+      records.push(
+        ...(await writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: frame.source_url,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.baseCaptureId}-ocr-${String(index + 1).padStart(3, "0")}-${sanitizeFileBase(frame.artifact_id)}`,
+          status: status.artifactStatus,
+          text: extraction.text,
+          metadata: { ocr: metadata },
+          captureMethod: "browser-agent-mcp-farm ocr",
+          toolName: "evidence_run_ocr",
+          evidenceKind: "ocr_text",
+          ...(status.note === undefined ? {} : { note: status.note })
+        }))
+      );
     }
   } finally {
     await worker.terminate().catch(() => undefined);
@@ -214,12 +220,7 @@ export async function runOcrForFrameArtifacts(input: {
   return { records, warnings };
 }
 
-async function recognizeWithTimeout(
-  worker: OcrWorker,
-  imagePath: string,
-  options: NormalizedOcrOptions,
-  signal: AbortSignal | undefined
-): Promise<OcrExtraction> {
+async function recognizeWithTimeout(worker: OcrWorker, imagePath: string, options: NormalizedOcrOptions, signal: AbortSignal | undefined): Promise<OcrExtraction> {
   throwIfAborted(signal);
   const bytes = await readFile(imagePath);
   const job = worker.recognize(bytes);
@@ -318,14 +319,7 @@ function classifyExtraction(extraction: OcrExtraction, minConfidence: number): O
   };
 }
 
-function buildOcrMetadata(input: {
-  status: OcrEvidenceMetadata["status"];
-  options: NormalizedOcrOptions;
-  frame: ArtifactRecord;
-  cacheHit: boolean;
-  extraction: OcrExtraction;
-  words: OcrWord[];
-}): OcrEvidenceMetadata {
+function buildOcrMetadata(input: { status: OcrEvidenceMetadata["status"]; options: NormalizedOcrOptions; frame: ArtifactRecord; cacheHit: boolean; extraction: OcrExtraction; words: OcrWord[] }): OcrEvidenceMetadata {
   const metadata: OcrEvidenceMetadata = {
     status: input.status,
     language: input.options.language,
@@ -351,12 +345,7 @@ function buildOcrMetadata(input: {
   return metadata;
 }
 
-function buildFailedOcrMetadata(input: {
-  status: "engine_error" | "timeout";
-  options: NormalizedOcrOptions;
-  frame: ArtifactRecord;
-  reason: string;
-}): OcrEvidenceMetadata {
+function buildFailedOcrMetadata(input: { status: "engine_error" | "timeout"; options: NormalizedOcrOptions; frame: ArtifactRecord; reason: string }): OcrEvidenceMetadata {
   const metadata: OcrEvidenceMetadata = {
     status: input.status,
     language: input.options.language,
@@ -431,7 +420,7 @@ function timestampSecFromFramePath(path: string): number | undefined {
 async function createOptionalTesseractWorker(language: string): Promise<OcrWorker | undefined> {
   try {
     const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
-    const module = await dynamicImport("tesseract.js") as { createWorker?: (language?: string) => Promise<OcrWorker> };
+    const module = (await dynamicImport("tesseract.js")) as { createWorker?: (language?: string) => Promise<OcrWorker> };
     if (typeof module.createWorker !== "function") {
       return undefined;
     }

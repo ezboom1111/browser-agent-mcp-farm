@@ -7,7 +7,7 @@ import type { SourceNavigationExecutionLimits } from "./source-navigation-execut
 
 export async function normalizeEvidenceRunInput(input: EvidenceRunInput): Promise<EvidenceWorkflowOptions> {
   const parsed = EvidenceRunInputSchema.parse(input);
-  const runDir = parsed.runDir ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-evidence-"));
+  const runDir = parsed.runDir ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-evidence-")));
   return normalizedInputToWorkflowOptions(parsed, runDir);
 }
 

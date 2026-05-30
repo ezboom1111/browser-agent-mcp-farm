@@ -8,13 +8,7 @@ export interface OfficialApiRunResult {
   warnings: string[];
 }
 
-export type OfficialApiFailureKind =
-  | "permission_denied"
-  | "ownership_required"
-  | "quota_exceeded"
-  | "rate_limited"
-  | "not_found"
-  | "unknown";
+export type OfficialApiFailureKind = "permission_denied" | "ownership_required" | "quota_exceeded" | "rate_limited" | "not_found" | "unknown";
 
 interface ApiLookup {
   key: string;
@@ -23,25 +17,11 @@ interface ApiLookup {
   run: (token: string, signal: AbortSignal | undefined) => Promise<unknown>;
 }
 
-export type OfficialApiCredentialReadinessStatus =
-  | "ready"
-  | "missing_reference"
-  | "missing_env"
-  | "missing_media_id"
-  | "not_applicable";
+export type OfficialApiCredentialReadinessStatus = "ready" | "missing_reference" | "missing_env" | "missing_media_id" | "not_applicable";
 
-export type OfficialApiCredentialState =
-  | "ready"
-  | "missing_reference"
-  | "missing_env"
-  | "not_applicable";
+export type OfficialApiCredentialState = "ready" | "missing_reference" | "missing_env" | "not_applicable";
 
-export type OfficialApiReadinessNextAction =
-  | "ready_for_live_api_call"
-  | "provide_credential_reference"
-  | "set_credential_env"
-  | "use_direct_media_url_or_followup"
-  | "browser_visible_evidence_only";
+export type OfficialApiReadinessNextAction = "ready_for_live_api_call" | "provide_credential_reference" | "set_credential_env" | "use_direct_media_url_or_followup" | "browser_visible_evidence_only";
 
 export interface OfficialApiCredentialReadinessItem {
   key: string;
@@ -107,28 +87,30 @@ export async function collectOfficialApiEvidence(input: {
         nextAction: "use_direct_media_url_or_followup",
         error: "a stable media ID could not be parsed from this URL"
       });
-      records.push(...await writer.writeCaptureBundle({
-        runDir: input.runDir,
-        sourceUrl: input.sourceUrl,
-        contextToken: input.contextToken,
-        pageId: input.pageId,
-        captureId: `${input.baseCaptureId}-official-api-${template.key}-missing-media-id`,
-        status: "partial",
-        metadata: {
-          officialApi: {
-            label: template.label,
-            status: "missing_media_id",
-            ...(template.credentialRef === undefined ? {} : { credentialRef: template.credentialRef }),
-            credentialStatus,
-            nextAction: "use_direct_media_url_or_followup",
-            error: "a stable media ID could not be parsed from this URL"
-          }
-        },
-        captureMethod: "browser-agent-mcp-farm official-api",
-        toolName: "evidence_run_official_api",
-        evidenceKind: "official_api_metadata",
-        note: "missing_media_id: use a direct item URL or destination follow-up before requesting official API metadata"
-      }));
+      records.push(
+        ...(await writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: input.sourceUrl,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.baseCaptureId}-official-api-${template.key}-missing-media-id`,
+          status: "partial",
+          metadata: {
+            officialApi: {
+              label: template.label,
+              status: "missing_media_id",
+              ...(template.credentialRef === undefined ? {} : { credentialRef: template.credentialRef }),
+              credentialStatus,
+              nextAction: "use_direct_media_url_or_followup",
+              error: "a stable media ID could not be parsed from this URL"
+            }
+          },
+          captureMethod: "browser-agent-mcp-farm official-api",
+          toolName: "evidence_run_official_api",
+          evidenceKind: "official_api_metadata",
+          note: "missing_media_id: use a direct item URL or destination follow-up before requesting official API metadata"
+        }))
+      );
     }
   }
 
@@ -139,26 +121,28 @@ export async function collectOfficialApiEvidence(input: {
       const error = credential.reason ?? "credential reference not configured";
       warnings.push(`${lookup.label}: ${error}`);
       cache.push(cacheEntry(lookup, "credential-required", error));
-      records.push(...await writer.writeCaptureBundle({
-        runDir: input.runDir,
-        sourceUrl: input.sourceUrl,
-        contextToken: input.contextToken,
-        pageId: input.pageId,
-        captureId: `${input.baseCaptureId}-official-api-${lookup.key}`,
-        status: "partial",
-        metadata: {
-          officialApi: {
-            label: lookup.label,
-            status: "credential-required",
-            credentialRef: lookup.credentialRef,
-            error
-          }
-        },
-        captureMethod: "browser-agent-mcp-farm official-api",
-        toolName: "evidence_run_official_api",
-        evidenceKind: "official_api_metadata",
-        note: `credential-required: ${error}`
-      }));
+      records.push(
+        ...(await writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: input.sourceUrl,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.baseCaptureId}-official-api-${lookup.key}`,
+          status: "partial",
+          metadata: {
+            officialApi: {
+              label: lookup.label,
+              status: "credential-required",
+              credentialRef: lookup.credentialRef,
+              error
+            }
+          },
+          captureMethod: "browser-agent-mcp-farm official-api",
+          toolName: "evidence_run_official_api",
+          evidenceKind: "official_api_metadata",
+          note: `credential-required: ${error}`
+        }))
+      );
       continue;
     }
 
@@ -166,26 +150,28 @@ export async function collectOfficialApiEvidence(input: {
       const data = await lookup.run(credential.token, input.signal);
       const sanitizedData = redactSecrets(data, [credential.token]);
       cache.push(cacheEntry(lookup, "ok"));
-      records.push(...await writer.writeCaptureBundle({
-        runDir: input.runDir,
-        sourceUrl: input.sourceUrl,
-        contextToken: input.contextToken,
-        pageId: input.pageId,
-        captureId: `${input.baseCaptureId}-official-api-${lookup.key}`,
-        status: "ok",
-        metadata: {
-          officialApi: {
-            label: lookup.label,
-            status: "ok",
-            credentialRef: lookup.credentialRef,
-            data: sanitizedData
-          }
-        },
-        text: JSON.stringify(sanitizedData, null, 2),
-        captureMethod: "browser-agent-mcp-farm official-api",
-        toolName: "evidence_run_official_api",
-        evidenceKind: "official_api_metadata"
-      }));
+      records.push(
+        ...(await writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: input.sourceUrl,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.baseCaptureId}-official-api-${lookup.key}`,
+          status: "ok",
+          metadata: {
+            officialApi: {
+              label: lookup.label,
+              status: "ok",
+              credentialRef: lookup.credentialRef,
+              data: sanitizedData
+            }
+          },
+          text: JSON.stringify(sanitizedData, null, 2),
+          captureMethod: "browser-agent-mcp-farm official-api",
+          toolName: "evidence_run_official_api",
+          evidenceKind: "official_api_metadata"
+        }))
+      );
     } catch (error) {
       if (isAbortError(error)) {
         throw error;
@@ -194,54 +180,53 @@ export async function collectOfficialApiEvidence(input: {
       const failureKind = classifyOfficialApiFailure(message);
       warnings.push(`${lookup.label}: ${failureKind}: ${message}`);
       cache.push(cacheEntry(lookup, "error", message, failureKind));
-      records.push(...await writer.writeCaptureBundle({
-        runDir: input.runDir,
-        sourceUrl: input.sourceUrl,
-        contextToken: input.contextToken,
-        pageId: input.pageId,
-        captureId: `${input.baseCaptureId}-official-api-${lookup.key}-failed`,
-        status: "partial",
-        metadata: {
-          officialApi: {
-            label: lookup.label,
-            status: "error",
-            credentialRef: lookup.credentialRef,
-            failureKind,
-            error: message
-          }
-        },
-        captureMethod: "browser-agent-mcp-farm official-api",
-        toolName: "evidence_run_official_api",
-        evidenceKind: "official_api_metadata",
-        note: `${failureKind}: ${message}`
-      }));
+      records.push(
+        ...(await writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: input.sourceUrl,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.baseCaptureId}-official-api-${lookup.key}-failed`,
+          status: "partial",
+          metadata: {
+            officialApi: {
+              label: lookup.label,
+              status: "error",
+              credentialRef: lookup.credentialRef,
+              failureKind,
+              error: message
+            }
+          },
+          captureMethod: "browser-agent-mcp-farm official-api",
+          toolName: "evidence_run_official_api",
+          evidenceKind: "official_api_metadata",
+          note: `${failureKind}: ${message}`
+        }))
+      );
     }
   }
 
-  records.push(...await writer.writeCaptureBundle({
-    runDir: input.runDir,
-    sourceUrl: input.sourceUrl,
-    contextToken: input.contextToken,
-    pageId: input.pageId,
-    captureId: `${input.baseCaptureId}-api-cache`,
-    status: "ok",
-    metadata: { officialApiCache: cache },
-    captureMethod: "browser-agent-mcp-farm api-cache",
-    toolName: "evidence_run_official_api",
-    evidenceKind: "api_cache"
-  }));
+  records.push(
+    ...(await writer.writeCaptureBundle({
+      runDir: input.runDir,
+      sourceUrl: input.sourceUrl,
+      contextToken: input.contextToken,
+      pageId: input.pageId,
+      captureId: `${input.baseCaptureId}-api-cache`,
+      status: "ok",
+      metadata: { officialApiCache: cache },
+      captureMethod: "browser-agent-mcp-farm api-cache",
+      toolName: "evidence_run_official_api",
+      evidenceKind: "api_cache"
+    }))
+  );
 
   return { records, warnings };
 }
 
-export function buildOfficialApiReadiness(input: {
-  platformCapabilities: PlatformCapabilityMap;
-  credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"];
-}): OfficialApiReadinessReport {
+export function buildOfficialApiReadiness(input: { platformCapabilities: PlatformCapabilityMap; credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"] }): OfficialApiReadinessReport {
   const lookups = buildLookups(input.platformCapabilities, input.credentials);
-  const missingMediaIdItems = lookups.length === 0 && input.platformCapabilities.mediaId === undefined
-    ? missingMediaIdReadinessItems(input.platformCapabilities.platform, input.credentials)
-    : [];
+  const missingMediaIdItems = lookups.length === 0 && input.platformCapabilities.mediaId === undefined ? missingMediaIdReadinessItems(input.platformCapabilities.platform, input.credentials) : [];
   const items = lookups.length === 0 ? missingMediaIdItems : lookups.map((lookup) => credentialReadinessItem(lookup));
   const missingMediaIdCount = items.filter((item) => item.status === "missing_media_id").length;
   const notApplicableCount = lookups.length === 0 && missingMediaIdCount === 0 ? 1 : 0;
@@ -289,12 +274,7 @@ interface OfficialApiCacheEntry {
   failureKind?: OfficialApiFailureKind;
 }
 
-function cacheEntry(
-  lookup: ApiLookup,
-  status: string,
-  error?: string,
-  failureKind?: OfficialApiFailureKind
-): OfficialApiCacheEntry {
+function cacheEntry(lookup: ApiLookup, status: string, error?: string, failureKind?: OfficialApiFailureKind): OfficialApiCacheEntry {
   return {
     key: lookup.key,
     label: lookup.label,
@@ -337,10 +317,7 @@ function credentialReadinessItem(lookup: ApiLookup): OfficialApiCredentialReadin
   };
 }
 
-function missingMediaIdReadinessItems(
-  platform: PlatformCapabilityMap["platform"],
-  credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]
-): OfficialApiCredentialReadinessItem[] {
+function missingMediaIdReadinessItems(platform: PlatformCapabilityMap["platform"], credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]): OfficialApiCredentialReadinessItem[] {
   return lookupTemplatesForPlatform(platform, credentials).map((lookup) => ({
     key: lookup.key,
     label: lookup.label,
@@ -363,10 +340,7 @@ function isMediaIdRequiredOfficialApiPlatform(platform: PlatformCapabilityMap["p
   return platform === "youtube" || platform === "instagram" || platform === "tiktok";
 }
 
-function lookupTemplatesForPlatform(
-  platform: PlatformCapabilityMap["platform"],
-  credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]
-): Array<Pick<ApiLookup, "key" | "label" | "credentialRef">> {
+function lookupTemplatesForPlatform(platform: PlatformCapabilityMap["platform"], credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]): Array<Pick<ApiLookup, "key" | "label" | "credentialRef">> {
   if (platform === "youtube") {
     return [
       { key: "youtube-videos", label: "YouTube Data API videos.list", credentialRef: credentials.youtubeApiKeyEnv },
@@ -374,9 +348,7 @@ function lookupTemplatesForPlatform(
     ];
   }
   if (platform === "instagram") {
-    return [
-      { key: "instagram-media", label: "Instagram Graph IG Media fields", credentialRef: credentials.instagramAccessTokenEnv }
-    ];
+    return [{ key: "instagram-media", label: "Instagram Graph IG Media fields", credentialRef: credentials.instagramAccessTokenEnv }];
   }
   if (platform === "tiktok") {
     return [
@@ -387,10 +359,7 @@ function lookupTemplatesForPlatform(
   return [];
 }
 
-function buildLookups(
-  platformCapabilities: PlatformCapabilityMap,
-  credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]
-): ApiLookup[] {
+function buildLookups(platformCapabilities: PlatformCapabilityMap, credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"]): ApiLookup[] {
   if (platformCapabilities.mediaId === undefined) {
     return [];
   }
@@ -429,18 +398,30 @@ function buildLookups(
         key: "tiktok-video-query",
         label: "TikTok Display API video query",
         credentialRef: credentials.tiktokAccessTokenEnv,
-        run: (token, signal) => fetchJson("https://open.tiktokapis.com/v2/video/query/?fields=id,title,video_description,duration,cover_image_url,share_url,embed_link", token, {
-          filters: { video_ids: [platformCapabilities.mediaId] }
-        }, signal),
+        run: (token, signal) =>
+          fetchJson(
+            "https://open.tiktokapis.com/v2/video/query/?fields=id,title,video_description,duration,cover_image_url,share_url,embed_link",
+            token,
+            {
+              filters: { video_ids: [platformCapabilities.mediaId] }
+            },
+            signal
+          )
       },
       {
         key: "tiktok-research-video-query",
         label: "TikTok Research API video query",
         credentialRef: credentials.tiktokResearchTokenEnv,
-        run: (token, signal) => fetchJson("https://open.tiktokapis.com/v2/research/video/query/?fields=id,video_description,voice_to_text,video_duration", token, {
-          query: { and: [{ operation: "EQ", field_name: "id", field_values: [platformCapabilities.mediaId] }] },
-          max_count: 1
-        }, signal)
+        run: (token, signal) =>
+          fetchJson(
+            "https://open.tiktokapis.com/v2/research/video/query/?fields=id,video_description,voice_to_text,video_duration",
+            token,
+            {
+              query: { and: [{ operation: "EQ", field_name: "id", field_values: [platformCapabilities.mediaId] }] },
+              max_count: 1
+            },
+            signal
+          )
       }
     ];
   }
@@ -473,9 +454,7 @@ function redactSecrets(value: unknown, secrets: string[]): unknown {
 }
 
 function redactSecretString(value: string, secrets: string[]): string {
-  return secrets
-    .filter((secret) => secret.length >= 4)
-    .reduce((text, secret) => text.split(secret).join("[REDACTED]"), value);
+  return secrets.filter((secret) => secret.length >= 4).reduce((text, secret) => text.split(secret).join("[REDACTED]"), value);
 }
 
 function classifyOfficialApiFailure(message: string): OfficialApiFailureKind {

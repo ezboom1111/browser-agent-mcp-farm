@@ -1,4 +1,4 @@
-import { type Server } from "node:http";
+import type { Server } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHttpServer } from "../src/http-server.js";
 import { EvidenceRunScheduler } from "../src/scheduler.js";
@@ -56,9 +56,7 @@ describe("createHttpServer", () => {
           enabled: true,
           calibrate: true,
           calibrationSelectorTimeoutMs: 1000,
-          actions: [
-            { actionKey: "page-capture", operation: "capture" }
-          ],
+          actions: [{ actionKey: "page-capture", operation: "capture" }],
           captureBeforeAfter: false,
           maxDepth: 2,
           maxDeepeningRuns: 1,
@@ -75,9 +73,7 @@ describe("createHttpServer", () => {
         enabled: true,
         calibrate: true,
         calibrationSelectorTimeoutMs: 1000,
-        actions: [
-          { actionKey: "page-capture", operation: "capture" }
-        ],
+        actions: [{ actionKey: "page-capture", operation: "capture" }],
         captureBeforeAfter: false,
         maxDepth: 2,
         maxDeepeningRuns: 1,
@@ -228,7 +224,7 @@ async function waitForReleaseOrAbort(release: Promise<void>, signal: AbortSignal
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
-  return await response.json() as T;
+  return (await response.json()) as T;
 }
 
 function closeServer(server: Server): Promise<void> {

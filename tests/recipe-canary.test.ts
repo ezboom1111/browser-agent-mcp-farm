@@ -1,18 +1,9 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  appendRecipeCanaryResult,
-  evaluateRecipeCanary,
-  latestCanaryByRecipe,
-  loadRecipeCanaryLedger,
-  runRecipeCanary,
-  type RecipeCanaryGolden,
-  type RecipeCanaryObservation,
-  type RecipeCanaryResult
-} from "../src/recipe-canary.js";
+import { appendRecipeCanaryResult, evaluateRecipeCanary, latestCanaryByRecipe, loadRecipeCanaryLedger, runRecipeCanary, type RecipeCanaryGolden, type RecipeCanaryObservation, type RecipeCanaryResult } from "../src/recipe-canary.js";
 
 let dirs: string[] = [];
 afterEach(async () => {
@@ -68,11 +59,16 @@ describe("runRecipeCanary", () => {
   it("observes via the injected probe and evaluates against the golden", async () => {
     let probedUrl = "";
     let probedSelectors: string[] = [];
-    const result = await runRecipeCanary(golden, "https://example.test/q", async (url, selectors) => {
-      probedUrl = url;
-      probedSelectors = selectors;
-      return { presentSelectors: selectors, obstructionSignals: [] };
-    }, "2026-05-30T00:00:00.000Z");
+    const result = await runRecipeCanary(
+      golden,
+      "https://example.test/q",
+      async (url, selectors) => {
+        probedUrl = url;
+        probedSelectors = selectors;
+        return { presentSelectors: selectors, obstructionSignals: [] };
+      },
+      "2026-05-30T00:00:00.000Z"
+    );
     expect(probedUrl).toBe("https://example.test/q");
     expect(probedSelectors).toEqual(golden.requiredSelectors);
     expect(result.verdict).toBe("pass");

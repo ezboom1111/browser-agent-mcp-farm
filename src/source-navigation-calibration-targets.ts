@@ -1,12 +1,5 @@
 import { sanitizeFileBase } from "./artifact-writer.js";
-import {
-  listSourceRegistryEntries,
-  type InformationCategory,
-  type LocaleSegment,
-  type SourceRegistryEntry,
-  type SourceRegistryFilter,
-  type SourceSupportTier
-} from "./source-registry.js";
+import { listSourceRegistryEntries, type InformationCategory, type LocaleSegment, type SourceRegistryEntry, type SourceRegistryFilter, type SourceSupportTier } from "./source-registry.js";
 import type { SourceNavigationCalibrationBatchTarget } from "./source-navigation-calibration-batch.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
 
@@ -139,9 +132,7 @@ const PLATFORM_TARGET_URLS: Partial<Record<SourcePlatform, UrlTemplate>> = {
   generic: (query) => withQuery("https://example.com/search", "q", query)
 };
 
-export function buildSourceNavigationCalibrationTargetPlan(
-  input: SourceNavigationCalibrationTargetPlanInput = {}
-): SourceNavigationCalibrationTargetPlan {
+export function buildSourceNavigationCalibrationTargetPlan(input: SourceNavigationCalibrationTargetPlanInput = {}): SourceNavigationCalibrationTargetPlan {
   const query = normalizedQuery(input.query, input.category, input.locale, input.sourceFamily);
   const filter: SourceRegistryFilter = {
     ...(input.category === undefined ? {} : { category: input.category }),
@@ -191,20 +182,13 @@ export function buildSourceNavigationCalibrationTargetPlan(
       "Generated targets are calibration seeds, not a claim that the platform is currently reachable or ranked.",
       "Run targets through source-navigation-calibrate-batch and review captured evidence before catalog promotion.",
       "Private messenger and derivative AI answer entries are skipped unless a user-controlled capture workflow is designed.",
-      ...(input.includeSearchVariants === true
-        ? ["Search variants are vertical calibration seeds; promote them separately from broad search-page readiness."]
-        : []),
-      ...(targetDetectionSummary.crossPlatformVariantCount > 0
-        ? ["Some variant target URLs are detected as a different platform; promotion and review will group by detected browser-visible platform/source family."]
-        : [])
+      ...(input.includeSearchVariants === true ? ["Search variants are vertical calibration seeds; promote them separately from broad search-page readiness."] : []),
+      ...(targetDetectionSummary.crossPlatformVariantCount > 0 ? ["Some variant target URLs are detected as a different platform; promotion and review will group by detected browser-visible platform/source family."] : [])
     ]
   };
 }
 
-export function expandSearchCalibrationTargetVariants(
-  targets: SourceNavigationCalibrationBatchTarget[],
-  options: { query: string; includeSearchVariants?: boolean | undefined }
-): SourceNavigationCalibrationBatchTarget[] {
+export function expandSearchCalibrationTargetVariants(targets: SourceNavigationCalibrationBatchTarget[], options: { query: string; includeSearchVariants?: boolean | undefined }): SourceNavigationCalibrationBatchTarget[] {
   if (options.includeSearchVariants !== true) {
     return targets;
   }
@@ -219,14 +203,16 @@ export function expandSearchCalibrationTargetVariants(
     }
     return [
       annotateSourceNavigationCalibrationTarget(target),
-      ...variants.map((variant) => ({
-        id: sanitizeFileBase(`${platform}-${variant.id}`),
-        url: variant.url,
-        note: `${target.note ?? platform}; variant=${variant.id}; ${variant.note}`,
-        parentPlatform: target.parentPlatform ?? platform,
-        ...(target.parentSourceFamilies === undefined ? {} : { parentSourceFamilies: target.parentSourceFamilies }),
-        variantId: variant.id
-      })).map(annotateSourceNavigationCalibrationTarget)
+      ...variants
+        .map((variant) => ({
+          id: sanitizeFileBase(`${platform}-${variant.id}`),
+          url: variant.url,
+          note: `${target.note ?? platform}; variant=${variant.id}; ${variant.note}`,
+          parentPlatform: target.parentPlatform ?? platform,
+          ...(target.parentSourceFamilies === undefined ? {} : { parentSourceFamilies: target.parentSourceFamilies }),
+          variantId: variant.id
+        }))
+        .map(annotateSourceNavigationCalibrationTarget)
     ];
   });
 }
@@ -235,15 +221,11 @@ export function formatSourceNavigationCalibrationTargetsAsLines(plan: SourceNavi
   return plan.targets.map((target) => `${target.id} ${target.url}`).join("\n") + (plan.targets.length > 0 ? "\n" : "");
 }
 
-export function annotateSourceNavigationCalibrationTargets(
-  targets: SourceNavigationCalibrationBatchTarget[]
-): SourceNavigationCalibrationBatchTarget[] {
+export function annotateSourceNavigationCalibrationTargets(targets: SourceNavigationCalibrationBatchTarget[]): SourceNavigationCalibrationBatchTarget[] {
   return targets.map(annotateSourceNavigationCalibrationTarget);
 }
 
-export function summarizeSourceNavigationCalibrationTargetDetections(
-  targets: SourceNavigationCalibrationBatchTarget[]
-): SourceNavigationCalibrationTargetDetectionSummary {
+export function summarizeSourceNavigationCalibrationTargetDetections(targets: SourceNavigationCalibrationBatchTarget[]): SourceNavigationCalibrationTargetDetectionSummary {
   const platformCounts = new Map<SourcePlatform, number>();
   const sourceFamilyCounts = new Map<SourceFamily, number>();
   const crossPlatformVariantTargets: string[] = [];
@@ -286,12 +268,7 @@ function skippedEntry(entry: SourceRegistryEntry, reason: string): SourceNavigat
   };
 }
 
-function calibrationTargetsForEntry(
-  entry: SourceRegistryEntry,
-  query: string,
-  defaultUrl: string,
-  includeSearchVariants: boolean
-): SourceNavigationCalibrationBatchTarget[] {
+function calibrationTargetsForEntry(entry: SourceRegistryEntry, query: string, defaultUrl: string, includeSearchVariants: boolean): SourceNavigationCalibrationBatchTarget[] {
   const note = `${entry.displayName}; categories=${entry.informationCategories.join(",")}; supportTier=${entry.supportTier}`;
   const defaultTarget = annotateSourceNavigationCalibrationTarget({
     id: sanitizeFileBase(entry.platform),
@@ -309,14 +286,16 @@ function calibrationTargetsForEntry(
   }
   return [
     defaultTarget,
-    ...variants.map((variant) => ({
-      id: sanitizeFileBase(`${entry.platform}-${variant.id}`),
-      url: variant.url,
-      note: `${note}; variant=${variant.id}; ${variant.note}`,
-      parentPlatform: entry.platform,
-      parentSourceFamilies: entry.sourceFamilies,
-      variantId: variant.id
-    })).map(annotateSourceNavigationCalibrationTarget)
+    ...variants
+      .map((variant) => ({
+        id: sanitizeFileBase(`${entry.platform}-${variant.id}`),
+        url: variant.url,
+        note: `${note}; variant=${variant.id}; ${variant.note}`,
+        parentPlatform: entry.platform,
+        parentSourceFamilies: entry.sourceFamilies,
+        variantId: variant.id
+      }))
+      .map(annotateSourceNavigationCalibrationTarget)
   ];
 }
 
@@ -529,11 +508,7 @@ function platformFromTargetId(id: string): SourcePlatform | undefined {
   return undefined;
 }
 
-function sortEntriesForCalibration(
-  entries: SourceRegistryEntry[],
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): SourceRegistryEntry[] {
+function sortEntriesForCalibration(entries: SourceRegistryEntry[], category: InformationCategory | undefined, locale: LocaleSegment | undefined): SourceRegistryEntry[] {
   return [...entries].sort((left, right) => {
     const leftRank = rankingScore(left, category, locale);
     const rightRank = rankingScore(right, category, locale);
@@ -547,27 +522,15 @@ function sortEntriesForCalibration(
   });
 }
 
-function rankingScore(
-  entry: SourceRegistryEntry,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): number {
-  const matchingSlots = entry.topSlots.filter((slot) =>
-    (category === undefined || slot.category === category)
-    && (locale === undefined || slot.segment === locale)
-  );
+function rankingScore(entry: SourceRegistryEntry, category: InformationCategory | undefined, locale: LocaleSegment | undefined): number {
+  const matchingSlots = entry.topSlots.filter((slot) => (category === undefined || slot.category === category) && (locale === undefined || slot.segment === locale));
   if (matchingSlots.length === 0) {
     return Number.POSITIVE_INFINITY;
   }
   return Math.min(...matchingSlots.map((slot) => slot.rank));
 }
 
-function normalizedQuery(
-  query: string | undefined,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined,
-  sourceFamily: SourceFamily | undefined
-): string {
+function normalizedQuery(query: string | undefined, category: InformationCategory | undefined, locale: LocaleSegment | undefined, sourceFamily: SourceFamily | undefined): string {
   if (query !== undefined && query.trim().length > 0) {
     return query.trim();
   }

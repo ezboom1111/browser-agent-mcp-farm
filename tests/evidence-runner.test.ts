@@ -17,10 +17,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("registers a structured_data artifact when the page exposes JSON-LD", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
     if (!executableAvailable) {
       console.warn("Skipping structured extraction test because Playwright Chromium is not installed.");
       return;
@@ -72,10 +75,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("creates page, frame, claim, citation, report, and final gate artifacts", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping evidence workflow test because Playwright Chromium is not installed.");
@@ -140,18 +146,9 @@ describe("runEvidenceWorkflow", () => {
       });
       expect(result.assessment.frameSampling.status).toBe("ok");
       expect(result.frameRecords.some((record) => record.kind === "screenshot")).toBe(true);
-      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining([
-        "setup",
-        "platform_capability_artifact",
-        "source_registry_artifact",
-        "source_navigation_plan_artifact",
-        "source_navigation_execution_plan_artifact",
-        "source_navigation_recipe_plan_artifact",
-        "browser_open_page",
-        "browser_page_capture",
-        "frame_sampling",
-        "claim_gate"
-      ]));
+      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(
+        expect.arrayContaining(["setup", "platform_capability_artifact", "source_registry_artifact", "source_navigation_plan_artifact", "source_navigation_execution_plan_artifact", "source_navigation_recipe_plan_artifact", "browser_open_page", "browser_page_capture", "frame_sampling", "claim_gate"])
+      );
       expect(result.stageTimings.every((timing) => timing.durationMs >= 0)).toBe(true);
 
       const report = await readFile(result.reportPath, "utf8");
@@ -165,13 +162,13 @@ describe("runEvidenceWorkflow", () => {
       expect(report).toContain("browser_page_capture");
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"platform_capabilities\"");
-      expect(ledger).toContain("\"tool_name\":\"source_registry\"");
-      expect(ledger).toContain("\"tool_name\":\"source_navigation_plan\"");
-      expect(ledger).toContain("\"tool_name\":\"source_navigation_execution_plan\"");
-      expect(ledger).toContain("\"tool_name\":\"source_navigation_recipe_plan\"");
-      expect(ledger).toContain("\"tool_name\":\"farm_sample_frames\"");
-      expect(ledger).toContain("\"tool_name\":\"evidence_run\"");
+      expect(ledger).toContain('"tool_name":"platform_capabilities"');
+      expect(ledger).toContain('"tool_name":"source_registry"');
+      expect(ledger).toContain('"tool_name":"source_navigation_plan"');
+      expect(ledger).toContain('"tool_name":"source_navigation_execution_plan"');
+      expect(ledger).toContain('"tool_name":"source_navigation_recipe_plan"');
+      expect(ledger).toContain('"tool_name":"farm_sample_frames"');
+      expect(ledger).toContain('"tool_name":"evidence_run"');
 
       const claims = await readFile(join(runDir, "claims.jsonl"), "utf8");
       const citations = await readFile(join(runDir, "citations.jsonl"), "utf8");
@@ -183,10 +180,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("executes explicit source navigation recipes before final page capture", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping source navigation workflow test because Playwright Chromium is not installed.");
@@ -232,7 +232,7 @@ describe("runEvidenceWorkflow", () => {
       expect(report).toContain("Source navigation execution: partial, executed 2");
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"farm_source_navigation_execute\"");
+      expect(ledger).toContain('"tool_name":"farm_source_navigation_execute"');
       const textRecord = result.pageCaptureRecords.find((record) => record.kind === "text");
       expect(textRecord).toBeDefined();
       const text = await readFile(join(runDir, textRecord?.path ?? ""), "utf8");
@@ -244,10 +244,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("runs read-only source navigation calibration during evidence-run when requested", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping source navigation calibration workflow test because Playwright Chromium is not installed.");
@@ -282,26 +285,26 @@ describe("runEvidenceWorkflow", () => {
       });
       expect(result.assessment.sourceNavigationCalibration.summary?.matchedSelectorCount).toBeGreaterThanOrEqual(2);
       expect(result.sourceNavigationCalibrationRecords.some((record) => record.evidence_kind === "source_navigation_calibration")).toBe(true);
-      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining([
-        "source_navigation_calibration",
-        "source_navigation_calibration_artifact"
-      ]));
+      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining(["source_navigation_calibration", "source_navigation_calibration_artifact"]));
 
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Source navigation calibration: ok");
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"source_navigation_calibration\"");
+      expect(ledger).toContain('"tool_name":"source_navigation_calibration"');
     } finally {
       await fixture.close();
     }
   });
 
   it("runs explicit source navigation destination follow-ups as child evidence runs", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping source navigation follow-up workflow test because Playwright Chromium is not installed.");
@@ -321,9 +324,7 @@ describe("runEvidenceWorkflow", () => {
         sampleFrames: false,
         sourceNavigation: {
           enabled: true,
-          actions: [
-            { actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-destination" }
-          ],
+          actions: [{ actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-destination" }],
           maxFollowUps: 1,
           limits: { perActionTimeoutMs: 5_000 }
         }
@@ -357,9 +358,9 @@ describe("runEvidenceWorkflow", () => {
       expect(followUpReport).toContain(`${fixture.baseUrl}/destination`);
 
       const followUpLedger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(followUpLedger).toContain("\"tool_name\":\"source_navigation_followup\"");
-      expect(followUpLedger).toContain("\"tool_name\":\"destination_candidate\"");
-      expect(followUpLedger).toContain("\"tool_name\":\"destination_triage\"");
+      expect(followUpLedger).toContain('"tool_name":"source_navigation_followup"');
+      expect(followUpLedger).toContain('"tool_name":"destination_candidate"');
+      expect(followUpLedger).toContain('"tool_name":"destination_triage"');
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Source navigation follow-ups: requested 1, attempted 1, completed 1, failed 0, omitted 0");
       expect(report).toContain("Destination triage: selected, candidates 1, selected 1, rejected 0");
@@ -369,10 +370,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("does not reuse an active parent profile for child destination follow-ups", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping profiled source navigation follow-up workflow test because Playwright Chromium is not installed.");
@@ -395,9 +399,7 @@ describe("runEvidenceWorkflow", () => {
         storagePolicy: "storage-state",
         sourceNavigation: {
           enabled: true,
-          actions: [
-            { actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-profiled-destination" }
-          ],
+          actions: [{ actionKey: "destination-followup", operation: "follow_up", selector: "#destination-link", captureId: "fixture-profiled-destination" }],
           maxFollowUps: 1,
           limits: { perActionTimeoutMs: 5_000 }
         }
@@ -419,10 +421,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("uses iframe-visible child text for destination usefulness", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping iframe child evidence workflow test because Playwright Chromium is not installed.");
@@ -442,9 +447,7 @@ describe("runEvidenceWorkflow", () => {
         sampleFrames: false,
         sourceNavigation: {
           enabled: true,
-          actions: [
-            { actionKey: "destination-followup", operation: "follow_up", selector: "#frame-destination-link", captureId: "fixture-frame-destination" }
-          ],
+          actions: [{ actionKey: "destination-followup", operation: "follow_up", selector: "#frame-destination-link", captureId: "fixture-frame-destination" }],
           maxFollowUps: 1,
           limits: { perActionTimeoutMs: 5_000 }
         }
@@ -473,10 +476,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("does not count failed child page capture as successful browser evidence", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping failed child capture workflow test because Playwright Chromium is not installed.");
@@ -497,9 +503,7 @@ describe("runEvidenceWorkflow", () => {
         navigationTimeoutMs: 5_000,
         sourceNavigation: {
           enabled: true,
-          actions: [
-            { actionKey: "destination-followup", operation: "follow_up", selector: "#failed-destination-link", captureId: "fixture-failed-destination" }
-          ],
+          actions: [{ actionKey: "destination-followup", operation: "follow_up", selector: "#failed-destination-link", captureId: "fixture-failed-destination" }],
           maxFollowUps: 1,
           limits: { perActionTimeoutMs: 5_000 }
         }
@@ -528,10 +532,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("triages extracted destination candidates before bounded child evidence runs", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping extracted destination triage workflow test because Playwright Chromium is not installed.");
@@ -615,20 +622,20 @@ describe("runEvidenceWorkflow", () => {
 
       const actionRecord = result.sourceNavigationActionRecords.find((record) => record.path.includes("destination-followup-action.metadata.json"));
       const actionMetadata = await readFile(join(runDir, actionRecord?.path ?? ""), "utf8");
-      expect(actionMetadata).toContain("\"operation\": \"extract_destinations\"");
+      expect(actionMetadata).toContain('"operation": "extract_destinations"');
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"destination_candidate\"");
-      expect(ledger).toContain("\"tool_name\":\"destination_triage\"");
-      expect(ledger).toContain("\"tool_name\":\"destination_deepening_proposal\"");
+      expect(ledger).toContain('"tool_name":"destination_candidate"');
+      expect(ledger).toContain('"tool_name":"destination_triage"');
+      expect(ledger).toContain('"tool_name":"destination_deepening_proposal"');
       const triageTextRecord = result.destinationTriageRecords.find((record) => record.kind === "text");
       const triageText = await readFile(join(runDir, triageTextRecord?.path ?? ""), "utf8");
-      expect(triageText).toContain("\"matchedQueryTokens\"");
-      expect(triageText).toContain("\"reasonCodes\"");
-      expect(triageText).toContain("\"visibleMetadata\"");
-      expect(triageText).toContain("\"positiveReasonCounts\"");
-      expect(triageText).toContain("\"negativeReasonCounts\"");
-      expect(triageText).toContain("\"query_overlap\"");
-      expect(triageText).toContain("\"portal_shell\"");
+      expect(triageText).toContain('"matchedQueryTokens"');
+      expect(triageText).toContain('"reasonCodes"');
+      expect(triageText).toContain('"visibleMetadata"');
+      expect(triageText).toContain('"positiveReasonCounts"');
+      expect(triageText).toContain('"negativeReasonCounts"');
+      expect(triageText).toContain('"query_overlap"');
+      expect(triageText).toContain('"portal_shell"');
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Source navigation follow-ups: requested 4, attempted 1, completed 1, failed 0, omitted 3");
       expect(report).toContain("Destination triage: selected, candidates 4, selected 1, rejected 3");
@@ -645,10 +652,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("runs selected source navigation follow-ups with bounded concurrency", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping follow-up concurrency workflow test because Playwright Chromium is not installed.");
@@ -696,10 +706,7 @@ describe("runEvidenceWorkflow", () => {
         followUpConcurrency: 2
       });
       expect(fixture.slowChildMaxConcurrency()).toBeGreaterThan(1);
-      expect(result.assessment.sourceNavigationFollowUps.results.map((run) => run.url)).toEqual([
-        `${fixture.baseUrl}/slow-child-one?query=ramen`,
-        `${fixture.baseUrl}/slow-child-two?query=ramen`
-      ]);
+      expect(result.assessment.sourceNavigationFollowUps.results.map((run) => run.url)).toEqual([`${fixture.baseUrl}/slow-child-one?query=ramen`, `${fixture.baseUrl}/slow-child-two?query=ramen`]);
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Source navigation follow-ups: requested 2, attempted 2, completed 2, failed 0, omitted 0, concurrency 2");
     } finally {
@@ -708,10 +715,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("reports fallback diagnostics when the selected child evidence is downgraded", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping destination fallback diagnostics workflow test because Playwright Chromium is not installed.");
@@ -781,22 +791,17 @@ describe("runEvidenceWorkflow", () => {
         retryAdvice: {
           recommendedMaxSelected: 2,
           recommendedMaxPerDomain: 1,
-          cliFlags: [
-            "--source-navigation-max-followups",
-            "2",
-            "--source-navigation-max-followups-per-domain",
-            "1"
-          ],
+          cliFlags: ["--source-navigation-max-followups", "2", "--source-navigation-max-followups-per-domain", "1"],
           reasons: ["increase_max_followups"]
         }
       });
 
       const triageTextRecord = result.destinationTriageRecords.find((record) => record.kind === "text");
       const triageText = await readFile(join(runDir, triageTextRecord?.path ?? ""), "utf8");
-      expect(triageText).toContain("\"unattemptedFallbackCount\": 1");
-      expect(triageText).toContain("\"fallbackCandidates\"");
+      expect(triageText).toContain('"unattemptedFallbackCount": 1');
+      expect(triageText).toContain('"fallbackCandidates"');
       expect(triageText).toContain(`${fixture.baseUrl}/blog/ramen`);
-      expect(triageText).toContain("\"retryRecommended\": true");
+      expect(triageText).toContain('"retryRecommended": true');
       expect(triageText).toContain("Selected child evidence was downgraded while unattempted fallback candidates remain");
 
       const report = await readFile(result.reportPath, "utf8");
@@ -810,10 +815,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("runs bounded fallback follow-ups when explicitly enabled after a downgraded child", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping destination fallback execution workflow test because Playwright Chromium is not installed.");
@@ -863,10 +871,7 @@ describe("runEvidenceWorkflow", () => {
         maxFallbackFollowUps: 1,
         fallbackAttemptedCount: 1
       });
-      expect(result.assessment.sourceNavigationFollowUps.results.map((run) => run.url)).toEqual([
-        `${fixture.baseUrl}/official-thin`,
-        `${fixture.baseUrl}/blog/ramen`
-      ]);
+      expect(result.assessment.sourceNavigationFollowUps.results.map((run) => run.url)).toEqual([`${fixture.baseUrl}/official-thin`, `${fixture.baseUrl}/blog/ramen`]);
       expect(result.assessment.destinationTriage).toMatchObject({
         status: "partial",
         candidateCount: 2,
@@ -882,9 +887,9 @@ describe("runEvidenceWorkflow", () => {
       const triageText = await readFile(join(runDir, triageTextRecord?.path ?? ""), "utf8");
       expect(triageText).toContain(`${fixture.baseUrl}/official-thin`);
       expect(triageText).toContain(`${fixture.baseUrl}/blog/ramen`);
-      expect(triageText).toContain("\"usefulness\": \"off_topic\"");
-      expect(triageText).toContain("\"usefulness\": \"useful\"");
-      expect(triageText).toContain("\"query_overlap\"");
+      expect(triageText).toContain('"usefulness": "off_topic"');
+      expect(triageText).toContain('"usefulness": "useful"');
+      expect(triageText).toContain('"query_overlap"');
 
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Source navigation follow-ups: requested 2, attempted 2, completed 2, failed 0, omitted 0");
@@ -897,10 +902,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("reports profile/headed recovery advice when a blocked child exposes deeper candidates", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping blocked-child recovery workflow test because Playwright Chromium is not installed.");
@@ -961,16 +969,10 @@ describe("runEvidenceWorkflow", () => {
               argv: expect.arrayContaining(["evidence-run", "--url", `${fixture.baseUrl}/recovery-place`])
             })
           ],
-          reasons: [
-            "blocked_child_exposes_deeper_candidates",
-            "profile_headed_review_required",
-            "default_depth_2_execution_disabled"
-          ]
+          reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
         }
       });
-      expect(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.steps.map((step) => step.powershellCommand)).toEqual(
-        result.assessment.destinationTriage.blockedChildRecoveryAdvice?.commandHints
-      );
+      expect(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.steps.map((step) => step.powershellCommand)).toEqual(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.commandHints);
       expect(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.profileSetupPowerShellCommand).toContain("'auth-login' '--profile' '127.0.0.1-recovery-profile'");
       expect(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.profileSetupPowerShellCommand).toContain("'--browser-channel' 'chrome'");
       expect(result.assessment.destinationTriage.blockedChildRecoveryAdvice?.evidenceRunPowerShellCommand).toContain(`'evidence-run' '--url' '${fixture.baseUrl}/recovery-place'`);
@@ -992,10 +994,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("matches common transliterated query aliases on cross-script child evidence", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping query alias workflow test because Playwright Chromium is not installed.");
@@ -1044,26 +1049,27 @@ describe("runEvidenceWorkflow", () => {
       expect(result.assessment.destinationTriage).toMatchObject({
         status: "selected",
         usefulCount: 1,
-        positiveReasonCounts: expect.arrayContaining([
-          { reasonCode: "query_overlap", count: 1 }
-        ])
+        positiveReasonCounts: expect.arrayContaining([{ reasonCode: "query_overlap", count: 1 }])
       });
 
       const triageTextRecord = result.destinationTriageRecords.find((record) => record.kind === "text");
       const triageText = await readFile(join(runDir, triageTextRecord?.path ?? ""), "utf8");
-      expect(triageText).toContain("\"matchedQueryTokens\"");
-      expect(triageText).toContain("\"seongsu\"");
-      expect(triageText).not.toContain("\"query_script_mismatch_possible\"");
+      expect(triageText).toContain('"matchedQueryTokens"');
+      expect(triageText).toContain('"seongsu"');
+      expect(triageText).not.toContain('"query_script_mismatch_possible"');
     } finally {
       await fixture.close();
     }
   });
 
   it("executes proposed depth-2 destination evidence only with explicit maxDepth opt-in", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping depth-2 destination deepening workflow test because Playwright Chromium is not installed.");
@@ -1142,7 +1148,7 @@ describe("runEvidenceWorkflow", () => {
       expect(result.destinationDeepeningRunRecords.some((record) => record.evidence_kind === "destination_deepening_run")).toBe(true);
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"destination_deepening_run\"");
+      expect(ledger).toContain('"tool_name":"destination_deepening_run"');
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Destination deepening execution: ok, max depth 2, max runs 1, max per-domain 1, concurrency 1, timeout 15000ms, max artifacts 1000, attempted 1, completed 1, failed 0, omitted 0, useful 1, budget-limited 0, timeouts 0");
     } finally {
@@ -1151,10 +1157,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("runs proposed depth-2 destination evidence with bounded concurrency", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping depth-2 concurrency workflow test because Playwright Chromium is not installed.");
@@ -1209,10 +1218,7 @@ describe("runEvidenceWorkflow", () => {
         usefulCount: 2
       });
       expect(fixture.slowChildMaxConcurrency()).toBeGreaterThan(1);
-      expect(result.assessment.destinationDeepeningExecution.results.map((run) => run.url)).toEqual([
-        `${fixture.baseUrl}/slow-depth-one?query=ramen`,
-        `${fixture.baseUrl}/slow-depth-two?query=ramen`
-      ]);
+      expect(result.assessment.destinationDeepeningExecution.results.map((run) => run.url)).toEqual([`${fixture.baseUrl}/slow-depth-one?query=ramen`, `${fixture.baseUrl}/slow-depth-two?query=ramen`]);
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Destination deepening execution: ok, max depth 2, max runs 2, max per-domain 2, concurrency 2");
     } finally {
@@ -1221,10 +1227,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("marks depth-2 destination evidence as budget-limited when artifact budget is exceeded", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping depth-2 destination artifact-budget workflow test because Playwright Chromium is not installed.");
@@ -1291,10 +1300,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("adds dense frame sampling around OCR text hits", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping OCR dense workflow test because Playwright Chromium is not installed.");
@@ -1308,51 +1320,52 @@ describe("runEvidenceWorkflow", () => {
     let workerFactoryCalls = 0;
 
     try {
-      const result = await runEvidenceWorkflow({
-        url: `${fixture.baseUrl}/video`,
-        runDir,
-        captureId: "fixture-ocr-dense",
-        timestampsSec: [10],
-        maxFrames: 1,
-        waitMs: 0,
-        seekTimeoutMs: 1_000,
-        settleMs: 10,
-        ocr: { enabled: true, maxFrames: 20, timeoutMs: 1_000, language: "eng", minConfidence: 50 },
-        denseSampling: { enabled: true, windowSec: 1, stepSec: 1, maxDenseFrames: 4, query: "marker" }
-      }, {
-        ocrWorkerFactory: async () => {
-          workerFactoryCalls += 1;
-          const worker: OcrWorker = {
-            recognize: async () => {
-              recognizeCalls += 1;
-              return { data: { text: "OCR marker", confidence: 95, words: [{ text: "marker", confidence: 96 }] } };
-            },
-            terminate: async () => undefined
-          };
-          return worker;
+      const result = await runEvidenceWorkflow(
+        {
+          url: `${fixture.baseUrl}/video`,
+          runDir,
+          captureId: "fixture-ocr-dense",
+          timestampsSec: [10],
+          maxFrames: 1,
+          waitMs: 0,
+          seekTimeoutMs: 1_000,
+          settleMs: 10,
+          ocr: { enabled: true, maxFrames: 20, timeoutMs: 1_000, language: "eng", minConfidence: 50 },
+          denseSampling: { enabled: true, windowSec: 1, stepSec: 1, maxDenseFrames: 4, query: "marker" }
+        },
+        {
+          ocrWorkerFactory: async () => {
+            workerFactoryCalls += 1;
+            const worker: OcrWorker = {
+              recognize: async () => {
+                recognizeCalls += 1;
+                return { data: { text: "OCR marker", confidence: 95, words: [{ text: "marker", confidence: 96 }] } };
+              },
+              terminate: async () => undefined
+            };
+            return worker;
+          }
         }
-      });
+      );
 
       expect(result.ok).toBe(true);
       expect(workerFactoryCalls).toBe(2);
       expect(recognizeCalls).toBeGreaterThan(1);
-      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining([
-        "ocr",
-        "ocr_hit_dense_frame_sampling",
-        "ocr_dense_sampling"
-      ]));
+      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining(["ocr", "ocr_hit_dense_frame_sampling", "ocr_dense_sampling"]));
       expect(result.frameRecords.filter((record) => record.evidence_kind === "frame_screenshot")).toHaveLength(3);
       expect(result.ocrRecords.filter((record) => record.kind === "text" && record.status === "ok")).toHaveLength(3);
       expect(result.claims.some((claim) => claim.verification_level === "ocr_extracted")).toBe(true);
       if ("timestampsSec" in result.assessment.frameSampling) {
         expect(result.assessment.frameSampling.timestampsSec).toEqual(expect.arrayContaining([9, 10, 11]));
-        expect(result.assessment.frameSampling.denseSampling?.events).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            source: "ocr_text",
-            hitTimestampsSec: [10],
-            capturedTimestampsSec: expect.arrayContaining([9, 11])
-          })
-        ]));
+        expect(result.assessment.frameSampling.denseSampling?.events).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              source: "ocr_text",
+              hitTimestampsSec: [10],
+              capturedTimestampsSec: expect.arrayContaining([9, 11])
+            })
+          ])
+        );
       }
     } finally {
       await fixture.close();
@@ -1360,10 +1373,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("records browser-visible obstruction artifacts and claims", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping obstruction workflow test because Playwright Chromium is not installed.");
@@ -1385,9 +1401,7 @@ describe("runEvidenceWorkflow", () => {
 
       expect(result.ok).toBe(true);
       expect(result.assessment.browserObstructions.status).toBe("detected");
-      expect(result.assessment.browserObstructions.detections).toEqual(expect.arrayContaining([
-        expect.objectContaining({ kind: "login_wall" })
-      ]));
+      expect(result.assessment.browserObstructions.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "login_wall" })]));
       expect(result.obstructionRecords.some((record) => record.evidence_kind === "browser_obstruction")).toBe(true);
       expect(result.claims.some((claim) => claim.evidence_kind === "browser_obstruction")).toBe(true);
 
@@ -1400,10 +1414,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("dismisses benign overlays before evidence page capture", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping overlay dismissal workflow test because Playwright Chromium is not installed.");
@@ -1427,10 +1444,7 @@ describe("runEvidenceWorkflow", () => {
       expect(result.assessment.browserOverlayDismissal.status).toBe("dismissed");
       expect(result.assessment.browserOverlayDismissal.dismissedCount).toBeGreaterThan(0);
       expect(result.overlayDismissalRecords.some((record) => record.evidence_kind === "browser_overlay_dismissal")).toBe(true);
-      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining([
-        "browser_overlay_dismissal",
-        "browser_overlay_dismissal_artifact"
-      ]));
+      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining(["browser_overlay_dismissal", "browser_overlay_dismissal_artifact"]));
 
       const textRecord = result.pageCaptureRecords.find((record) => record.kind === "text");
       expect(textRecord).toBeDefined();
@@ -1446,10 +1460,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("can disable overlay dismissal for evidence page capture", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping disabled overlay dismissal workflow test because Playwright Chromium is not installed.");
@@ -1486,10 +1503,13 @@ describe("runEvidenceWorkflow", () => {
   });
 
   it("adds dense frame sampling around browser-visible scene changes", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping scene-change dense workflow test because Playwright Chromium is not installed.");
@@ -1527,40 +1547,44 @@ describe("runEvidenceWorkflow", () => {
       expect(result.frameRecords.filter((record) => record.evidence_kind === "frame_screenshot")).toHaveLength(6);
       if ("timestampsSec" in result.assessment.frameSampling) {
         expect(result.assessment.frameSampling.timestampsSec).toEqual(expect.arrayContaining([0, 4, 5, 6, 10, 20]));
-        expect(result.assessment.frameSampling.denseSampling?.events).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            source: "scene_change",
-            hitTimestampsSec: [5],
-            capturedTimestampsSec: expect.arrayContaining([4, 5, 6]),
-            sceneChangeDiagnostics: expect.objectContaining({
+        expect(result.assessment.frameSampling.denseSampling?.events).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              source: "scene_change",
+              hitTimestampsSec: [5],
+              capturedTimestampsSec: expect.arrayContaining([4, 5, 6]),
+              sceneChangeDiagnostics: expect.objectContaining({
+                threshold: 16,
+                maxHits: 1,
+                uniqueFingerprintCount: expect.any(Number),
+                zeroDistancePairCount: expect.any(Number),
+                distanceP90: expect.any(Number),
+                comparablePairCount: expect.any(Number),
+                selectedHitCount: 1,
+                thresholdRecommendation: expect.any(String)
+              }),
+              sceneChangeHits: expect.arrayContaining([
+                expect.objectContaining({
+                  fromTimestampSec: 0,
+                  toTimestampSec: 10,
+                  midpointSec: 5
+                })
+              ])
+            })
+          ])
+        );
+        expect(result.assessment.frameSampling.sceneChangeDiagnostics).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
               threshold: 16,
               maxHits: 1,
-              uniqueFingerprintCount: expect.any(Number),
-              zeroDistancePairCount: expect.any(Number),
-              distanceP90: expect.any(Number),
-              comparablePairCount: expect.any(Number),
               selectedHitCount: 1,
+              maxObservedDistance: expect.any(Number),
+              distanceP90: expect.any(Number),
               thresholdRecommendation: expect.any(String)
-            }),
-            sceneChangeHits: expect.arrayContaining([
-              expect.objectContaining({
-                fromTimestampSec: 0,
-                toTimestampSec: 10,
-                midpointSec: 5
-              })
-            ])
-          })
-        ]));
-        expect(result.assessment.frameSampling.sceneChangeDiagnostics).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            threshold: 16,
-            maxHits: 1,
-            selectedHitCount: 1,
-            maxObservedDistance: expect.any(Number),
-            distanceP90: expect.any(Number),
-            thresholdRecommendation: expect.any(String)
-          })
-        ]));
+            })
+          ])
+        );
       }
       expect(result.assessment.frameSampling.status).toBe("ok");
       expect(await readFile(result.reportPath, "utf8")).toContain("Scene-change diagnostics:");

@@ -119,15 +119,7 @@ export class FarmService {
 
   async captureAfterIdle(input: CaptureAfterIdleInput) {
     const parsed = CaptureAfterIdleInputSchema.parse(input);
-    const capture = await this.browserPool.captureAfterIdle(
-      parsed.agentId,
-      parsed.contextToken,
-      parsed.pageId,
-      parsed.captureId,
-      parsed.waitMs,
-      parsed.idleMs,
-      parsed.timeoutMs
-    );
+    const capture = await this.browserPool.captureAfterIdle(parsed.agentId, parsed.contextToken, parsed.pageId, parsed.captureId, parsed.waitMs, parsed.idleMs, parsed.timeoutMs);
     return { ok: true as const, ...capture };
   }
 
@@ -208,9 +200,7 @@ export class FarmService {
   async listArtifacts(input: ListArtifactsInput) {
     const parsed = ListArtifactsInputSchema.parse(input);
     const rows = await this.readArtifactRows(parsed.runDir);
-    const filtered = parsed.evidenceKind === undefined
-      ? rows
-      : rows.filter((row) => row.evidence_kind === parsed.evidenceKind);
+    const filtered = parsed.evidenceKind === undefined ? rows : rows.filter((row) => row.evidence_kind === parsed.evidenceKind);
     const artifacts = filtered.slice(-parsed.limit).reverse();
     return { ok: true as const, runDir: parsed.runDir, total: filtered.length, returned: artifacts.length, artifacts };
   }
@@ -229,9 +219,7 @@ export class FarmService {
   async readArtifact(input: ReadArtifactInput) {
     const parsed = ReadArtifactInputSchema.parse(input);
     const rows = await this.readArtifactRows(parsed.runDir);
-    const row = rows.find((candidate) =>
-      (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) ||
-      (parsed.path !== undefined && candidate.path === parsed.path));
+    const row = rows.find((candidate) => (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) || (parsed.path !== undefined && candidate.path === parsed.path));
     if (row === undefined || typeof row.path !== "string") {
       return { ok: false as const, found: false as const, runDir: parsed.runDir };
     }
@@ -347,12 +335,7 @@ export class FarmService {
       serverName: "browser-agent-mcp-farm",
       version: "0.3.0",
       evidenceKinds: EvidenceKindSchema.options,
-      nonGoals: [
-        "no login / CAPTCHA / paywall / age-gate bypass",
-        "no payments / bookings / account changes",
-        "no raw video or audio stream download",
-        "no full-video understanding without transcript/audio evidence"
-      ],
+      nonGoals: ["no login / CAPTCHA / paywall / age-gate bypass", "no payments / bookings / account changes", "no raw video or audio stream download", "no full-video understanding without transcript/audio evidence"],
       optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") }
     };
   }
@@ -391,9 +374,7 @@ export class FarmService {
     const parsed = ExtractStructuredInputSchema.parse(input);
     let html = parsed.html;
     if (html === undefined && parsed.runDir !== undefined) {
-      const row = (await this.readArtifactRows(parsed.runDir)).find((candidate) =>
-        (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) ||
-        (parsed.path !== undefined && candidate.path === parsed.path));
+      const row = (await this.readArtifactRows(parsed.runDir)).find((candidate) => (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) || (parsed.path !== undefined && candidate.path === parsed.path));
       if (row !== undefined && typeof row.path === "string") {
         html = await readFile(join(parsed.runDir, row.path), "utf8").catch(() => undefined);
       }

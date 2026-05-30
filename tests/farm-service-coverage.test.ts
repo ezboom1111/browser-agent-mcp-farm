@@ -40,7 +40,10 @@ describe("FarmService non-browser methods and error branches", () => {
     const { service, runDir } = await newRun();
     await service.registerEvidence({ runDir, sourceUrl: "https://example.com/", text: "first", evidenceKind: "page_text" });
     await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "<html><title>T</title></html>", evidenceKind: "page_html"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "<html><title>T</title></html>",
+      evidenceKind: "page_html"
     });
 
     const all = await service.listArtifacts({ runDir });
@@ -75,11 +78,19 @@ describe("FarmService non-browser methods and error branches", () => {
   it("runClaimGate proxies to claim-gate and returns ClaimGateResult counts shape", async () => {
     const { service, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "The price was 4500 KRW.", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "The price was 4500 KRW.",
+      evidenceKind: "page_text"
     });
     await service.addClaim({
-      runDir, artifactId: reg.artifactId as string, claim: "price 4500", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "4500" }
+      runDir,
+      artifactId: reg.artifactId as string,
+      claim: "price 4500",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      anchor: { type: "text_span", quote: "4500" }
     });
 
     const gate = await service.runClaimGate({ runDir, mode: "final", minClaims: 1 });
@@ -117,7 +128,10 @@ describe("FarmService non-browser methods and error branches", () => {
   it("readArtifact reports missingOnDisk when the ledger row's file is deleted", async () => {
     const { service, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "gone", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "gone",
+      evidenceKind: "page_text"
     });
     await rm(join(runDir, reg.path as string), { force: true });
 
@@ -131,7 +145,10 @@ describe("FarmService non-browser methods and error branches", () => {
   it("readArtifact returns not-found for an unknown artifactId", async () => {
     const { service, runDir } = await newRun();
     await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "present", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "present",
+      evidenceKind: "page_text"
     });
 
     const read = await service.readArtifact({ runDir, artifactId: "does-not-exist" });
@@ -143,7 +160,10 @@ describe("FarmService non-browser methods and error branches", () => {
   it("readArtifact returns base64-encoded content for a non-text evidence kind", async () => {
     const { service, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "binary-ish", evidenceKind: "media"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "binary-ish",
+      evidenceKind: "media"
     });
 
     const read = await service.readArtifact({ runDir, artifactId: reg.artifactId as string });
@@ -160,12 +180,20 @@ describe("FarmService non-browser methods and error branches", () => {
   it("addClaim records optional anchor + claimTaxonomy branches for a derived claim", async () => {
     const { service, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "alpha beta gamma 4500", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "alpha beta gamma 4500",
+      evidenceKind: "page_text"
     });
 
     const result = await service.addClaim({
-      runDir, artifactId: reg.artifactId as string, claim: "mentions alpha and 4500", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", claimTaxonomy: "derived",
+      runDir,
+      artifactId: reg.artifactId as string,
+      claim: "mentions alpha and 4500",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      claimTaxonomy: "derived",
       anchor: { type: "text_span", quote: "alpha 4500", normalizedTokens: ["alpha", "4500"] }
     });
     expect(result.appended).toBe(true);
@@ -199,11 +227,19 @@ describe("FarmService non-browser methods and error branches", () => {
   it("listRuns reports artifactCount/claimCount/hasReport for a populated run", async () => {
     const { service, root, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "abc 4500", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "abc 4500",
+      evidenceKind: "page_text"
     });
     await service.addClaim({
-      runDir, artifactId: reg.artifactId as string, claim: "abc 4500", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "4500" }
+      runDir,
+      artifactId: reg.artifactId as string,
+      claim: "abc 4500",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      anchor: { type: "text_span", quote: "4500" }
     });
     await mkdir(join(runDir, "reports"), { recursive: true });
 
@@ -253,7 +289,10 @@ describe("FarmService non-browser methods and error branches", () => {
 
     const { service, runDir } = await newRun();
     await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "signed evidence", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "signed evidence",
+      evidenceKind: "page_text"
     });
 
     const exported = await service.exportBundle({ runDir, privateKeyEnv: "FARM_TEST_PRIV" });
@@ -274,7 +313,10 @@ describe("FarmService non-browser methods and error branches", () => {
   it("verifyBundle flags a tampered artifact after export", async () => {
     const { service, runDir } = await newRun();
     const reg = await service.registerEvidence({
-      runDir, sourceUrl: "https://example.com/", text: "original bytes", evidenceKind: "page_text"
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "original bytes",
+      evidenceKind: "page_text"
     });
     const exported = await service.exportBundle({ runDir });
     await writeFile(join(runDir, reg.path as string), "tampered", "utf8");
@@ -320,8 +362,7 @@ describe("FarmService non-browser methods and error branches", () => {
 
   it("evidenceRun rejects headed mode without launching a browser", async () => {
     const service = new FarmService();
-    await expect(service.evidenceRun({ url: "http://127.0.0.1/", headed: true }))
-      .rejects.toThrow("headed evidence-run is available through the CLI");
+    await expect(service.evidenceRun({ url: "http://127.0.0.1/", headed: true })).rejects.toThrow("headed evidence-run is available through the CLI");
   });
 
   // ---- shutdown (no browser launched) ----

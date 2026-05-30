@@ -3,10 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { SourceNavigationCalibrationReport } from "../src/source-navigation-calibration.js";
-import {
-  loadSourceNavigationCalibrationReports,
-  parseSourceNavigationCalibrationReport
-} from "../src/source-navigation-calibration-loader.js";
+import { loadSourceNavigationCalibrationReports, parseSourceNavigationCalibrationReport } from "../src/source-navigation-calibration-loader.js";
 
 let runDirs: string[] = [];
 
@@ -41,22 +38,26 @@ describe("loadSourceNavigationCalibrationReports", () => {
     const report = calibrationReport("https://example.com/ledger");
     await writeFile(join(runDir, "raw", "run-source-navigation-calibration.txt"), JSON.stringify(report, null, 2), "utf8");
     await writeFile(join(runDir, "structured", "run-source-navigation-calibration.metadata.json"), JSON.stringify({ sourceNavigationCalibration: report }, null, 2), "utf8");
-    await writeFile(join(runDir, "artifacts.jsonl"), [
-      JSON.stringify({
-        path: "structured/run-source-navigation-calibration.metadata.json",
-        kind: "structured",
-        format: "json",
-        tool_name: "source_navigation_calibration",
-        evidence_kind: "source_navigation_calibration"
-      }),
-      JSON.stringify({
-        path: "raw/run-source-navigation-calibration.txt",
-        kind: "text",
-        format: "txt",
-        tool_name: "source_navigation_calibration",
-        evidence_kind: "source_navigation_calibration"
-      })
-    ].join("\n"), "utf8");
+    await writeFile(
+      join(runDir, "artifacts.jsonl"),
+      [
+        JSON.stringify({
+          path: "structured/run-source-navigation-calibration.metadata.json",
+          kind: "structured",
+          format: "json",
+          tool_name: "source_navigation_calibration",
+          evidence_kind: "source_navigation_calibration"
+        }),
+        JSON.stringify({
+          path: "raw/run-source-navigation-calibration.txt",
+          kind: "text",
+          format: "txt",
+          tool_name: "source_navigation_calibration",
+          evidence_kind: "source_navigation_calibration"
+        })
+      ].join("\n"),
+      "utf8"
+    );
 
     const result = await loadSourceNavigationCalibrationReports({ runDirs: [runDir] });
 
@@ -73,11 +74,7 @@ describe("loadSourceNavigationCalibrationReports", () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-source-nav-loader-fallback-"));
     runDirs.push(runDir);
     await mkdir(join(runDir, "raw"), { recursive: true });
-    await writeFile(
-      join(runDir, "raw", "example-source-navigation-calibration.txt"),
-      JSON.stringify(calibrationReport("https://example.com/fallback"), null, 2),
-      "utf8"
-    );
+    await writeFile(join(runDir, "raw", "example-source-navigation-calibration.txt"), JSON.stringify(calibrationReport("https://example.com/fallback"), null, 2), "utf8");
 
     const result = await loadSourceNavigationCalibrationReports({ runDirs: [runDir] });
 
@@ -95,58 +92,59 @@ describe("loadSourceNavigationCalibrationReports", () => {
     await writeRunDirCalibrationReport(firstRunDir, calibrationReport("https://example.com/batch-1"));
     await writeRunDirCalibrationReport(secondRunDir, calibrationReport("https://example.com/batch-2"));
     const manifestPath = join(runRoot, "calibration-batch-manifest.json");
-    await writeFile(manifestPath, JSON.stringify({
-      schemaVersion: "1.0",
-      executionPolicy: "read_only_selector_probe_batch",
-      runRoot,
-      targetCount: 1,
-      repeat: 3,
-      attemptCount: 3,
-      succeededCount: 2,
-      failedCount: 1,
-      attempts: [
+    await writeFile(
+      manifestPath,
+      JSON.stringify(
         {
-          attemptId: "google-r1",
-          status: "succeeded",
-          runDir: firstRunDir,
-          calibrationArtifactPaths: [join(firstRunDir, "raw", "source-navigation-calibration.txt")]
+          schemaVersion: "1.0",
+          executionPolicy: "read_only_selector_probe_batch",
+          runRoot,
+          targetCount: 1,
+          repeat: 3,
+          attemptCount: 3,
+          succeededCount: 2,
+          failedCount: 1,
+          attempts: [
+            {
+              attemptId: "google-r1",
+              status: "succeeded",
+              runDir: firstRunDir,
+              calibrationArtifactPaths: [join(firstRunDir, "raw", "source-navigation-calibration.txt")]
+            },
+            {
+              attemptId: "google-r2",
+              status: "succeeded",
+              runDir: secondRunDir,
+              calibrationArtifactPaths: [join(secondRunDir, "raw", "source-navigation-calibration.txt")]
+            },
+            {
+              attemptId: "google-r3",
+              status: "failed",
+              runDir: join(runRoot, "google-r3"),
+              calibrationArtifactPaths: [],
+              error: "timeout"
+            }
+          ],
+          catalogHints: [],
+          warnings: []
         },
-        {
-          attemptId: "google-r2",
-          status: "succeeded",
-          runDir: secondRunDir,
-          calibrationArtifactPaths: [join(secondRunDir, "raw", "source-navigation-calibration.txt")]
-        },
-        {
-          attemptId: "google-r3",
-          status: "failed",
-          runDir: join(runRoot, "google-r3"),
-          calibrationArtifactPaths: [],
-          error: "timeout"
-        }
-      ],
-      catalogHints: [],
-      warnings: []
-    }, null, 2), "utf8");
+        null,
+        2
+      ),
+      "utf8"
+    );
 
     const result = await loadSourceNavigationCalibrationReports({ batchManifests: [manifestPath] });
 
-    expect(result.reports.map((report) => report.url)).toEqual([
-      "https://example.com/batch-1",
-      "https://example.com/batch-2"
-    ]);
-    expect(result.sources.map((source) => source.kind)).toEqual(expect.arrayContaining([
-      "batch_manifest",
-      "run_dir_manifest"
-    ]));
+    expect(result.reports.map((report) => report.url)).toEqual(["https://example.com/batch-1", "https://example.com/batch-2"]);
+    expect(result.sources.map((source) => source.kind)).toEqual(expect.arrayContaining(["batch_manifest", "run_dir_manifest"]));
     expect(result.warnings.join(" ")).toContain("Skipped failed calibration batch attempt google-r3");
   });
 });
 
 describe("parseSourceNavigationCalibrationReport", () => {
   it("rejects non-calibration JSON", () => {
-    expect(() => parseSourceNavigationCalibrationReport(JSON.stringify({ schemaVersion: "1.0" })))
-      .toThrow("source_navigation_calibration");
+    expect(() => parseSourceNavigationCalibrationReport(JSON.stringify({ schemaVersion: "1.0" }))).toThrow("source_navigation_calibration");
   });
 });
 
@@ -185,11 +183,15 @@ function calibrationReport(url: string): SourceNavigationCalibrationReport {
 async function writeRunDirCalibrationReport(runDir: string, report: SourceNavigationCalibrationReport): Promise<void> {
   await mkdir(join(runDir, "raw"), { recursive: true });
   await writeFile(join(runDir, "raw", "source-navigation-calibration.txt"), JSON.stringify(report, null, 2), "utf8");
-  await writeFile(join(runDir, "artifacts.jsonl"), JSON.stringify({
-    path: "raw/source-navigation-calibration.txt",
-    kind: "text",
-    format: "txt",
-    tool_name: "source_navigation_calibration",
-    evidence_kind: "source_navigation_calibration"
-  }), "utf8");
+  await writeFile(
+    join(runDir, "artifacts.jsonl"),
+    JSON.stringify({
+      path: "raw/source-navigation-calibration.txt",
+      kind: "text",
+      format: "txt",
+      tool_name: "source_navigation_calibration",
+      evidence_kind: "source_navigation_calibration"
+    }),
+    "utf8"
+  );
 }

@@ -6,12 +6,7 @@ import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 import type { BrowserObstructionReport } from "./browser-obstructions.js";
 import type { BrowserOverlayDismissalReport, BrowserPool } from "./browser-pool.js";
 import type { ClaimGateResult } from "./claim-gate.js";
-import type {
-  DestinationChildEvidenceSummary,
-  DestinationDeepeningExecutionSummary,
-  DestinationDeepeningProposalSummary,
-  DestinationTriageSummary
-} from "./destination-triage.js";
+import type { DestinationChildEvidenceSummary, DestinationDeepeningExecutionSummary, DestinationDeepeningProposalSummary, DestinationTriageSummary } from "./destination-triage.js";
 import type { DenseSamplingEvent, SceneChangeDetectionDiagnostics } from "./frame-sampler.js";
 import type { LeaseManager, StoragePolicy } from "./lease-manager.js";
 import type { OcrOptions, OcrWorkerFactory } from "./ocr.js";
@@ -42,49 +37,57 @@ export interface EvidenceWorkflowOptions {
   storagePolicy?: StoragePolicy | undefined;
   headed?: boolean | undefined;
   browserChannel?: string | undefined;
-  overlayDismissal?: {
-    enabled: boolean;
-    maxActions: number;
-  } | undefined;
+  overlayDismissal?:
+    | {
+        enabled: boolean;
+        maxActions: number;
+      }
+    | undefined;
   ocr?: OcrOptions | undefined;
-  denseSampling?: {
-    enabled: boolean;
-    windowSec: number;
-    stepSec: number;
-    maxDenseFrames: number;
-    sceneChange?: boolean | undefined;
-    sceneChangeThreshold?: number | undefined;
-    sceneChangeMaxHits?: number | undefined;
-    query?: string | undefined;
-  } | undefined;
-  officialApi?: {
-    enabled: boolean;
-    credentials: {
-      youtubeApiKeyEnv?: string | undefined;
-      youtubeOAuthTokenEnv?: string | undefined;
-      instagramAccessTokenEnv?: string | undefined;
-      tiktokAccessTokenEnv?: string | undefined;
-      tiktokResearchTokenEnv?: string | undefined;
-    };
-  } | undefined;
-  sourceNavigation?: {
-    enabled: boolean;
-    calibrate?: boolean | undefined;
-    calibrationSelectorTimeoutMs?: number | undefined;
-    actions: SourceNavigationExecutableAction[];
-    maxFollowUps?: number | undefined;
-    maxFollowUpsPerDomain?: number | undefined;
-    followUpConcurrency?: number | undefined;
-    fallbackFollowUps?: boolean | undefined;
-    maxFallbackFollowUps?: number | undefined;
-    maxDepth?: number | undefined;
-    maxDeepeningRuns?: number | undefined;
-    maxDeepeningRunsPerDomain?: number | undefined;
-    deepeningConcurrency?: number | undefined;
-    deepeningTimeoutMs?: number | undefined;
-    maxDeepeningArtifacts?: number | undefined;
-    limits?: Partial<SourceNavigationExecutionLimits> | undefined;
-  } | undefined;
+  denseSampling?:
+    | {
+        enabled: boolean;
+        windowSec: number;
+        stepSec: number;
+        maxDenseFrames: number;
+        sceneChange?: boolean | undefined;
+        sceneChangeThreshold?: number | undefined;
+        sceneChangeMaxHits?: number | undefined;
+        query?: string | undefined;
+      }
+    | undefined;
+  officialApi?:
+    | {
+        enabled: boolean;
+        credentials: {
+          youtubeApiKeyEnv?: string | undefined;
+          youtubeOAuthTokenEnv?: string | undefined;
+          instagramAccessTokenEnv?: string | undefined;
+          tiktokAccessTokenEnv?: string | undefined;
+          tiktokResearchTokenEnv?: string | undefined;
+        };
+      }
+    | undefined;
+  sourceNavigation?:
+    | {
+        enabled: boolean;
+        calibrate?: boolean | undefined;
+        calibrationSelectorTimeoutMs?: number | undefined;
+        actions: SourceNavigationExecutableAction[];
+        maxFollowUps?: number | undefined;
+        maxFollowUpsPerDomain?: number | undefined;
+        followUpConcurrency?: number | undefined;
+        fallbackFollowUps?: boolean | undefined;
+        maxFallbackFollowUps?: number | undefined;
+        maxDepth?: number | undefined;
+        maxDeepeningRuns?: number | undefined;
+        maxDeepeningRunsPerDomain?: number | undefined;
+        deepeningConcurrency?: number | undefined;
+        deepeningTimeoutMs?: number | undefined;
+        maxDeepeningArtifacts?: number | undefined;
+        limits?: Partial<SourceNavigationExecutionLimits> | undefined;
+      }
+    | undefined;
   abortSignal?: AbortSignal | undefined;
 }
 

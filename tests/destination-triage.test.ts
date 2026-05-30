@@ -128,9 +128,7 @@ describe("buildDestinationTriage", () => {
         { reasonCode: "query_overlap", count: 1 },
         { reasonCode: "official_domain_match", count: 1 }
       ]),
-      negativeReasonCounts: expect.arrayContaining([
-        { reasonCode: "portal_shell", count: 1 }
-      ])
+      negativeReasonCounts: expect.arrayContaining([{ reasonCode: "portal_shell", count: 1 }])
     });
     expect(selectedDestinationRequests(triage, requests)).toEqual([requests[1]]);
   });
@@ -228,20 +226,19 @@ describe("buildDestinationTriage", () => {
       maxPerDomain: 1
     });
 
-    expect(triage.selected.map((candidate) => candidate.domain)).toEqual([
-      "same.example.com",
-      "other.example.org"
-    ]);
-    expect(triage.rejected).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        actionKey: "first",
-        usefulness: "budget_limited",
-        rejectionReason: "Candidate was outside the per-domain destination budget of 1.",
-        reasonCodes: expect.objectContaining({
-          negative: expect.arrayContaining(["domain_budget"])
+    expect(triage.selected.map((candidate) => candidate.domain)).toEqual(["same.example.com", "other.example.org"]);
+    expect(triage.rejected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionKey: "first",
+          usefulness: "budget_limited",
+          rejectionReason: "Candidate was outside the per-domain destination budget of 1.",
+          reasonCodes: expect.objectContaining({
+            negative: expect.arrayContaining(["domain_budget"])
+          })
         })
-      })
-    ]));
+      ])
+    );
     expect(triage.summary).toMatchObject({
       status: "selected",
       candidateCount: 3,
@@ -283,17 +280,16 @@ describe("buildDestinationTriage", () => {
 
     expect(triage.selected.map((candidate) => candidate.url)).toEqual([agoda, trip]);
     expect(triage.selected.map((candidate) => candidate.domain)).toEqual(["www.agoda.com", "kr.trip.com"]);
-    expect(triage.selected).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        originalUrl: agodaRedirect,
-        urlResolutionMethod: "bing_ck_u",
-        signals: expect.arrayContaining(["external_destination"])
-      })
-    ]));
-    expect(selectedDestinationRequests(triage, requests)).toEqual([
-      expect.objectContaining({ url: agoda, originalUrl: agodaRedirect, urlResolutionMethod: "bing_ck_u" }),
-      expect.objectContaining({ url: trip, originalUrl: tripRedirect, urlResolutionMethod: "bing_ck_u" })
-    ]);
+    expect(triage.selected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          originalUrl: agodaRedirect,
+          urlResolutionMethod: "bing_ck_u",
+          signals: expect.arrayContaining(["external_destination"])
+        })
+      ])
+    );
+    expect(selectedDestinationRequests(triage, requests)).toEqual([expect.objectContaining({ url: agoda, originalUrl: agodaRedirect, urlResolutionMethod: "bing_ck_u" }), expect.objectContaining({ url: trip, originalUrl: tripRedirect, urlResolutionMethod: "bing_ck_u" })]);
     expect(triage.summary).toMatchObject({
       selectedCount: 2,
       budgetLimitedCount: 0
@@ -375,22 +371,24 @@ describe("buildDestinationTriage", () => {
         positive: expect.arrayContaining(["local_place_match", "source_family_fit"])
       }
     });
-    expect(triage.rejected).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        actionKey: "provider-home",
-        usefulness: "low_value",
-        reasonCodes: expect.objectContaining({
-          negative: expect.arrayContaining(["portal_shell"])
+    expect(triage.rejected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionKey: "provider-home",
+          usefulness: "low_value",
+          reasonCodes: expect.objectContaining({
+            negative: expect.arrayContaining(["portal_shell"])
+          })
+        }),
+        expect.objectContaining({
+          actionKey: "help",
+          usefulness: "low_value",
+          reasonCodes: expect.objectContaining({
+            negative: expect.arrayContaining(["portal_shell"])
+          })
         })
-      }),
-      expect.objectContaining({
-        actionKey: "help",
-        usefulness: "low_value",
-        reasonCodes: expect.objectContaining({
-          negative: expect.arrayContaining(["portal_shell"])
-        })
-      })
-    ]));
+      ])
+    );
   });
 
   it("keeps Naver map entry fallback candidates as place evidence with canonical provenance", () => {
@@ -797,9 +795,7 @@ describe("buildDestinationTriage", () => {
     expect(triage.summary).toMatchObject({
       status: "partial",
       offTopicCount: 1,
-      negativeReasonCounts: expect.arrayContaining([
-        { reasonCode: "query_script_mismatch_possible", count: 1 }
-      ])
+      negativeReasonCounts: expect.arrayContaining([{ reasonCode: "query_script_mismatch_possible", count: 1 }])
     });
   });
 
@@ -878,12 +874,7 @@ describe("buildDestinationTriage", () => {
       retryAdvice: {
         recommendedMaxSelected: 2,
         recommendedMaxPerDomain: 1,
-        cliFlags: [
-          "--source-navigation-max-followups",
-          "2",
-          "--source-navigation-max-followups-per-domain",
-          "1"
-        ],
+        cliFlags: ["--source-navigation-max-followups", "2", "--source-navigation-max-followups-per-domain", "1"],
         reasons: ["increase_max_followups"]
       }
     });
@@ -953,12 +944,7 @@ describe("buildDestinationTriage", () => {
       retryAdvice: {
         recommendedMaxSelected: 2,
         recommendedMaxPerDomain: 2,
-        cliFlags: [
-          "--source-navigation-max-followups",
-          "2",
-          "--source-navigation-max-followups-per-domain",
-          "2"
-        ],
+        cliFlags: ["--source-navigation-max-followups", "2", "--source-navigation-max-followups-per-domain", "2"],
         reasons: ["increase_max_followups_per_domain"]
       }
     });
@@ -1131,9 +1117,7 @@ describe("buildDestinationTriage", () => {
     expect(triage.summary).toMatchObject({
       usefulCount: 1,
       offTopicCount: 2,
-      queryIntentCounts: [
-        { queryIntent: "commerce_offer", count: 3 }
-      ]
+      queryIntentCounts: [{ queryIntent: "commerce_offer", count: 3 }]
     });
   });
 
@@ -1163,12 +1147,7 @@ describe("buildDestinationTriage", () => {
     expect(triage.selected[0]).toMatchObject({
       actionKey: "second",
       usefulness: "useful",
-      signals: expect.arrayContaining([
-        "official_authority_hint",
-        "freshness_recent_hint",
-        "publisher_authority_hint",
-        "source_family_fit"
-      ]),
+      signals: expect.arrayContaining(["official_authority_hint", "freshness_recent_hint", "publisher_authority_hint", "source_family_fit"]),
       visibleMetadata: expect.objectContaining({
         textSnippet: `Official Seoul hotel homepage updated ${currentYear}`,
         years: [currentYear],
@@ -1211,15 +1190,9 @@ describe("buildDestinationTriage", () => {
         { candidateKind: "generic", count: 1 },
         { candidateKind: "official", count: 1 }
       ],
-      selectedKindCounts: [
-        { candidateKind: "official", count: 1 }
-      ],
-      usefulKindCounts: [
-        { candidateKind: "official", count: 1 }
-      ],
-      rejectedKindCounts: [
-        { candidateKind: "generic", count: 1 }
-      ]
+      selectedKindCounts: [{ candidateKind: "official", count: 1 }],
+      usefulKindCounts: [{ candidateKind: "official", count: 1 }],
+      rejectedKindCounts: [{ candidateKind: "generic", count: 1 }]
     });
   });
 
@@ -1381,9 +1354,7 @@ describe("buildDestinationTriage", () => {
         queryIntent: 22
       })
     });
-    expect(newsTriage.summary.queryIntentCounts).toEqual([
-      { queryIntent: "fresh_news", count: 3 }
-    ]);
+    expect(newsTriage.summary.queryIntentCounts).toEqual([{ queryIntent: "fresh_news", count: 3 }]);
     expect(reviewTriage.selected[0]).toMatchObject({
       actionKey: "blog",
       candidateKind: "blog",
@@ -1396,9 +1367,7 @@ describe("buildDestinationTriage", () => {
         queryIntent: 22
       })
     });
-    expect(reviewTriage.summary.queryIntentCounts).toEqual([
-      { queryIntent: "experience_review", count: 3 }
-    ]);
+    expect(reviewTriage.summary.queryIntentCounts).toEqual([{ queryIntent: "experience_review", count: 3 }]);
   });
 
   it("detects Korean and Japanese query intents before choosing child source kinds", () => {
@@ -1455,9 +1424,7 @@ describe("buildDestinationTriage", () => {
         positive: expect.arrayContaining(["query_intent_match"])
       }
     });
-    expect(koreanReviewTriage.summary.queryIntentCounts).toEqual([
-      { queryIntent: "experience_review", count: 3 }
-    ]);
+    expect(koreanReviewTriage.summary.queryIntentCounts).toEqual([{ queryIntent: "experience_review", count: 3 }]);
     expect(japaneseCommerceTriage.selected[0]).toMatchObject({
       actionKey: "offer",
       candidateKind: "commerce",
@@ -1467,9 +1434,7 @@ describe("buildDestinationTriage", () => {
         positive: expect.arrayContaining(["query_intent_match", "price_or_offer_visible"])
       }
     });
-    expect(japaneseCommerceTriage.summary.queryIntentCounts).toEqual([
-      { queryIntent: "commerce_offer", count: 2 }
-    ]);
+    expect(japaneseCommerceTriage.summary.queryIntentCounts).toEqual([{ queryIntent: "commerce_offer", count: 2 }]);
   });
 
   it("classifies Korean and Japanese visible destination text without provider URL hints", () => {
@@ -1789,20 +1754,7 @@ describe("buildDestinationTriage", () => {
         sampleUrls: ["https://pcmap.place.naver.com/restaurant/1790076538/home?from=map"],
         profileSetupUrl: "https://map.naver.com/p/entry/place/1790076538",
         recoveryUrl: "https://pcmap.place.naver.com/restaurant/1790076538/home?from=map",
-        profileSetupArgv: [
-          "node",
-          ".\\dist\\cli.js",
-          "auth-login",
-          "--profile",
-          "pcmap.place.naver.com-recovery-profile",
-          "--url",
-          "https://map.naver.com/p/entry/place/1790076538",
-          "--wait-ms",
-          "120000",
-          "--browser-channel",
-          "chrome",
-          "--persistent-profile"
-        ],
+        profileSetupArgv: ["node", ".\\dist\\cli.js", "auth-login", "--profile", "pcmap.place.naver.com-recovery-profile", "--url", "https://map.naver.com/p/entry/place/1790076538", "--wait-ms", "120000", "--browser-channel", "chrome", "--persistent-profile"],
         evidenceRunArgv: [
           "node",
           ".\\dist\\cli.js",
@@ -1833,11 +1785,7 @@ describe("buildDestinationTriage", () => {
             argv: expect.arrayContaining(["evidence-run", "--headed", "--browser-channel", "chrome"])
           })
         ],
-        reasons: [
-          "blocked_child_exposes_deeper_candidates",
-          "profile_headed_review_required",
-          "default_depth_2_execution_disabled"
-        ]
+        reasons: ["blocked_child_exposes_deeper_candidates", "profile_headed_review_required", "default_depth_2_execution_disabled"]
       },
       retryRecommended: true
     });
@@ -1845,10 +1793,7 @@ describe("buildDestinationTriage", () => {
     expect(triage.summary.blockedChildRecoveryAdvice?.profileSetupPowerShellCommand).toContain("'--browser-channel' 'chrome'");
     expect(triage.summary.blockedChildRecoveryAdvice?.evidenceRunPowerShellCommand).toContain("'evidence-run' '--url' 'https://pcmap.place.naver.com/restaurant/1790076538/home?from=map'");
     expect(triage.summary.blockedChildRecoveryAdvice?.evidenceRunPowerShellCommand).toContain("'--headed' '--browser-channel' 'chrome' '--profile' 'pcmap.place.naver.com-recovery-profile'");
-    expect(triage.summary.blockedChildRecoveryAdvice?.commandHints).toEqual([
-      triage.summary.blockedChildRecoveryAdvice?.profileSetupPowerShellCommand,
-      triage.summary.blockedChildRecoveryAdvice?.evidenceRunPowerShellCommand
-    ]);
+    expect(triage.summary.blockedChildRecoveryAdvice?.commandHints).toEqual([triage.summary.blockedChildRecoveryAdvice?.profileSetupPowerShellCommand, triage.summary.blockedChildRecoveryAdvice?.evidenceRunPowerShellCommand]);
     expect(buildDestinationDeepeningProposals({ triage })).toEqual([]);
   });
 });

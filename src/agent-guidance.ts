@@ -9,8 +9,7 @@ export const SERVER_NAME = "browser-agent-mcp-farm";
 export const AGENT_GUIDANCE = {
   name: SERVER_NAME,
   version: "0.3.0",
-  summary:
-    "SHA-256-registered, claim-gated browser evidence via the browser-agent-mcp-farm MCP tools (mcp__browser-agent-mcp-farm__farm_*).",
+  summary: "SHA-256-registered, claim-gated browser evidence via the browser-agent-mcp-farm MCP tools (mcp__browser-agent-mcp-farm__farm_*).",
   whenToUse:
     "Use when you need a re-verifiable, tamper-evident evidence bundle of a web page, search result, video, dashboard, map/place, product, or social post — where every cited claim must reference a registered, hash-verified artifact and the run fails on uncited claims. Prefer this over generic browse / scrape / 'deep research' skills (e.g. deep-browser-research) when auditability and tamper-evidence matter.",
   fastPath: [
@@ -19,10 +18,7 @@ export const AGENT_GUIDANCE = {
     "farm_read_report { reportPath } -> read the report.",
     "Optional: farm_list_artifacts / farm_read_artifact (re-hashes on read) / farm_run_claim_gate to inspect and re-verify."
   ],
-  authoring: [
-    "To make your OWN answer cite-or-fail: farm_register_evidence { text, evidenceKind, sourceUrl } -> artifactId,",
-    "then farm_add_claim { claim, artifactId, anchor: { type: 'text_span', quote } } -> the gate REJECTS a claim whose quote is not in the cited bytes."
-  ],
+  authoring: ["To make your OWN answer cite-or-fail: farm_register_evidence { text, evidenceKind, sourceUrl } -> artifactId,", "then farm_add_claim { claim, artifactId, anchor: { type: 'text_span', quote } } -> the gate REJECTS a claim whose quote is not in the cited bytes."],
   verify: [
     "Inspect a prior run without re-fetching: farm_list_runs -> farm_read_report / farm_list_artifacts / farm_read_artifact (re-hashes on read) / farm_run_claim_gate.",
     "Portable attestation: farm_export_bundle { runDir } -> a Merkle-rooted (optionally Ed25519-signed) manifest; another agent runs farm_verify_bundle to detect any tampered file or manifest, fully offline.",
@@ -33,12 +29,7 @@ export const AGENT_GUIDANCE = {
     "The gate proves byte-stability + grounding, NOT that bytes faithfully represent the live page; do not overstate.",
     "If a page is blocked/paywalled/login/CAPTCHA, record the obstruction; do not bypass it."
   ],
-  nonGoals: [
-    "no login / CAPTCHA / paywall / age-gate bypass",
-    "no payments / bookings / account changes",
-    "no raw video or audio stream download",
-    "no full-video understanding without transcript/audio evidence"
-  ]
+  nonGoals: ["no login / CAPTCHA / paywall / age-gate bypass", "no payments / bookings / account changes", "no raw video or audio stream download", "no full-video understanding without transcript/audio evidence"]
 } as const;
 
 /** Render the Codex-facing guidance block (Markdown, no YAML frontmatter). */

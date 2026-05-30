@@ -171,12 +171,7 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
   };
 }
 
-function validateSmokeTypedClaim(
-  claim: ClaimLedgerRow,
-  artifact: ArtifactLedgerRow | undefined,
-  claimLabel: string,
-  warnings: string[]
-): void {
+function validateSmokeTypedClaim(claim: ClaimLedgerRow, artifact: ArtifactLedgerRow | undefined, claimLabel: string, warnings: string[]): void {
   if (claim.claim_type !== undefined && !ClaimTypeSchema.safeParse(claim.claim_type).success) {
     warnings.push(`claim has unknown claim_type: ${claimLabel}`);
   }
@@ -188,12 +183,7 @@ function validateSmokeTypedClaim(
   }
 }
 
-function validateTypedClaim(
-  claim: ClaimLedgerRow,
-  artifact: ArtifactLedgerRow | undefined,
-  claimLabel: string,
-  errors: string[]
-): void {
+function validateTypedClaim(claim: ClaimLedgerRow, artifact: ArtifactLedgerRow | undefined, claimLabel: string, errors: string[]): void {
   if (claim.schema_version !== "1.0") {
     errors.push(`final claim is missing supported schema_version: ${claimLabel}`);
   }
@@ -233,19 +223,12 @@ function validateTypedClaim(
   }
 }
 
-function validateDestinationProvenanceClaim(
-  claim: ClaimLedgerRow,
-  citations: CitationEvidence[] | undefined,
-  claimLabel: string,
-  errors: string[]
-): void {
+function validateDestinationProvenanceClaim(claim: ClaimLedgerRow, citations: CitationEvidence[] | undefined, claimLabel: string, errors: string[]): void {
   const requiredKinds = requiredDestinationProvenanceKinds(claim.evidence_kind);
   if (requiredKinds.length === 0) {
     return;
   }
-  const citedKinds = new Set((citations ?? [])
-    .map((citation) => citation.evidenceKind)
-    .filter((value): value is EvidenceKind => value !== undefined));
+  const citedKinds = new Set((citations ?? []).map((citation) => citation.evidenceKind).filter((value): value is EvidenceKind => value !== undefined));
   for (const requiredKind of requiredKinds) {
     if (!citedKinds.has(requiredKind)) {
       errors.push(`destination claim missing provenance citation: ${claimLabel} requires ${requiredKind}`);
@@ -279,13 +262,7 @@ function requiredDestinationProvenanceKinds(evidenceKind: EvidenceKind | undefin
  * citation graph is well-formed. Other anchor types are checked structurally
  * (the cited artifact's kind must match the anchor).
  */
-async function validateClaimGrounding(
-  runDir: string,
-  claim: ClaimLedgerRow,
-  artifact: ArtifactLedgerRow | undefined,
-  claimLabel: string,
-  errors: string[]
-): Promise<void> {
+async function validateClaimGrounding(runDir: string, claim: ClaimLedgerRow, artifact: ArtifactLedgerRow | undefined, claimLabel: string, errors: string[]): Promise<void> {
   const parsed = ClaimAnchorSchema.safeParse(claim.anchor);
   if (!parsed.success) {
     errors.push(`claim anchor is malformed: ${claimLabel}`);
@@ -325,9 +302,7 @@ async function validateClaimGrounding(
   }
   const normContent = normalizeForMatch(content);
   if (claim.claim_taxonomy === "derived" || claim.claim_taxonomy === "aggregated") {
-    const tokens = anchor.normalizedTokens !== undefined && anchor.normalizedTokens.length > 0
-      ? anchor.normalizedTokens
-      : tokenizeForMatch(anchor.quote);
+    const tokens = anchor.normalizedTokens !== undefined && anchor.normalizedTokens.length > 0 ? anchor.normalizedTokens : tokenizeForMatch(anchor.quote);
     const missing = tokens.filter((token) => !normContent.includes(normalizeForMatch(token)));
     if (missing.length > 0) {
       errors.push(`claim grounding tokens not found in cited artifact: ${claimLabel} -> ${missing.slice(0, 5).join(", ")}`);
@@ -340,12 +315,7 @@ async function validateClaimGrounding(
 }
 
 function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {
-  return kind === "page_text"
-    || kind === "page_html"
-    || kind === "ocr_text"
-    || kind === "transcript_cue"
-    || kind === "audio_transcription"
-    || kind === "structured_data";
+  return kind === "page_text" || kind === "page_html" || kind === "ocr_text" || kind === "transcript_cue" || kind === "audio_transcription" || kind === "structured_data";
 }
 
 async function readArtifactText(runDir: string, artifact: ArtifactLedgerRow | undefined): Promise<string | undefined> {
@@ -364,7 +334,9 @@ function normalizeForMatch(value: string): string {
 }
 
 function tokenizeForMatch(value: string): string[] {
-  return normalizeForMatch(value).split(" ").filter((token) => token.length >= 2);
+  return normalizeForMatch(value)
+    .split(" ")
+    .filter((token) => token.length >= 2);
 }
 
 async function readJsonl<T>(path: string): Promise<T[]> {

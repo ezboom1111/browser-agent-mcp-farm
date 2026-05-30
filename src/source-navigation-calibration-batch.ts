@@ -91,9 +91,7 @@ export function parseSourceNavigationCalibrationBatchTargets(text: string): Sour
   if (trimmed.length === 0) {
     throw new Error("Calibration batch target file is empty.");
   }
-  const targets = trimmed.startsWith("[") || trimmed.startsWith("{")
-    ? parseJsonTargets(trimmed)
-    : parseLineTargets(trimmed);
+  const targets = trimmed.startsWith("[") || trimmed.startsWith("{") ? parseJsonTargets(trimmed) : parseLineTargets(trimmed);
   if (targets.length === 0) {
     throw new Error("Calibration batch target file did not contain any targets.");
   }
@@ -113,10 +111,7 @@ export function parseSourceNavigationCalibrationBatchManifest(text: string): Sou
   return parsed;
 }
 
-export function expandSourceNavigationCalibrationBatchAttempts(input: {
-  targets: SourceNavigationCalibrationBatchTarget[];
-  repeat?: number | undefined;
-}): SourceNavigationCalibrationBatchAttempt[] {
+export function expandSourceNavigationCalibrationBatchAttempts(input: { targets: SourceNavigationCalibrationBatchTarget[]; repeat?: number | undefined }): SourceNavigationCalibrationBatchAttempt[] {
   const repeat = normalizeRepeat(input.repeat ?? 1);
   const attempts: SourceNavigationCalibrationBatchAttempt[] = [];
   for (const [targetIndex, target] of input.targets.entries()) {
@@ -179,9 +174,7 @@ export function buildSourceNavigationCalibrationBatchManifest(input: {
   };
 }
 
-export async function runSourceNavigationCalibrationBatchAttempts(
-  input: RunSourceNavigationCalibrationBatchAttemptsInput
-): Promise<SourceNavigationCalibrationBatchAttemptResult[]> {
+export async function runSourceNavigationCalibrationBatchAttempts(input: RunSourceNavigationCalibrationBatchAttemptsInput): Promise<SourceNavigationCalibrationBatchAttemptResult[]> {
   const concurrency = normalizeSourceNavigationCalibrationBatchConcurrency(input.concurrency);
   const results: SourceNavigationCalibrationBatchAttemptResult[] = [];
   for (let offset = 0; offset < input.attempts.length; offset += concurrency) {
@@ -207,11 +200,7 @@ function parseJsonTargets(text: string): SourceNavigationCalibrationBatchTarget[
     throw new Error(`Invalid calibration batch target JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
   const maybeWrapped = parsed as { targets?: unknown };
-  const rawTargets = Array.isArray(parsed)
-    ? parsed
-    : Array.isArray(maybeWrapped.targets)
-      ? maybeWrapped.targets
-      : undefined;
+  const rawTargets = Array.isArray(parsed) ? parsed : Array.isArray(maybeWrapped.targets) ? maybeWrapped.targets : undefined;
   if (rawTargets === undefined) {
     throw new Error("Calibration batch JSON must be an array or an object with a targets array.");
   }
@@ -294,10 +283,7 @@ function dedupeTargetIds(targets: SourceNavigationCalibrationBatchTarget[]): Sou
   });
 }
 
-function catalogHintsFor(
-  attempts: SourceNavigationCalibrationBatchAttemptResult[],
-  runtime: SourceNavigationCalibrationRuntime
-): SourceNavigationCalibrationBatchCatalogHint[] {
+function catalogHintsFor(attempts: SourceNavigationCalibrationBatchAttemptResult[], runtime: SourceNavigationCalibrationRuntime): SourceNavigationCalibrationBatchCatalogHint[] {
   const groups = new Map<string, SourceNavigationCalibrationBatchAttemptResult[]>();
   for (const attempt of attempts) {
     if (attempt.status !== "succeeded" || attempt.platform === undefined || attempt.sourceFamily === undefined) {
@@ -360,11 +346,7 @@ function isSourceNavigationCalibrationBatchManifest(value: unknown): value is So
     attempts?: unknown;
     catalogHints?: unknown;
   };
-  return manifest.schemaVersion === "1.0"
-    && manifest.executionPolicy === "read_only_selector_probe_batch"
-    && typeof manifest.runRoot === "string"
-    && Array.isArray(manifest.attempts)
-    && Array.isArray(manifest.catalogHints);
+  return manifest.schemaVersion === "1.0" && manifest.executionPolicy === "read_only_selector_probe_batch" && typeof manifest.runRoot === "string" && Array.isArray(manifest.attempts) && Array.isArray(manifest.catalogHints);
 }
 
 function normalizeRepeat(value: number): number {

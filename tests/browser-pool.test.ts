@@ -1,6 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { readFile } from "node:fs/promises";
-import { createServer, type Server } from "node:http";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,23 +17,26 @@ describe("BrowserPool", () => {
   });
 
   it("uses isolated BrowserContexts", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping browser isolation test because Playwright Chromium is not installed.");
       return;
     }
 
-      const fixture = await startFixtureServer();
-      const runDir = await mkdtemp(join(tmpdir(), "farm-browser-"));
-      runDirs.push(runDir);
-      const manager = new LeaseManager();
-      const pool = new BrowserPool(manager);
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-browser-"));
+    runDirs.push(runDir);
+    const manager = new LeaseManager();
+    const pool = new BrowserPool(manager);
 
-      try {
+    try {
       const a = manager.acquire({ agentId: "a", runId: "run", artifactRunDir: runDir, allowedDomains: ["127.0.0.1"] });
       const b = manager.acquire({ agentId: "b", runId: "run", artifactRunDir: runDir, allowedDomains: ["127.0.0.1"] });
       const pageA = await pool.openPage("a", a.contextToken, `${fixture.baseUrl}/a`);
@@ -69,10 +72,13 @@ describe("BrowserPool", () => {
   });
 
   it("aborts low-level page waits with AbortSignal", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping browser abort test because Playwright Chromium is not installed.");
@@ -100,10 +106,13 @@ describe("BrowserPool", () => {
   });
 
   it("dismisses benign overlays without clicking access-control buttons", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping overlay dismissal safety test because Playwright Chromium is not installed.");
@@ -125,9 +134,7 @@ describe("BrowserPool", () => {
       expect(report.status).toBe("dismissed");
       expect(report.dismissedCount).toBeGreaterThan(0);
       expect(report.skippedCount).toBeGreaterThan(0);
-      expect(report.actions).toEqual(expect.arrayContaining([
-        expect.objectContaining({ status: "skipped", label: expect.stringContaining("log in") })
-      ]));
+      expect(report.actions).toEqual(expect.arrayContaining([expect.objectContaining({ status: "skipped", label: expect.stringContaining("log in") })]));
 
       const text = await readFile(join(runDir, "raw", "overlay-safety.txt"), "utf8");
       expect(text).not.toContain("cookie banner");
@@ -140,10 +147,13 @@ describe("BrowserPool", () => {
   });
 
   it("captures visible text and destination links from accessible frames", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping frame-aware capture test because Playwright Chromium is not installed.");
@@ -177,12 +187,14 @@ describe("BrowserPool", () => {
       expect(metadata.visibleTextFrames?.frameCount).toBeGreaterThanOrEqual(2);
       expect(metadata.visibleTextFrames?.textFrameCount).toBeGreaterThanOrEqual(2);
       expect(metadata.visibleTextFrames?.frames.some((frame) => frame.textSnippet?.includes("iframe-only place evidence"))).toBe(true);
-      expect(metadata.visibleLinks).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          url: `${fixture.baseUrl}/framed-destination`,
-          text: "Frame destination"
-        })
-      ]));
+      expect(metadata.visibleLinks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            url: `${fixture.baseUrl}/framed-destination`,
+            text: "Frame destination"
+          })
+        ])
+      );
     } finally {
       await pool.shutdown();
       await fixture.close();
@@ -190,10 +202,13 @@ describe("BrowserPool", () => {
   });
 
   it("persists storage-state profiles and allows non-payment write actions", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping profile persistence test because Playwright Chromium is not installed.");
@@ -242,10 +257,13 @@ describe("BrowserPool", () => {
   });
 
   it("persists OAuth-style popup consent in the same profile", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping popup consent test because Playwright Chromium is not installed.");
@@ -295,10 +313,13 @@ describe("BrowserPool", () => {
   });
 
   it("rejects concurrent leases that share a profile", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping profile lock test because Playwright Chromium is not installed.");
@@ -344,10 +365,13 @@ describe("BrowserPool", () => {
   });
 
   it("blocks write actions on payment-like pages", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping payment guard test because Playwright Chromium is not installed.");
@@ -381,10 +405,13 @@ describe("BrowserPool", () => {
   });
 
   it("applies a lease-level user agent fingerprint", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping fingerprint test because Playwright Chromium is not installed.");
@@ -422,10 +449,13 @@ describe("BrowserPool", () => {
   });
 
   it("captures image-like media artifacts and indexes skipped video bytes", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping media capture test because Playwright Chromium is not installed.");
@@ -458,7 +488,7 @@ describe("BrowserPool", () => {
       expect(mediaIndex.some((row) => row.mime === "video/mp4" && row.skipped && row.reason === "non_capturable_stream_or_binary_media")).toBe(true);
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"kind\":\"media\"");
+      expect(ledger).toContain('"kind":"media"');
       expect(ledger).toContain("media/media-capture/");
     } finally {
       await pool.shutdown();
@@ -467,10 +497,13 @@ describe("BrowserPool", () => {
   });
 
   it("samples timestamped media frames with per-frame metadata", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping frame sampling test because Playwright Chromium is not installed.");
@@ -515,8 +548,8 @@ describe("BrowserPool", () => {
       await expect(readFile(join(runDir, "screenshots", "frame-sample-frame-002-000010s.png"))).resolves.toBeInstanceOf(Buffer);
 
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-      expect(ledger).toContain("\"tool_name\":\"farm_sample_frames\"");
-      expect(ledger).toContain("\"capture_method\":\"browser-agent-mcp-farm frame-sample\"");
+      expect(ledger).toContain('"tool_name":"farm_sample_frames"');
+      expect(ledger).toContain('"capture_method":"browser-agent-mcp-farm frame-sample"');
     } finally {
       await pool.shutdown();
       await fixture.close();
@@ -524,10 +557,13 @@ describe("BrowserPool", () => {
   });
 
   it("records partial frame artifacts when seeking fails", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping failed frame sampling test because Playwright Chromium is not installed.");
@@ -572,10 +608,13 @@ describe("BrowserPool", () => {
   });
 
   it("waits for selectors, scrolls, and captures after idle", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping wait/scroll test because Playwright Chromium is not installed.");
@@ -610,10 +649,13 @@ describe("BrowserPool", () => {
   });
 
   it("routes traffic through a lease-level proxy", async () => {
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping proxy test because Playwright Chromium is not installed.");
@@ -647,11 +689,8 @@ describe("BrowserPool", () => {
 });
 
 async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Promise<void> }> {
-  const tinyPng = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
-    "base64"
-  );
-  const svg = Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"#0f766e\"/></svg>", "utf8");
+  const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=", "base64");
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#0f766e"/></svg>', "utf8");
   const captions = Buffer.from("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nmedia fixture caption\n", "utf8");
   const fakeMp4 = Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]);
   const server = createServer((request, response) => {
@@ -845,15 +884,16 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
 
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
-    close: () => new Promise((resolvePromise, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolvePromise();
-        }
-      });
-    })
+    close: () =>
+      new Promise((resolvePromise, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolvePromise();
+          }
+        });
+      })
   };
 }
 
@@ -877,14 +917,15 @@ async function startProxyFixtureServer(): Promise<{ proxyUrl: string; requestedU
   return {
     proxyUrl: `http://127.0.0.1:${address.port}`,
     requestedUrls,
-    close: () => new Promise((resolvePromise, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolvePromise();
-        }
-      });
-    })
+    close: () =>
+      new Promise((resolvePromise, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolvePromise();
+          }
+        });
+      })
   };
 }

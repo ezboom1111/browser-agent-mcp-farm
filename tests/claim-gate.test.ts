@@ -171,12 +171,14 @@ describe("runClaimGate", () => {
       contextToken: "ctx_test",
       pageId: "page_test",
       captureId: "captioned",
-      mediaArtifacts: [{
-        url: "https://example.com/captions.vtt",
-        bytes: Buffer.from("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\ncaption text\n", "utf8"),
-        mime: "text/vtt",
-        resourceType: "media"
-      }]
+      mediaArtifacts: [
+        {
+          url: "https://example.com/captions.vtt",
+          bytes: Buffer.from("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\ncaption text\n", "utf8"),
+          mime: "text/vtt",
+          resourceType: "media"
+        }
+      ]
     });
     const transcript = transcriptRecords.find((record) => record.evidence_kind === "transcript_cue");
     const audioRecords = await writer.writeCaptureBundle({
@@ -344,10 +346,20 @@ describe("runClaimGate", () => {
     runDirs.push(runDir);
     const writer = new ArtifactWriter();
     const aRecords = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/a", contextToken: "ctx_test", pageId: "page_a", captureId: "a", text: "Evidence A"
+      runDir,
+      sourceUrl: "https://example.com/a",
+      contextToken: "ctx_test",
+      pageId: "page_a",
+      captureId: "a",
+      text: "Evidence A"
     });
     const bRecords = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/b", contextToken: "ctx_test", pageId: "page_b", captureId: "b", text: "Evidence B"
+      runDir,
+      sourceUrl: "https://example.com/b",
+      contextToken: "ctx_test",
+      pageId: "page_b",
+      captureId: "b",
+      text: "Evidence B"
     });
     const evidenceA = aRecords[0]?.artifact_id;
     const evidenceB = bRecords[0]?.artifact_id;
@@ -369,7 +381,12 @@ describe("runClaimGate", () => {
     runDirs.push(runDir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "grounded", text: "The price is 38,000 KRW today."
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "grounded",
+      text: "The price is 38,000 KRW today."
     });
     const record = records.find((item) => item.evidence_kind === "page_text");
     if (!record) {
@@ -377,8 +394,12 @@ describe("runClaimGate", () => {
     }
 
     await appendTypedClaim(runDir, {
-      claim_id: "g-1", claim_type: "text", claim: "Price is 38,000 KRW",
-      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      claim_id: "g-1",
+      claim_type: "text",
+      claim: "Price is 38,000 KRW",
+      artifact_id: record.artifact_id,
+      evidence_kind: "page_text",
+      verification_level: "grounded",
       anchor: { type: "text_span", quote: "38,000 KRW" }
     });
 
@@ -392,7 +413,12 @@ describe("runClaimGate", () => {
     runDirs.push(runDir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "ungrounded", text: "The price is 38,000 KRW today."
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "ungrounded",
+      text: "The price is 38,000 KRW today."
     });
     const record = records.find((item) => item.evidence_kind === "page_text");
     if (!record) {
@@ -400,8 +426,12 @@ describe("runClaimGate", () => {
     }
 
     await appendTypedClaim(runDir, {
-      claim_id: "g-2", claim_type: "text", claim: "It costs 50,000 USD",
-      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      claim_id: "g-2",
+      claim_type: "text",
+      claim: "It costs 50,000 USD",
+      artifact_id: record.artifact_id,
+      evidence_kind: "page_text",
+      verification_level: "grounded",
       anchor: { type: "text_span", quote: "50,000 USD" }
     });
 
@@ -415,7 +445,11 @@ describe("runClaimGate", () => {
     runDirs.push(runDir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "structured",
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "structured",
       text: JSON.stringify({ summary: { price: { value: "4500", currency: "KRW" } } }),
       evidenceKind: "structured_data"
     });
@@ -425,8 +459,12 @@ describe("runClaimGate", () => {
     }
 
     await appendTypedClaim(runDir, {
-      claim_id: "s-1", claim_type: "metadata", claim: "Price is 4500 KRW",
-      artifact_id: record.artifact_id, evidence_kind: "structured_data", verification_level: "grounded",
+      claim_id: "s-1",
+      claim_type: "metadata",
+      claim: "Price is 4500 KRW",
+      artifact_id: record.artifact_id,
+      evidence_kind: "structured_data",
+      verification_level: "grounded",
       anchor: { type: "text_span", quote: "4500" }
     });
 
@@ -439,7 +477,12 @@ describe("runClaimGate", () => {
     runDirs.push(runDir);
     const writer = new ArtifactWriter();
     const records = await writer.writeCaptureBundle({
-      runDir, sourceUrl: "https://example.com/", contextToken: "ctx_test", pageId: "page_test", captureId: "derived", text: "Open now. Rated 4.6 out of 5 by 1200 reviews."
+      runDir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx_test",
+      pageId: "page_test",
+      captureId: "derived",
+      text: "Open now. Rated 4.6 out of 5 by 1200 reviews."
     });
     const record = records.find((item) => item.evidence_kind === "page_text");
     if (!record) {
@@ -447,8 +490,12 @@ describe("runClaimGate", () => {
     }
 
     await appendTypedClaim(runDir, {
-      claim_id: "g-3", claim_type: "metadata", claim: "Highly rated place",
-      artifact_id: record.artifact_id, evidence_kind: "page_text", verification_level: "grounded",
+      claim_id: "g-3",
+      claim_type: "metadata",
+      claim: "Highly rated place",
+      artifact_id: record.artifact_id,
+      evidence_kind: "page_text",
+      verification_level: "grounded",
       claim_taxonomy: "derived",
       anchor: { type: "text_span", quote: "4.6 rating", normalizedTokens: ["4.6", "rated", "reviews"] }
     });
@@ -458,18 +505,21 @@ describe("runClaimGate", () => {
   });
 });
 
-async function appendTypedClaim(runDir: string, claim: {
-  claim_id: string;
-  claim_type: "visual" | "text" | "metadata" | "audio" | "inference";
-  claim: string;
-  artifact_id: string;
-  evidence_kind: EvidenceKind | string;
-  verification_level: string;
-  timestampSec?: number;
-  anchor?: unknown;
-  claim_taxonomy?: string;
-  extraCitations?: ArtifactRecord[];
-}): Promise<void> {
+async function appendTypedClaim(
+  runDir: string,
+  claim: {
+    claim_id: string;
+    claim_type: "visual" | "text" | "metadata" | "audio" | "inference";
+    claim: string;
+    artifact_id: string;
+    evidence_kind: EvidenceKind | string;
+    verification_level: string;
+    timestampSec?: number;
+    anchor?: unknown;
+    claim_taxonomy?: string;
+    extraCitations?: ArtifactRecord[];
+  }
+): Promise<void> {
   const row = {
     schema_version: "1.0",
     ...claim,
@@ -478,20 +528,19 @@ async function appendTypedClaim(runDir: string, claim: {
   await appendFile(join(runDir, "claims.jsonl"), `${JSON.stringify(row)}\n`);
   await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({ claim_id: claim.claim_id, evidence: claim.artifact_id, artifact_id: claim.artifact_id, evidence_kind: claim.evidence_kind })}\n`);
   for (const record of claim.extraCitations ?? []) {
-    await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({
-      claim_id: claim.claim_id,
-      evidence: record.artifact_id,
-      artifact_id: record.artifact_id,
-      evidence_kind: record.evidence_kind
-    })}\n`);
+    await appendFile(
+      join(runDir, "citations.jsonl"),
+      `${JSON.stringify({
+        claim_id: claim.claim_id,
+        evidence: record.artifact_id,
+        artifact_id: record.artifact_id,
+        evidence_kind: record.evidence_kind
+      })}\n`
+    );
   }
 }
 
-async function writeEvidenceArtifact(
-  writer: ArtifactWriter,
-  runDir: string,
-  evidenceKind: EvidenceKind
-): Promise<ArtifactRecord> {
+async function writeEvidenceArtifact(writer: ArtifactWriter, runDir: string, evidenceKind: EvidenceKind): Promise<ArtifactRecord> {
   const records = await writer.writeCaptureBundle({
     runDir,
     sourceUrl: "https://example.com/",

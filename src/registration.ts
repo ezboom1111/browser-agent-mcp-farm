@@ -29,15 +29,7 @@ export function codexServerBlock(cliPath: string, platform: NodeJS.Platform = pr
   const onWindows = platform === "win32";
   const command = onWindows ? "cmd" : "node";
   const args = onWindows ? ["/c", "node", cliPath, "serve"] : [cliPath, "serve"];
-  return [
-    CODEX_BEGIN,
-    `[mcp_servers.${SERVER_NAME}]`,
-    `command = ${JSON.stringify(command)}`,
-    `args = ${JSON.stringify(args)}`,
-    `startup_timeout_sec = 20.0`,
-    CODEX_END,
-    ""
-  ].join("\n");
+  return [CODEX_BEGIN, `[mcp_servers.${SERVER_NAME}]`, `command = ${JSON.stringify(command)}`, `args = ${JSON.stringify(args)}`, `startup_timeout_sec = 20.0`, CODEX_END, ""].join("\n");
 }
 
 export async function registerCodex(configPath = join(homedir(), ".codex", "config.toml")): Promise<RegistrationResult> {
@@ -48,9 +40,7 @@ export async function registerCodex(configPath = join(homedir(), ".codex", "conf
   const existing = existsSync(configPath) ? await readFile(configPath, "utf8") : "";
   const backupPath = existsSync(configPath) ? await backupFile(configPath) : undefined;
   const pattern = new RegExp(`\\n?${escapeRegex(CODEX_BEGIN)}[\\s\\S]*?${escapeRegex(CODEX_END)}\\n?`, "m");
-  const next = pattern.test(existing)
-    ? existing.replace(pattern, `\n${block}`)
-    : `${existing.trimEnd()}\n\n${block}`;
+  const next = pattern.test(existing) ? existing.replace(pattern, `\n${block}`) : `${existing.trimEnd()}\n\n${block}`;
   await writeFile(configPath, next, "utf8");
 
   const registration: RegistrationResult = {
@@ -106,9 +96,7 @@ export async function registerCodexSkill(agentsPath = join(homedir(), ".codex", 
   const existing = existsSync(agentsPath) ? await readFile(agentsPath, "utf8") : "";
   const backupPath = existsSync(agentsPath) ? await backupFile(agentsPath) : undefined;
   const pattern = new RegExp(`\\n?${escapeRegex(CODEX_GUIDANCE_BEGIN)}[\\s\\S]*?${escapeRegex(CODEX_GUIDANCE_END)}\\n?`, "m");
-  const next = pattern.test(existing)
-    ? existing.replace(pattern, `\n${block}`)
-    : `${existing.trimEnd()}\n\n${block}`;
+  const next = pattern.test(existing) ? existing.replace(pattern, `\n${block}`) : `${existing.trimEnd()}\n\n${block}`;
   await writeFile(agentsPath, next, "utf8");
 
   const registration: RegistrationResult = {
@@ -163,7 +151,10 @@ async function backupFile(path: string): Promise<string> {
 }
 
 function timestamp(): string {
-  return new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+  return new Date()
+    .toISOString()
+    .replace(/[-:TZ.]/g, "")
+    .slice(0, 14);
 }
 
 function escapeRegex(value: string): string {

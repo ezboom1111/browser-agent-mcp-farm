@@ -1,41 +1,18 @@
-import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
+import { type ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
 import type { BrowserLinkTargetsResult, BrowserPool } from "./browser-pool.js";
 import { extractClientStateDestinationCandidates, type ClientStateDestinationExtractor } from "./client-state-destinations.js";
 import { classifyDestinationProbeCandidate } from "./destination-triage.js";
-import type {
-  SourceNavigationRecipeActionCandidate,
-  SourceNavigationRecipePlan,
-  SourceNavigationSelectorCandidate
-} from "./source-navigation-recipes.js";
+import type { SourceNavigationRecipeActionCandidate, SourceNavigationRecipePlan, SourceNavigationSelectorCandidate } from "./source-navigation-recipes.js";
 
-export type SourceNavigationSelectorCalibrationStatus =
-  | "matched"
-  | "hidden_match"
-  | "not_matched"
-  | "error";
+export type SourceNavigationSelectorCalibrationStatus = "matched" | "hidden_match" | "not_matched" | "error";
 
-export type SourceNavigationSignalCalibrationStatus =
-  | "present"
-  | "missing"
-  | "unavailable";
+export type SourceNavigationSignalCalibrationStatus = "present" | "missing" | "unavailable";
 
-export type SourceNavigationActionCalibrationStatus =
-  | "observed"
-  | "partial"
-  | "not_observed"
-  | "blocked_signal_detected"
-  | "error";
+export type SourceNavigationActionCalibrationStatus = "observed" | "partial" | "not_observed" | "blocked_signal_detected" | "error";
 
-export type SourceNavigationDestinationProbeStatus =
-  | "ok"
-  | "no_usable_links"
-  | "error";
+export type SourceNavigationDestinationProbeStatus = "ok" | "no_usable_links" | "error";
 
-export type SourceNavigationClientStateProbeStatus =
-  | "ok"
-  | "no_state_found"
-  | "no_candidates"
-  | "error";
+export type SourceNavigationClientStateProbeStatus = "ok" | "no_state_found" | "no_candidates" | "error";
 
 export interface SourceNavigationDestinationProbeResult {
   status: SourceNavigationDestinationProbeStatus;
@@ -177,9 +154,7 @@ export interface CalibrateSourceNavigationRecipePlanInput {
   signal?: AbortSignal;
 }
 
-export async function calibrateSourceNavigationRecipePlan(
-  input: CalibrateSourceNavigationRecipePlanInput
-): Promise<SourceNavigationCalibrationReport> {
+export async function calibrateSourceNavigationRecipePlan(input: CalibrateSourceNavigationRecipePlanInput): Promise<SourceNavigationCalibrationReport> {
   const selectorTimeoutMs = Math.max(100, Math.min(10_000, input.selectorTimeoutMs ?? 1_000));
   const bodyText = await readBodyText(input, selectorTimeoutMs);
   const actionCalibrations: SourceNavigationActionCalibrationResult[] = [];
@@ -187,12 +162,8 @@ export async function calibrateSourceNavigationRecipePlan(
   for (const action of input.recipePlan.actionCandidates) {
     const selectorResults = await calibrateSelectorList(input, action, action.selectorCandidates, "selector", selectorTimeoutMs);
     const captureScopeResults = await calibrateSelectorList(input, action, action.captureScopeCandidates, "capture_scope", selectorTimeoutMs);
-    const destinationDiscovery = action.operation === "extract_destinations"
-      ? await discoverDestinationLinks(input)
-      : undefined;
-    const clientStateProbe = action.operation === "extract_client_state_destinations"
-      ? await probeClientStateDestinations(input, action)
-      : undefined;
+    const destinationDiscovery = action.operation === "extract_destinations" ? await discoverDestinationLinks(input) : undefined;
+    const clientStateProbe = action.operation === "extract_client_state_destinations" ? await probeClientStateDestinations(input, action) : undefined;
     const expectedTextSignals = action.expectedTextSignals.map((signal) => signalResult(action.actionKey, signal, "expected_text", bodyText));
     const blockedSignals = action.blockedSignals.map((signal) => signalResult(action.actionKey, signal, "blocked_text", bodyText));
     actionCalibrations.push({
@@ -210,11 +181,7 @@ export async function calibrateSourceNavigationRecipePlan(
     });
   }
 
-  const warnings = [
-    ...input.recipePlan.warnings,
-    "Calibration is read-only and does not prove that clicking or filling a candidate is safe.",
-    "Promote a selector into a maintained provider recipe only after repeated browser-visible calibration."
-  ];
+  const warnings = [...input.recipePlan.warnings, "Calibration is read-only and does not prove that clicking or filling a candidate is safe.", "Promote a selector into a maintained provider recipe only after repeated browser-visible calibration."];
   return {
     schemaVersion: "1.0",
     url: input.url,
@@ -229,9 +196,7 @@ export async function calibrateSourceNavigationRecipePlan(
   };
 }
 
-export function summarizeSourceNavigationCalibration(
-  actionCalibrations: SourceNavigationActionCalibrationResult[]
-): SourceNavigationCalibrationSummary {
+export function summarizeSourceNavigationCalibration(actionCalibrations: SourceNavigationActionCalibrationResult[]): SourceNavigationCalibrationSummary {
   const selectorResults = actionCalibrations.flatMap((action) => action.selectorResults);
   const captureScopeResults = actionCalibrations.flatMap((action) => action.captureScopeResults);
   const matchedSelectors = selectorResults.filter((result) => result.status === "matched");
@@ -258,15 +223,7 @@ export function summarizeSourceNavigationCalibration(
   };
 }
 
-export async function writeSourceNavigationCalibrationArtifact(input: {
-  artifactWriter: ArtifactWriter;
-  runDir: string;
-  sourceUrl: string;
-  contextToken: string;
-  pageId: string;
-  report: SourceNavigationCalibrationReport;
-  captureId?: string;
-}): Promise<ArtifactRecord[]> {
+export async function writeSourceNavigationCalibrationArtifact(input: { artifactWriter: ArtifactWriter; runDir: string; sourceUrl: string; contextToken: string; pageId: string; report: SourceNavigationCalibrationReport; captureId?: string }): Promise<ArtifactRecord[]> {
   return input.artifactWriter.writeCaptureBundle({
     runDir: input.runDir,
     sourceUrl: input.sourceUrl,
@@ -283,13 +240,7 @@ export async function writeSourceNavigationCalibrationArtifact(input: {
   });
 }
 
-async function calibrateSelectorList(
-  input: CalibrateSourceNavigationRecipePlanInput,
-  action: SourceNavigationRecipeActionCandidate,
-  selectors: SourceNavigationSelectorCandidate[],
-  kind: "selector" | "capture_scope",
-  selectorTimeoutMs: number
-): Promise<SourceNavigationSelectorCalibrationResult[]> {
+async function calibrateSelectorList(input: CalibrateSourceNavigationRecipePlanInput, action: SourceNavigationRecipeActionCandidate, selectors: SourceNavigationSelectorCandidate[], kind: "selector" | "capture_scope", selectorTimeoutMs: number): Promise<SourceNavigationSelectorCalibrationResult[]> {
   const results: SourceNavigationSelectorCalibrationResult[] = [];
   for (const selectorCandidate of selectors) {
     try {
@@ -298,14 +249,8 @@ async function calibrateSelectorList(
         maxTextLength: 300,
         ...(input.signal === undefined ? {} : { signal: input.signal })
       });
-      const status = inspection.visibleCount > 0
-        ? "matched"
-        : inspection.matchCount > 0
-          ? "hidden_match"
-          : "not_matched";
-      const destinationProbe = action.operation === "extract_destinations" && kind === "selector" && status === "matched"
-        ? await probeDestinationLinks(input, selectorCandidate.selector, selectorTimeoutMs)
-        : undefined;
+      const status = inspection.visibleCount > 0 ? "matched" : inspection.matchCount > 0 ? "hidden_match" : "not_matched";
+      const destinationProbe = action.operation === "extract_destinations" && kind === "selector" && status === "matched" ? await probeDestinationLinks(input, selectorCandidate.selector, selectorTimeoutMs) : undefined;
       const matchedFrameUrl = firstMatchedFrameUrl(inspection);
       const visibleFrameUrl = firstVisibleFrameUrl(inspection);
       results.push({
@@ -355,21 +300,9 @@ function firstVisibleFrameUrl(inspection: Awaited<ReturnType<BrowserPool["inspec
   return inspection.matches.find((match) => match.visible && match.frameUrl !== undefined)?.frameUrl;
 }
 
-async function probeDestinationLinks(
-  input: CalibrateSourceNavigationRecipePlanInput,
-  selector: string,
-  selectorTimeoutMs: number
-): Promise<SourceNavigationDestinationProbeResult> {
+async function probeDestinationLinks(input: CalibrateSourceNavigationRecipePlanInput, selector: string, selectorTimeoutMs: number): Promise<SourceNavigationDestinationProbeResult> {
   try {
-    const targets = await input.browserPool.readLinkTargets(
-      input.agentId,
-      input.contextToken,
-      input.pageId,
-      selector,
-      10,
-      selectorTimeoutMs,
-      input.signal
-    );
+    const targets = await input.browserPool.readLinkTargets(input.agentId, input.contextToken, input.pageId, selector, 10, selectorTimeoutMs, input.signal);
     return destinationProbeFromTargets(targets, input.recipePlan.sourceFamily, input.url);
   } catch (error) {
     return {
@@ -389,17 +322,9 @@ async function probeDestinationLinks(
   }
 }
 
-async function discoverDestinationLinks(
-  input: CalibrateSourceNavigationRecipePlanInput
-): Promise<SourceNavigationDestinationProbeResult> {
+async function discoverDestinationLinks(input: CalibrateSourceNavigationRecipePlanInput): Promise<SourceNavigationDestinationProbeResult> {
   try {
-    const targets = await input.browserPool.discoverLinkTargets(
-      input.agentId,
-      input.contextToken,
-      input.pageId,
-      25,
-      input.signal
-    );
+    const targets = await input.browserPool.discoverLinkTargets(input.agentId, input.contextToken, input.pageId, 25, input.signal);
     return destinationProbeFromTargets(targets, input.recipePlan.sourceFamily, input.url);
   } catch (error) {
     return {
@@ -419,23 +344,13 @@ async function discoverDestinationLinks(
   }
 }
 
-async function probeClientStateDestinations(
-  input: CalibrateSourceNavigationRecipePlanInput,
-  action: SourceNavigationRecipeActionCandidate
-): Promise<SourceNavigationClientStateProbeResult> {
+async function probeClientStateDestinations(input: CalibrateSourceNavigationRecipePlanInput, action: SourceNavigationRecipeActionCandidate): Promise<SourceNavigationClientStateProbeResult> {
   const stateKey = action.clientStateExtraction?.stateKey ?? "__APOLLO_STATE__";
   const extractor = action.clientStateExtraction?.extractor ?? "naver_place_apollo";
   const destinationPath = action.clientStateExtraction?.destinationPath;
   const maxLinks = Math.max(1, Math.min(25, action.clientStateExtraction?.maxLinks ?? 10));
   try {
-    const state = await input.browserPool.readClientState(
-      input.agentId,
-      input.contextToken,
-      input.pageId,
-      stateKey,
-      2_000_000,
-      input.signal
-    );
+    const state = await input.browserPool.readClientState(input.agentId, input.contextToken, input.pageId, stateKey, 2_000_000, input.signal);
     const extracted = extractClientStateDestinationCandidates(state, {
       extractor,
       maxLinks,
@@ -449,11 +364,7 @@ async function probeClientStateDestinations(
     const sampleTexts = extracted.candidates.map((candidate) => candidate.text).slice(0, 5);
     const sampleFrameUrls = [...new Set(extracted.candidates.map((candidate) => candidate.frameUrl))].slice(0, 5);
     return {
-      status: state.matchedFrameCount <= 0
-        ? "no_state_found"
-        : extracted.uniqueCandidateCount <= 0
-          ? "no_candidates"
-          : "ok",
+      status: state.matchedFrameCount <= 0 ? "no_state_found" : extracted.uniqueCandidateCount <= 0 ? "no_candidates" : "ok",
       stateKey,
       extractor,
       ...(destinationPath === undefined ? {} : { destinationPath }),
@@ -485,11 +396,7 @@ async function probeClientStateDestinations(
   }
 }
 
-function destinationProbeFromTargets(
-  targets: BrowserLinkTargetsResult,
-  sourceFamily: CalibrateSourceNavigationRecipePlanInput["recipePlan"]["sourceFamily"],
-  parentUrl: string
-): SourceNavigationDestinationProbeResult {
+function destinationProbeFromTargets(targets: BrowserLinkTargetsResult, sourceFamily: CalibrateSourceNavigationRecipePlanInput["recipePlan"]["sourceFamily"], parentUrl: string): SourceNavigationDestinationProbeResult {
   const classifications = targets.links.map((link) => ({
     link,
     classification: classifyDestinationProbeCandidate({
@@ -535,10 +442,7 @@ function destinationProbeFromTargets(
   };
 }
 
-function sampleTarget(entry: {
-  link: BrowserLinkTargetsResult["links"][number];
-  classification: ReturnType<typeof classifyDestinationProbeCandidate>;
-}): SourceNavigationDestinationProbeSampleTarget {
+function sampleTarget(entry: { link: BrowserLinkTargetsResult["links"][number]; classification: ReturnType<typeof classifyDestinationProbeCandidate> }): SourceNavigationDestinationProbeSampleTarget {
   return {
     url: entry.link.url,
     text: entry.link.text,
@@ -556,9 +460,7 @@ function countDestinationProbeWarnings(warnings: string[]): Array<{ warning: str
   for (const warning of warnings) {
     counts.set(warning, (counts.get(warning) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([warning, count]) => ({ warning, count }));
+  return [...counts.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([warning, count]) => ({ warning, count }));
 }
 
 async function readBodyText(input: CalibrateSourceNavigationRecipePlanInput, timeoutMs: number): Promise<string | undefined> {
@@ -587,12 +489,7 @@ async function readBodyText(input: CalibrateSourceNavigationRecipePlanInput, tim
   return uniqueChunks.length === 0 ? undefined : uniqueChunks.join("\n");
 }
 
-function signalResult(
-  actionKey: string,
-  signal: string,
-  kind: "expected_text" | "blocked_text",
-  bodyText: string | undefined
-): SourceNavigationSignalCalibrationResult {
+function signalResult(actionKey: string, signal: string, kind: "expected_text" | "blocked_text", bodyText: string | undefined): SourceNavigationSignalCalibrationResult {
   if (bodyText === undefined) {
     return { actionKey, signal, kind, status: "unavailable" };
   }

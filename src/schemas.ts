@@ -38,16 +38,7 @@ export const EvidenceKindSchema = z.enum([
   "audio_transcription",
   "failure"
 ]);
-export const VerificationLevelSchema = z.enum([
-  "verified",
-  "grounded",
-  "browser_visible",
-  "official_api",
-  "transcript_cue",
-  "ocr_extracted",
-  "unverified",
-  "inferred"
-]);
+export const VerificationLevelSchema = z.enum(["verified", "grounded", "browser_visible", "official_api", "transcript_cue", "ocr_extracted", "unverified", "inferred"]);
 
 export const OcrStatusSchema = z.enum(["ok", "unavailable", "no_frames", "empty_text", "low_confidence", "engine_error", "timeout"]);
 export const OcrBoundingBoxSchema = z.object({
@@ -111,10 +102,12 @@ export const FingerprintSchema = z.object({
   userAgent: z.string().min(1).optional(),
   locale: z.string().min(1).optional(),
   timezoneId: z.string().min(1).optional(),
-  viewport: z.object({
-    width: z.number().int().positive(),
-    height: z.number().int().positive()
-  }).optional(),
+  viewport: z
+    .object({
+      width: z.number().int().positive(),
+      height: z.number().int().positive()
+    })
+    .optional(),
   colorScheme: z.enum(["light", "dark", "no-preference"]).optional()
 });
 
@@ -138,10 +131,12 @@ export const ClaimAnchorSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("transcript_cue"),
     cueIndex: z.number().int().nonnegative().optional(),
-    timeRangeSec: z.object({
-      start: z.number().nonnegative().max(86_400),
-      end: z.number().nonnegative().max(86_400)
-    }).optional()
+    timeRangeSec: z
+      .object({
+        start: z.number().nonnegative().max(86_400),
+        end: z.number().nonnegative().max(86_400)
+      })
+      .optional()
   }),
   z.object({
     type: z.literal("frame"),
@@ -285,104 +280,123 @@ export const OfficialApiCredentialsSchema = z.object({
 const SourceNavigationExecutableActionBaseSchema = z.object({
   actionKey: z.string().min(1),
   note: z.string().min(1).optional(),
-  expectedStates: z.array(z.object({
-    selector: z.string().min(1).optional(),
-    textIncludes: z.string().min(1).optional(),
-    caseSensitive: z.boolean().optional(),
-    timeoutMs: z.number().int().positive().max(120_000).optional()
-  }).refine((value) => value.selector !== undefined || value.textIncludes !== undefined, {
-    message: "expected state must include selector or textIncludes"
-  })).max(20).optional(),
-  captureScopes: z.array(z.object({
-    key: z.string().min(1),
-    selector: z.string().min(1),
-    phase: z.enum(["before", "after"]).optional(),
-    note: z.string().min(1).optional()
-  })).max(20).optional()
+  expectedStates: z
+    .array(
+      z
+        .object({
+          selector: z.string().min(1).optional(),
+          textIncludes: z.string().min(1).optional(),
+          caseSensitive: z.boolean().optional(),
+          timeoutMs: z.number().int().positive().max(120_000).optional()
+        })
+        .refine((value) => value.selector !== undefined || value.textIncludes !== undefined, {
+          message: "expected state must include selector or textIncludes"
+        })
+    )
+    .max(20)
+    .optional(),
+  captureScopes: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        selector: z.string().min(1),
+        phase: z.enum(["before", "after"]).optional(),
+        note: z.string().min(1).optional()
+      })
+    )
+    .max(20)
+    .optional()
 });
 
-export const SourceNavigationExecutableActionSchema = z.discriminatedUnion("operation", [
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("click"),
-    selector: z.string().min(1)
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("fill"),
-    selector: z.string().min(1),
-    value: z.string()
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("select"),
-    selector: z.string().min(1),
-    value: z.string().min(1)
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("press"),
-    key: z.string().min(1)
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("scroll"),
-    direction: z.enum(["down", "up", "bottom", "top"]).optional(),
-    pixels: z.number().int().positive().max(100_000).optional()
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("wait_for_selector"),
-    selector: z.string().min(1)
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("capture")
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("follow_up"),
-    selector: z.string().min(1).optional(),
-    url: z.string().min(1).optional(),
-    captureId: z.string().min(1).optional()
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("extract_destinations"),
-    selector: z.string().min(1),
-    maxLinks: z.number().int().positive().max(50).optional(),
-    captureId: z.string().min(1).optional()
-  }),
-  SourceNavigationExecutableActionBaseSchema.extend({
-    operation: z.literal("extract_client_state_destinations"),
-    selector: z.string().min(1).optional(),
-    stateKey: z.string().regex(/^[A-Za-z_$][A-Za-z0-9_$]{0,120}$/).optional(),
-    extractor: z.literal("naver_place_apollo").optional(),
-    destinationPath: z.enum(["restaurant", "hospital", "place", "accommodation"]).optional(),
-    maxLinks: z.number().int().positive().max(50).optional(),
-    captureId: z.string().min(1).optional()
+export const SourceNavigationExecutableActionSchema = z
+  .discriminatedUnion("operation", [
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("click"),
+      selector: z.string().min(1)
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("fill"),
+      selector: z.string().min(1),
+      value: z.string()
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("select"),
+      selector: z.string().min(1),
+      value: z.string().min(1)
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("press"),
+      key: z.string().min(1)
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("scroll"),
+      direction: z.enum(["down", "up", "bottom", "top"]).optional(),
+      pixels: z.number().int().positive().max(100_000).optional()
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("wait_for_selector"),
+      selector: z.string().min(1)
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("capture")
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("follow_up"),
+      selector: z.string().min(1).optional(),
+      url: z.string().min(1).optional(),
+      captureId: z.string().min(1).optional()
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("extract_destinations"),
+      selector: z.string().min(1),
+      maxLinks: z.number().int().positive().max(50).optional(),
+      captureId: z.string().min(1).optional()
+    }),
+    SourceNavigationExecutableActionBaseSchema.extend({
+      operation: z.literal("extract_client_state_destinations"),
+      selector: z.string().min(1).optional(),
+      stateKey: z
+        .string()
+        .regex(/^[A-Za-z_$][A-Za-z0-9_$]{0,120}$/)
+        .optional(),
+      extractor: z.literal("naver_place_apollo").optional(),
+      destinationPath: z.enum(["restaurant", "hospital", "place", "accommodation"]).optional(),
+      maxLinks: z.number().int().positive().max(50).optional(),
+      captureId: z.string().min(1).optional()
+    })
+  ])
+  .superRefine((value, ctx) => {
+    if (value.operation === "follow_up" && value.selector === undefined && value.url === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "follow_up action must include selector or url"
+      });
+    }
+  });
+
+export const SourceNavigationRecipeInputSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    calibrate: z.boolean().default(false),
+    calibrationSelectorTimeoutMs: z.number().int().positive().max(10_000).optional(),
+    actions: z.array(SourceNavigationExecutableActionSchema).max(50).default([]),
+    maxActions: z.number().int().positive().max(50).optional(),
+    perActionTimeoutMs: z.number().int().positive().max(120_000).optional(),
+    captureBeforeAfter: z.boolean().optional(),
+    stopOnUnsupported: z.boolean().optional(),
+    maxFollowUps: z.number().int().nonnegative().max(5).optional(),
+    maxFollowUpsPerDomain: z.number().int().nonnegative().max(5).optional(),
+    followUpConcurrency: z.number().int().positive().max(5).optional(),
+    fallbackFollowUps: z.boolean().optional(),
+    maxFallbackFollowUps: z.number().int().nonnegative().max(5).optional(),
+    maxDepth: z.number().int().positive().max(2).optional(),
+    maxDeepeningRuns: z.number().int().nonnegative().max(5).optional(),
+    maxDeepeningRunsPerDomain: z.number().int().nonnegative().max(5).optional(),
+    deepeningConcurrency: z.number().int().positive().max(5).optional(),
+    deepeningTimeoutMs: z.number().int().positive().max(120_000).optional(),
+    maxDeepeningArtifacts: z.number().int().positive().max(1_000).optional()
   })
-]).superRefine((value, ctx) => {
-  if (value.operation === "follow_up" && value.selector === undefined && value.url === undefined) {
-    ctx.addIssue({
-      code: "custom",
-      message: "follow_up action must include selector or url"
-    });
-  }
-});
-
-export const SourceNavigationRecipeInputSchema = z.object({
-  enabled: z.boolean().default(false),
-  calibrate: z.boolean().default(false),
-  calibrationSelectorTimeoutMs: z.number().int().positive().max(10_000).optional(),
-  actions: z.array(SourceNavigationExecutableActionSchema).max(50).default([]),
-  maxActions: z.number().int().positive().max(50).optional(),
-  perActionTimeoutMs: z.number().int().positive().max(120_000).optional(),
-  captureBeforeAfter: z.boolean().optional(),
-  stopOnUnsupported: z.boolean().optional(),
-  maxFollowUps: z.number().int().nonnegative().max(5).optional(),
-  maxFollowUpsPerDomain: z.number().int().nonnegative().max(5).optional(),
-  followUpConcurrency: z.number().int().positive().max(5).optional(),
-  fallbackFollowUps: z.boolean().optional(),
-  maxFallbackFollowUps: z.number().int().nonnegative().max(5).optional(),
-  maxDepth: z.number().int().positive().max(2).optional(),
-  maxDeepeningRuns: z.number().int().nonnegative().max(5).optional(),
-  maxDeepeningRunsPerDomain: z.number().int().nonnegative().max(5).optional(),
-  deepeningConcurrency: z.number().int().positive().max(5).optional(),
-  deepeningTimeoutMs: z.number().int().positive().max(120_000).optional(),
-  maxDeepeningArtifacts: z.number().int().positive().max(1_000).optional()
-}).default({ enabled: false, calibrate: false, actions: [] });
+  .default({ enabled: false, calibrate: false, actions: [] });
 
 export const EvidenceRunInputSchema = z.object({
   url: z.url().describe("The page to research. The farm captures the rendered page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a claim-gated report."),
@@ -401,31 +415,39 @@ export const EvidenceRunInputSchema = z.object({
   storagePolicy: StoragePolicySchema.optional(),
   headed: z.boolean().default(false).describe("Run with a visible browser window. NOT supported over MCP (use the CLI); MCP evidence-run is headless."),
   browserChannel: z.string().min(1).optional(),
-  overlayDismissal: z.object({
-    enabled: z.boolean().default(true),
-    maxActions: z.number().int().nonnegative().max(10).default(3)
-  }).default({ enabled: true, maxActions: 3 }),
-  ocr: z.object({
-    enabled: z.boolean().default(false),
-    maxFrames: z.number().int().positive().max(120).default(20),
-    timeoutMs: z.number().int().positive().max(60_000).default(10_000),
-    language: z.string().min(1).max(32).default("eng"),
-    minConfidence: z.number().min(0).max(100).default(0)
-  }).default({ enabled: false, maxFrames: 20, timeoutMs: 10_000, language: "eng", minConfidence: 0 }),
-  denseSampling: z.object({
-    enabled: z.boolean().default(false),
-    windowSec: z.number().positive().max(600).default(5),
-    stepSec: z.number().positive().max(60).default(1),
-    maxDenseFrames: z.number().int().positive().max(240).default(40),
-    sceneChange: z.boolean().default(true),
-    sceneChangeThreshold: z.number().int().positive().max(64).default(16),
-    sceneChangeMaxHits: z.number().int().positive().max(120).optional(),
-    query: z.string().min(1).optional()
-  }).default({ enabled: false, windowSec: 5, stepSec: 1, maxDenseFrames: 40, sceneChange: true, sceneChangeThreshold: 16 }),
-  officialApi: z.object({
-    enabled: z.boolean().default(false),
-    credentials: OfficialApiCredentialsSchema.default({})
-  }).default({ enabled: false, credentials: {} }),
+  overlayDismissal: z
+    .object({
+      enabled: z.boolean().default(true),
+      maxActions: z.number().int().nonnegative().max(10).default(3)
+    })
+    .default({ enabled: true, maxActions: 3 }),
+  ocr: z
+    .object({
+      enabled: z.boolean().default(false),
+      maxFrames: z.number().int().positive().max(120).default(20),
+      timeoutMs: z.number().int().positive().max(60_000).default(10_000),
+      language: z.string().min(1).max(32).default("eng"),
+      minConfidence: z.number().min(0).max(100).default(0)
+    })
+    .default({ enabled: false, maxFrames: 20, timeoutMs: 10_000, language: "eng", minConfidence: 0 }),
+  denseSampling: z
+    .object({
+      enabled: z.boolean().default(false),
+      windowSec: z.number().positive().max(600).default(5),
+      stepSec: z.number().positive().max(60).default(1),
+      maxDenseFrames: z.number().int().positive().max(240).default(40),
+      sceneChange: z.boolean().default(true),
+      sceneChangeThreshold: z.number().int().positive().max(64).default(16),
+      sceneChangeMaxHits: z.number().int().positive().max(120).optional(),
+      query: z.string().min(1).optional()
+    })
+    .default({ enabled: false, windowSec: 5, stepSec: 1, maxDenseFrames: 40, sceneChange: true, sceneChangeThreshold: 16 }),
+  officialApi: z
+    .object({
+      enabled: z.boolean().default(false),
+      credentials: OfficialApiCredentialsSchema.default({})
+    })
+    .default({ enabled: false, credentials: {} }),
   sourceNavigation: SourceNavigationRecipeInputSchema.describe("Optional explicit, bounded portal-navigation recipe (actions, follow-ups, destination extraction). Disabled by default; only supplied action-key recipes run, and only read-only/non-mutating operations are allowed.")
 });
 
@@ -445,15 +467,17 @@ export const RunClaimGateInputSchema = z.object({
   minClaims: z.number().int().nonnegative().max(1000).optional().describe("Minimum number of claims required (defaults to 1 in final mode, 0 in smoke mode).")
 });
 
-export const ReadArtifactInputSchema = z.object({
-  runDir: z.string().min(1).describe("Run directory (the `runDir` from farm_evidence_run) containing the artifact ledger."),
-  artifactId: z.string().min(1).optional().describe("artifact_id to read (from farm_list_artifacts). Provide this OR `path`."),
-  path: z.string().min(1).optional().describe("The artifact's ledger `path` relative to runDir. Provide this OR `artifactId`."),
-  maxBytes: z.number().int().positive().max(5_000_000).default(1_000_000).describe("Maximum bytes to return; content is truncated past this."),
-  asText: z.boolean().optional().describe("Force text (utf8) vs binary (base64). Default: text for text-like evidence kinds, base64 for screenshots/media.")
-}).refine((value) => value.artifactId !== undefined || value.path !== undefined, {
-  message: "provide artifactId or path"
-});
+export const ReadArtifactInputSchema = z
+  .object({
+    runDir: z.string().min(1).describe("Run directory (the `runDir` from farm_evidence_run) containing the artifact ledger."),
+    artifactId: z.string().min(1).optional().describe("artifact_id to read (from farm_list_artifacts). Provide this OR `path`."),
+    path: z.string().min(1).optional().describe("The artifact's ledger `path` relative to runDir. Provide this OR `artifactId`."),
+    maxBytes: z.number().int().positive().max(5_000_000).default(1_000_000).describe("Maximum bytes to return; content is truncated past this."),
+    asText: z.boolean().optional().describe("Force text (utf8) vs binary (base64). Default: text for text-like evidence kinds, base64 for screenshots/media.")
+  })
+  .refine((value) => value.artifactId !== undefined || value.path !== undefined, {
+    message: "provide artifactId or path"
+  });
 
 // Agent claim-authoring (master-plan flagship slice 2). Lets ANY agent register
 // the bytes it saw and author its OWN substantive, cite-or-fail grounded claim,
@@ -485,14 +509,16 @@ export const ListRunsInputSchema = z.object({
   limit: z.number().int().positive().max(500).default(50).describe("Maximum number of runs to return.")
 });
 
-export const ExtractStructuredInputSchema = z.object({
-  html: z.string().min(1).optional().describe("Captured HTML to parse. Provide this, OR runDir + artifactId/path to load a page_html artifact."),
-  runDir: z.string().min(1).optional().describe("Run directory holding the HTML artifact (alternative to passing html)."),
-  artifactId: z.string().min(1).optional().describe("artifact_id of a page_html artifact in runDir to parse."),
-  path: z.string().min(1).optional().describe("Ledger path of the HTML artifact (alternative to artifactId).")
-}).refine((value) => value.html !== undefined || (value.runDir !== undefined && (value.artifactId !== undefined || value.path !== undefined)), {
-  message: "provide html, or runDir + artifactId/path"
-});
+export const ExtractStructuredInputSchema = z
+  .object({
+    html: z.string().min(1).optional().describe("Captured HTML to parse. Provide this, OR runDir + artifactId/path to load a page_html artifact."),
+    runDir: z.string().min(1).optional().describe("Run directory holding the HTML artifact (alternative to passing html)."),
+    artifactId: z.string().min(1).optional().describe("artifact_id of a page_html artifact in runDir to parse."),
+    path: z.string().min(1).optional().describe("Ledger path of the HTML artifact (alternative to artifactId).")
+  })
+  .refine((value) => value.html !== undefined || (value.runDir !== undefined && (value.artifactId !== undefined || value.path !== undefined)), {
+    message: "provide html, or runDir + artifactId/path"
+  });
 
 export const ExportBundleInputSchema = z.object({
   runDir: z.string().min(1).describe("Run directory to export a verifiable bundle manifest for."),
@@ -502,11 +528,13 @@ export const ExportBundleInputSchema = z.object({
 export const BundleManifestSchema = z.object({
   version: z.literal(1),
   artifactCount: z.number().int().nonnegative(),
-  artifacts: z.array(z.object({
-    artifact_id: z.string().min(1),
-    path: z.string().min(1).optional(),
-    sha256: z.string().min(1)
-  })),
+  artifacts: z.array(
+    z.object({
+      artifact_id: z.string().min(1),
+      path: z.string().min(1).optional(),
+      sha256: z.string().min(1)
+    })
+  ),
   merkleRoot: z.string().min(1),
   claimCount: z.number().int().nonnegative(),
   citationCount: z.number().int().nonnegative(),

@@ -19,8 +19,12 @@ async function runCli(args: string[]): Promise<{ out: string; exitCode: number |
   const savedExit = process.exitCode;
   process.exitCode = undefined;
   const lines: string[] = [];
-  const logSpy = vi.spyOn(console, "log").mockImplementation((...parts: unknown[]) => { lines.push(parts.join(" ")); });
-  const errSpy = vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => { lines.push(parts.join(" ")); });
+  const logSpy = vi.spyOn(console, "log").mockImplementation((...parts: unknown[]) => {
+    lines.push(parts.join(" "));
+  });
+  const errSpy = vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+    lines.push(parts.join(" "));
+  });
   process.argv = ["node", "/repo/dist/cli.js", ...args];
   try {
     await main();
@@ -43,7 +47,12 @@ async function makeRun(): Promise<string> {
   dirs.push(runDir);
   const writer = new ArtifactWriter();
   await writer.writeCaptureBundle({
-    runDir, sourceUrl: "https://example.com/", contextToken: "ctx", pageId: "p", captureId: "c", text: "evidence one"
+    runDir,
+    sourceUrl: "https://example.com/",
+    contextToken: "ctx",
+    pageId: "p",
+    captureId: "c",
+    text: "evidence one"
   });
   return runDir;
 }
@@ -58,7 +67,7 @@ describe("cli", () => {
   it("scan-secrets passes a clean run and fails a dirty one", async () => {
     const clean = await makeRun();
     const cleanResult = await runCli(["scan-secrets", "--run-dir", clean]);
-    expect(cleanResult.out).toContain("\"ok\": true");
+    expect(cleanResult.out).toContain('"ok": true');
     expect(cleanResult.exitCode).toBeFalsy();
 
     const dirty = await mkdtemp(join(tmpdir(), "farm-cli-dirty-"));
@@ -74,7 +83,7 @@ describe("cli", () => {
     dirs.push(run);
     await writeFile(join(run, "artifacts.jsonl"), '{"x":1}\n', "utf8");
     const purged = await runCli(["purge-run", "--run-dir", run]);
-    expect(purged.out).toContain("\"removed\": true");
+    expect(purged.out).toContain('"removed": true');
     await expect(stat(run)).rejects.toBeTruthy();
 
     const notRun = await mkdtemp(join(tmpdir(), "farm-cli-notrun-"));
@@ -89,8 +98,8 @@ describe("cli", () => {
     await mkdir(join(root, "run-1"), { recursive: true });
     await writeFile(join(root, "run-1", "artifacts.jsonl"), '{"x":1}\n', "utf8");
     const { out } = await runCli(["prune-runs", "--run-root", root, "--max-age-days", "0", "--dry-run"]);
-    expect(out).toContain("\"dryRun\": true");
-    expect(out).toContain("\"scanned\": 1");
+    expect(out).toContain('"dryRun": true');
+    expect(out).toContain('"scanned": 1');
     await expect(stat(join(root, "run-1"))).resolves.toBeTruthy(); // not deleted
   });
 
@@ -100,7 +109,7 @@ describe("cli", () => {
     const logFile = join(dir, "decisions.jsonl");
     await writeFile(logFile, "", "utf8");
     const { out, exitCode } = await runCli(["verify-decision-log", "--log-file", logFile]);
-    expect(out).toContain("\"ok\": true");
+    expect(out).toContain('"ok": true');
     expect(exitCode).toBeFalsy();
   });
 
@@ -108,9 +117,9 @@ describe("cli", () => {
     const run = await makeRun();
     const evb = join(run, "bundle.evb");
     const exported = await runCli(["export-bundle", "--run-dir", run, "--archive-file", evb]);
-    expect(exported.out).toContain("\"embeddedFiles\"");
+    expect(exported.out).toContain('"embeddedFiles"');
     const verified = await runCli(["verify-bundle", "--archive-file", evb]);
-    expect(verified.out).toContain("\"ok\": true");
+    expect(verified.out).toContain('"ok": true');
     expect(verified.exitCode).toBeFalsy();
   });
 
@@ -152,7 +161,7 @@ describe("cli", () => {
     const { out } = await runCli(["export-bundle", "--run-dir", run, "--output-file", manifestFile]);
     expect(out).toContain("merkleRoot");
     const verified = await runCli(["verify-bundle", "--run-dir", run, "--manifest-file", manifestFile]);
-    expect(verified.out).toContain("\"ok\": true");
+    expect(verified.out).toContain('"ok": true');
   });
 
   it("reports an error for a command missing required args", async () => {
@@ -162,7 +171,7 @@ describe("cli", () => {
 
   it("scan-secrets on a nonexistent run reports clean (no files)", async () => {
     const { out, exitCode } = await runCli(["scan-secrets", "--run-dir", join(tmpdir(), "definitely-missing-farm-run-xyz")]);
-    expect(out).toContain("\"ok\": true");
+    expect(out).toContain('"ok": true');
     expect(exitCode).toBeFalsy();
   });
 
@@ -203,7 +212,7 @@ describe("cli", () => {
     try {
       const evb = join(run, "signed.evb");
       const { out } = await runCli(["export-bundle", "--run-dir", run, "--archive-file", evb, "--private-key-env", "CLI_TEST_SIGNING_KEY"]);
-      expect(out).toContain("\"signed\": true");
+      expect(out).toContain('"signed": true');
     } finally {
       if (previous === undefined) {
         delete process.env.CLI_TEST_SIGNING_KEY;

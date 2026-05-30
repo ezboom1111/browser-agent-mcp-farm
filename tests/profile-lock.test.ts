@@ -2,14 +2,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  acquireProfileLock,
-  profileLockPath,
-  refreshProfileLock,
-  releaseProfileLock,
-  PROFILE_LOCK_TTL_MS,
-  type ProfileLockHandle
-} from "../src/profile-lock.js";
+import { acquireProfileLock, profileLockPath, refreshProfileLock, releaseProfileLock, PROFILE_LOCK_TTL_MS, type ProfileLockHandle } from "../src/profile-lock.js";
 import { FarmError } from "../src/farm-error.js";
 
 // File-based O_EXCL is the cross-process mechanism: a second acquire of the same
@@ -76,10 +69,7 @@ describe("profile-lock", () => {
     const key = lockKey("ttl");
     const lockPath = profileLockPath(key);
     await mkdir(dirname(lockPath), { recursive: true });
-    await writeFile(
-      lockPath,
-      JSON.stringify({ pid: process.pid, owner: "old", lockKey: key, acquiredAt: Date.now() - PROFILE_LOCK_TTL_MS - 1000 })
-    );
+    await writeFile(lockPath, JSON.stringify({ pid: process.pid, owner: "old", lockKey: key, acquiredAt: Date.now() - PROFILE_LOCK_TTL_MS - 1000 }));
 
     const acquired = acquireProfileLock(key, "lease-a");
     expect(acquired.owner).toBe("lease-a");
@@ -100,10 +90,7 @@ describe("profile-lock", () => {
     const key = lockKey("refresh");
     const real = acquireProfileLock(key, "lease-a");
     // Artificially age the lock past the TTL.
-    await writeFile(
-      real.lockPath,
-      JSON.stringify({ pid: process.pid, owner: "lease-a", lockKey: key, acquiredAt: Date.now() - PROFILE_LOCK_TTL_MS - 1000 })
-    );
+    await writeFile(real.lockPath, JSON.stringify({ pid: process.pid, owner: "lease-a", lockKey: key, acquiredAt: Date.now() - PROFILE_LOCK_TTL_MS - 1000 }));
     // Refresh re-stamps acquiredAt to now (we own it).
     expect(refreshProfileLock(real)).toBe(true);
     // A second acquire must NOT steal the now-fresh lock.

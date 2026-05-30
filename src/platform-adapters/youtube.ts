@@ -1,10 +1,6 @@
 import { capability, type PlatformCapabilityMap, type PlatformEvidenceAdapter } from "./types.js";
 
-const YOUTUBE_SOURCES = [
-  "https://developers.google.com/youtube/v3/docs/videos/list",
-  "https://developers.google.com/youtube/v3/docs/captions/list",
-  "https://developers.google.com/youtube/v3/docs/captions/download"
-];
+const YOUTUBE_SOURCES = ["https://developers.google.com/youtube/v3/docs/videos/list", "https://developers.google.com/youtube/v3/docs/captions/list", "https://developers.google.com/youtube/v3/docs/captions/download"];
 
 export class YouTubeEvidenceAdapter implements PlatformEvidenceAdapter {
   readonly platform = "youtube" as const;
@@ -23,11 +19,7 @@ export class YouTubeEvidenceAdapter implements PlatformEvidenceAdapter {
       ...(videoId === undefined ? {} : { mediaId: videoId }),
       confidence: videoId === undefined ? "medium" : "high",
       sources: YOUTUBE_SOURCES,
-      warnings: [
-        "Official caption track metadata is authorization-gated.",
-        "Official caption body download requires sufficient OAuth scope and rights.",
-        "Raw video bytes are not a supported evidence path for this farm."
-      ],
+      warnings: ["Official caption track metadata is authorization-gated.", "Official caption body download requires sufficient OAuth scope and rights.", "Raw video bytes are not a supported evidence path for this farm."],
       capabilities: {
         metadata: capability({
           name: "metadata",

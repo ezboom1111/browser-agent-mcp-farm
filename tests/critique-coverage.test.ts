@@ -2,11 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  CritiqueRunnerError,
-  completeNextCritiqueTask,
-  getNextCritiqueTask
-} from "../src/critique-runner.js";
+import { CritiqueRunnerError, completeNextCritiqueTask, getNextCritiqueTask } from "../src/critique-runner.js";
 import { runCli, trackTempDirs } from "./helpers/cli-harness.js";
 
 const { cleanup, makeTempDir } = trackTempDirs();
@@ -57,11 +53,11 @@ describe("critique CLI commands", () => {
 
     const { out, exitCode } = await runCli(["critique-status", "--queue", queuePath]);
 
-    expect(out).toContain("\"task\":");
-    expect(out).toContain("\"id\": \"MEDIA-CRIT-01\"");
-    expect(out).toContain("\"complete\": false");
-    expect(out).toContain("\"outputExists\": false");
-    expect(out).toContain("\"outputBytes\": 0");
+    expect(out).toContain('"task":');
+    expect(out).toContain('"id": "MEDIA-CRIT-01"');
+    expect(out).toContain('"complete": false');
+    expect(out).toContain('"outputExists": false');
+    expect(out).toContain('"outputBytes": 0');
     expect(exitCode).toBeFalsy();
   });
 
@@ -73,9 +69,9 @@ describe("critique CLI commands", () => {
 
     const { out, exitCode } = await runCli(["critique-next", "--queue", queuePath]);
 
-    expect(out).toContain("\"task\": null");
-    expect(out).toContain("\"complete\": true");
-    expect(out).toContain("\"outputExists\": false");
+    expect(out).toContain('"task": null');
+    expect(out).toContain('"complete": true');
+    expect(out).toContain('"outputExists": false');
     expect(exitCode).toBeFalsy();
   });
 
@@ -88,13 +84,13 @@ describe("critique CLI commands", () => {
 
     const { out, exitCode } = await runCli(["critique-complete", "--queue", queuePath, "--task-id", "MEDIA-CRIT-01"]);
 
-    expect(out).toContain("\"ok\": true");
-    expect(out).toContain("\"completedTask\":");
-    expect(out).toContain("\"id\": \"MEDIA-CRIT-01\"");
-    expect(out).toContain("\"status\": \"done\"");
-    expect(out).toContain("\"completedOutputPath\":");
-    expect(out).toContain("\"nextTask\":");
-    expect(out).toContain("\"id\": \"MEDIA-CRIT-02\"");
+    expect(out).toContain('"ok": true');
+    expect(out).toContain('"completedTask":');
+    expect(out).toContain('"id": "MEDIA-CRIT-01"');
+    expect(out).toContain('"status": "done"');
+    expect(out).toContain('"completedOutputPath":');
+    expect(out).toContain('"nextTask":');
+    expect(out).toContain('"id": "MEDIA-CRIT-02"');
     expect(exitCode).toBeFalsy();
 
     // Queue file was mutated on disk.
@@ -143,9 +139,7 @@ describe("critique runner direct API", () => {
       tasks: [{ id: "MEDIA-CRIT-01", status: "open", output: ".gstack/projects/test/rounds/round-01.md" }]
     });
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      "Queue next_task is null but MEDIA-CRIT-01 is still open."
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow("Queue next_task is null but MEDIA-CRIT-01 is still open.");
   });
 
   it("throws critique_next_task_missing when next_task is absent but a task is open", async () => {
@@ -154,9 +148,7 @@ describe("critique runner direct API", () => {
       tasks: [{ id: "MEDIA-CRIT-01", status: "open", output: ".gstack/projects/test/rounds/round-01.md" }]
     });
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      "Queue has open task MEDIA-CRIT-01 but no next_task pointer."
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow("Queue has open task MEDIA-CRIT-01 but no next_task pointer.");
   });
 
   it("returns null when next_task is absent and no task is open", async () => {
@@ -176,17 +168,13 @@ describe("critique runner direct API", () => {
       tasks: [{ id: "MEDIA-CRIT-01", status: "open", output: ".gstack/projects/test/rounds/round-01.md" }]
     });
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      "Queue next_task points to an unknown task: MEDIA-CRIT-99"
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow("Queue next_task points to an unknown task: MEDIA-CRIT-99");
   });
 
   it("completeNextCritiqueTask throws critique_task_mismatch and leaves the queue unmutated", async () => {
     const { rootDir, queuePath } = await buildQueue(defaultQueue());
 
-    await expect(
-      completeNextCritiqueTask(queuePath, { taskId: "MEDIA-CRIT-02", cwd: rootDir })
-    ).rejects.toThrow("Expected next task MEDIA-CRIT-01, got MEDIA-CRIT-02.");
+    await expect(completeNextCritiqueTask(queuePath, { taskId: "MEDIA-CRIT-02", cwd: rootDir })).rejects.toThrow("Expected next task MEDIA-CRIT-01, got MEDIA-CRIT-02.");
 
     const queue = JSON.parse(await readFile(queuePath, "utf8")) as {
       next_task: string;
@@ -199,19 +187,13 @@ describe("critique runner direct API", () => {
   it("readQueue throws critique_queue_invalid when tasks is not an array", async () => {
     const { rootDir, queuePath } = await writeRawQueue(JSON.stringify({ next_task: null }));
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      /Critique queue must contain a tasks array:/
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(/Critique queue must contain a tasks array:/);
   });
 
   it("readQueue throws critique_queue_invalid when a task lacks string id/status", async () => {
-    const { rootDir, queuePath } = await writeRawQueue(
-      JSON.stringify({ next_task: "X", tasks: [{ status: "open" }] })
-    );
+    const { rootDir, queuePath } = await writeRawQueue(JSON.stringify({ next_task: "X", tasks: [{ status: "open" }] }));
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      /Every critique task must have string id and status fields:/
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(/Every critique task must have string id and status fields:/);
   });
 
   it("readQueue throws critique_queue_read_failed for a missing queue file (absolute path)", async () => {
@@ -234,9 +216,7 @@ describe("critique runner direct API", () => {
       tasks: [{ id: "MEDIA-CRIT-01", status: "open" }]
     });
 
-    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow(
-      "Current critique task must define a non-empty output path."
-    );
+    await expect(getNextCritiqueTask(queuePath, rootDir)).rejects.toThrow("Current critique task must define a non-empty output path.");
   });
 
   it("honors an explicit absolute result_output and reports outputBytes", async () => {

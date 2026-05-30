@@ -70,18 +70,12 @@ export function extractClientStateDestinationCandidates(
   };
 }
 
-function extractNaverPlaceApolloCandidates(
-  value: unknown,
-  frame: BrowserClientStateResult["frames"][number],
-  destinationPath: string | undefined
-): ClientStateDestinationCandidate[] {
+function extractNaverPlaceApolloCandidates(value: unknown, frame: BrowserClientStateResult["frames"][number], destinationPath: string | undefined): ClientStateDestinationCandidate[] {
   const candidates: ClientStateDestinationCandidate[] = [];
   const seenIds = new Set<string>();
   const stack: unknown[] = [value];
   let visited = 0;
-  const path = normalizeNaverPlaceDestinationPath(destinationPath) ??
-    normalizeNaverPlaceDestinationPath(pathFromNaverPlaceFrameUrl(frame.frameUrl)) ??
-    "restaurant";
+  const path = normalizeNaverPlaceDestinationPath(destinationPath) ?? normalizeNaverPlaceDestinationPath(pathFromNaverPlaceFrameUrl(frame.frameUrl)) ?? "restaurant";
 
   while (stack.length > 0 && visited < 50_000) {
     visited += 1;
@@ -111,11 +105,7 @@ function extractNaverPlaceApolloCandidates(
   return candidates;
 }
 
-function naverPlaceCandidateFromRecord(
-  record: Record<string, unknown>,
-  frame: BrowserClientStateResult["frames"][number],
-  path: string
-): ClientStateDestinationCandidate | undefined {
+function naverPlaceCandidateFromRecord(record: Record<string, unknown>, frame: BrowserClientStateResult["frames"][number], path: string): ClientStateDestinationCandidate | undefined {
   const id = stringValue(record.id);
   const name = compactText(stringValue(record.name));
   if (id === undefined || !/^\d{5,20}$/.test(id) || name === undefined) {
@@ -123,7 +113,8 @@ function naverPlaceCandidateFromRecord(
   }
   const category = compactText(firstStringValue(record, ["category", "businessCategory", "categoryName"]));
   const address = compactText(firstStringValue(record, ["roadAddress", "address", "fullAddress"]));
-  const hasPlaceSignal = category !== undefined ||
+  const hasPlaceSignal =
+    category !== undefined ||
     address !== undefined ||
     stringValue(record.x) !== undefined ||
     stringValue(record.y) !== undefined ||
@@ -158,7 +149,10 @@ function pathFromNaverPlaceFrameUrl(frameUrl: string): string | undefined {
 }
 
 function normalizeNaverPlaceDestinationPath(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/^\/+|\/+$/g, "").toLowerCase();
+  const normalized = value
+    ?.trim()
+    .replace(/^\/+|\/+$/g, "")
+    .toLowerCase();
   if (normalized === undefined || normalized.length === 0) {
     return undefined;
   }

@@ -106,7 +106,7 @@ const MAX_SCAN_BYTES = 5_000_000;
 export async function scanRunArtifacts(runDir: string): Promise<SecretFinding[]> {
   const findings: SecretFinding[] = [];
   const walk = async (dir: string): Promise<void> => {
-    let entries;
+    let entries: import("node:fs").Dirent[];
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {

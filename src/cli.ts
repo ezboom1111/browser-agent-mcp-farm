@@ -11,7 +11,15 @@ import { chromium, type BrowserContext } from "playwright";
 import { ArtifactWriter } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
-import { buildDestinationRecoveryPlanFromRunDir, checkDestinationRecoveryPlan, filterDestinationRecoveryPlanByCheck, formatDestinationRecoveryPlanCommandsAsLines, formatDestinationRecoveryPlanMarkdown, type DestinationRecoveryPlanCheckOptions, type DestinationRecoveryPlanCommandFormat } from "./destination-recovery-plan.js";
+import {
+  buildDestinationRecoveryPlanFromRunDir,
+  checkDestinationRecoveryPlan,
+  filterDestinationRecoveryPlanByCheck,
+  formatDestinationRecoveryPlanCommandsAsLines,
+  formatDestinationRecoveryPlanMarkdown,
+  type DestinationRecoveryPlanCheckOptions,
+  type DestinationRecoveryPlanCommandFormat
+} from "./destination-recovery-plan.js";
 import { FarmService } from "./farm-service.js";
 import { LeaseManager } from "./lease-manager.js";
 import { runStdioServer } from "./mcp-server.js";
@@ -34,15 +42,46 @@ import { EvidenceRunScheduler } from "./scheduler.js";
 import { isInformationCategory, isLocaleSegment, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryFilter } from "./source-registry.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
 import { buildSourceCoverageCalibrationLoopPlan, formatSourceCoverageCalibrationLoopReport, sourceCoverageCalibrationLoopOutputPaths } from "./source-coverage-calibration-loop.js";
-import { buildSourceCoverageReadinessAudit, buildSourceCoverageReadinessRetryPlan, checkSourceCoverageReadinessRetryPlan, filterSourceCoverageReadinessRetryPlan, filterSourceCoverageReadinessRetryPlanByCheck, formatSourceCoverageReadinessRetryCommandsAsLines, formatSourceCoverageReadinessRetryPlanCommandsAsLines, formatSourceCoverageReadinessRetryPlanMarkdown, formatSourceCoverageReadinessTargetsAsLines, parseSourceCoverageReadinessRetryPlan, type SourceCoverageReadinessRetryPlanCheckOptions, type SourceCoverageReadinessRetryPlanCommandFormat, type SourceCoverageReadinessRetryPriority } from "./source-coverage-readiness.js";
+import {
+  buildSourceCoverageReadinessAudit,
+  buildSourceCoverageReadinessRetryPlan,
+  checkSourceCoverageReadinessRetryPlan,
+  filterSourceCoverageReadinessRetryPlan,
+  filterSourceCoverageReadinessRetryPlanByCheck,
+  formatSourceCoverageReadinessRetryCommandsAsLines,
+  formatSourceCoverageReadinessRetryPlanCommandsAsLines,
+  formatSourceCoverageReadinessRetryPlanMarkdown,
+  formatSourceCoverageReadinessTargetsAsLines,
+  parseSourceCoverageReadinessRetryPlan,
+  type SourceCoverageReadinessRetryPlanCheckOptions,
+  type SourceCoverageReadinessRetryPlanCommandFormat,
+  type SourceCoverageReadinessRetryPriority
+} from "./source-coverage-readiness.js";
 import { describeSourceNavigationPlan } from "./source-navigation.js";
 import { describeSourceNavigationRecipePlan, summarizeSourceNavigationRecipePlan } from "./source-navigation-recipes.js";
 import { calibrateSourceNavigationRecipePlan, writeSourceNavigationCalibrationArtifact } from "./source-navigation-calibration.js";
-import { buildSourceNavigationCalibrationBatchManifest, expandSourceNavigationCalibrationBatchAttempts, parseSourceNavigationCalibrationBatchManifest, parseSourceNavigationCalibrationBatchTargets, runSourceNavigationCalibrationBatchAttempts, type SourceNavigationCalibrationBatchAttempt, type SourceNavigationCalibrationBatchAttemptResult, type SourceNavigationCalibrationBatchTarget, type SourceNavigationCalibrationRuntime } from "./source-navigation-calibration-batch.js";
+import {
+  buildSourceNavigationCalibrationBatchManifest,
+  expandSourceNavigationCalibrationBatchAttempts,
+  parseSourceNavigationCalibrationBatchManifest,
+  parseSourceNavigationCalibrationBatchTargets,
+  runSourceNavigationCalibrationBatchAttempts,
+  type SourceNavigationCalibrationBatchAttempt,
+  type SourceNavigationCalibrationBatchAttemptResult,
+  type SourceNavigationCalibrationBatchTarget,
+  type SourceNavigationCalibrationRuntime
+} from "./source-navigation-calibration-batch.js";
 import { loadSourceNavigationCalibrationReports, type SourceNavigationCalibrationReportLoadResult } from "./source-navigation-calibration-loader.js";
 import { buildSourceNavigationCalibrationTargetPlan, formatSourceNavigationCalibrationTargetsAsLines } from "./source-navigation-calibration-targets.js";
 import { parseSourceNavigationPromotionSummary, promoteSourceNavigationCalibrationBatch, reviewSourceNavigationPromotion, type SourceNavigationPromotionEvidenceRunOptions } from "./source-navigation-promotion.js";
-import { applySourceNavigationSelectorHintsToRecipePlan, buildSourceNavigationRecipeCatalog, exportMaintainedSourceNavigationRecipes, formatSourceNavigationDestinationSelectorHintsAsLines, parseSourceNavigationDestinationSelectorHintsAsLines, type SourceNavigationDestinationSelectorHintLine } from "./source-navigation-recipe-catalog.js";
+import {
+  applySourceNavigationSelectorHintsToRecipePlan,
+  buildSourceNavigationRecipeCatalog,
+  exportMaintainedSourceNavigationRecipes,
+  formatSourceNavigationDestinationSelectorHintsAsLines,
+  parseSourceNavigationDestinationSelectorHintsAsLines,
+  type SourceNavigationDestinationSelectorHintLine
+} from "./source-navigation-recipe-catalog.js";
 import { SourceNavigationExecutableActionSchema, type SourceNavigationExecutableActionInput } from "./schemas.js";
 
 export async function main(): Promise<void> {
@@ -98,15 +137,21 @@ export async function main(): Promise<void> {
     if (archiveFile !== undefined) {
       const archive = await exportBundleArchive(runDir, privateKeyPem !== undefined && privateKeyPem.length > 0 ? { privateKeyPem } : {});
       await writeFile(archiveFile, `${JSON.stringify(archive)}\n`, "utf8");
-      console.log(JSON.stringify({
-        ok: true,
-        archiveFile,
-        merkleRoot: archive.manifest.merkleRoot,
-        signed: archive.manifest.signature !== undefined,
-        artifactCount: archive.manifest.artifactCount,
-        embeddedFiles: Object.keys(archive.files).length,
-        omitted: archive.omitted.length
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            archiveFile,
+            merkleRoot: archive.manifest.merkleRoot,
+            signed: archive.manifest.signature !== undefined,
+            artifactCount: archive.manifest.artifactCount,
+            embeddedFiles: Object.keys(archive.files).length,
+            omitted: archive.omitted.length
+          },
+          null,
+          2
+        )
+      );
       return;
     }
 
@@ -336,15 +381,18 @@ async function runAuthLogin(): Promise<void> {
   }
 
   const waitMs = Number(getArgValue("--wait-ms") ?? "120000");
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-auth-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-auth-")));
   const profileMode = hasFlag("--persistent-profile") ? "persistent-profile" : "storage-state";
   const browserChannel = browserChannelFromArgs();
   const paths = profilePaths(profileName);
   const leaseManager = new LeaseManager();
-  const service = new FarmService(leaseManager, new BrowserPool(leaseManager, {
-    launchHeadless: false,
-    ...(browserChannel === undefined ? {} : { browserChannel })
-  }));
+  const service = new FarmService(
+    leaseManager,
+    new BrowserPool(leaseManager, {
+      launchHeadless: false,
+      ...(browserChannel === undefined ? {} : { browserChannel })
+    })
+  );
   const agentId = "auth-login";
   const lease = service.acquireContext({
     agentId,
@@ -385,9 +433,9 @@ async function runAuthCdpImport(): Promise<void> {
   const paths = profilePaths(profileName);
   const browser = await chromium.connectOverCDP(cdpUrl);
   try {
-    const context = browser.contexts()[0] ?? await browser.newContext();
+    const context = browser.contexts()[0] ?? (await browser.newContext());
     if (url !== undefined) {
-      const page = context.pages()[0] ?? await context.newPage();
+      const page = context.pages()[0] ?? (await context.newPage());
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => undefined);
     }
     console.error(`Connected to Chrome over CDP at ${cdpUrl}. Finish login in that Chrome window, then press Enter here to save profile '${profileName}'.`);
@@ -399,17 +447,23 @@ async function runAuthCdpImport(): Promise<void> {
     const storageState = await context.storageState({ indexedDB: true });
     const filteredStorageState = filterStorageState(storageState, cookieDomains);
     await writeFile(paths.storageStatePath, `${JSON.stringify(filteredStorageState, null, 2)}\n`, "utf8");
-    console.log(JSON.stringify({
-      ok: true,
-      profileName,
-      cdpUrl,
-      storageStatePath: paths.storageStatePath,
-      userDataDir: paths.userDataDir,
-      cookieDomains,
-      cookiesSaved: filteredStorageState.cookies.length,
-      originsSaved: filteredStorageState.origins.length,
-      note: "Saved browser storage state from the attached Chrome session; no password values were read or stored."
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          profileName,
+          cdpUrl,
+          storageStatePath: paths.storageStatePath,
+          userDataDir: paths.userDataDir,
+          cookieDomains,
+          cookiesSaved: filteredStorageState.cookies.length,
+          originsSaved: filteredStorageState.origins.length,
+          note: "Saved browser storage state from the attached Chrome session; no password values were read or stored."
+        },
+        null,
+        2
+      )
+    );
   } finally {
     await browser.close().catch(() => undefined);
   }
@@ -425,27 +479,29 @@ async function runAuthCdpLaunch(): Promise<void> {
   const chromePath = resolveChromePath(getArgValue("--chrome-path"));
   const paths = profilePaths(profileName);
   await mkdir(paths.userDataDir, { recursive: true });
-  const args = [
-    `--remote-debugging-port=${port}`,
-    `--user-data-dir=${paths.userDataDir}`,
-    url
-  ];
+  const args = [`--remote-debugging-port=${port}`, `--user-data-dir=${paths.userDataDir}`, url];
   const child = spawn(chromePath, args, {
     detached: true,
     stdio: "ignore"
   });
   child.unref();
-  console.log(JSON.stringify({
-    ok: true,
-    profileName,
-    cdpUrl: `http://127.0.0.1:${port}`,
-    chromePath,
-    userDataDir: paths.userDataDir,
-    storageStatePath: paths.storageStatePath,
-    url,
-    importCommand: `node .\\dist\\cli.js auth-cdp-import --profile ${quoteCliValue(profileName)} --cdp-url http://127.0.0.1:${port}`,
-    warning: "Remote debugging exposes this Chrome profile to local processes while the browser is running; close the window after importing the profile."
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        profileName,
+        cdpUrl: `http://127.0.0.1:${port}`,
+        chromePath,
+        userDataDir: paths.userDataDir,
+        storageStatePath: paths.storageStatePath,
+        url,
+        importCommand: `node .\\dist\\cli.js auth-cdp-import --profile ${quoteCliValue(profileName)} --cdp-url http://127.0.0.1:${port}`,
+        warning: "Remote debugging exposes this Chrome profile to local processes while the browser is running; close the window after importing the profile."
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runHttpServerCommand(): Promise<void> {
@@ -476,7 +532,7 @@ async function runHttpServerCommand(): Promise<void> {
 }
 
 async function runProxySmoke(): Promise<void> {
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-proxy-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-proxy-")));
   const proxy = await startProxyFixtureServer();
   const leaseManager = new LeaseManager();
   const service = new FarmService(leaseManager);
@@ -513,13 +569,9 @@ async function runProxySmoke(): Promise<void> {
 }
 
 async function runWebSmoke(): Promise<void> {
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-web-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-web-")));
   const timeoutMs = Number(getArgValue("--timeout-ms") ?? "10000");
-  const urls = [
-    "https://example.com/",
-    "https://www.iana.org/domains/reserved",
-    "https://example.org/"
-  ];
+  const urls = ["https://example.com/", "https://www.iana.org/domains/reserved", "https://example.org/"];
   const leaseManager = new LeaseManager();
   const service = new FarmService(leaseManager, new BrowserPool(leaseManager, { navigationTimeoutMs: timeoutMs }));
   const results = [];
@@ -725,20 +777,27 @@ async function runSourceRegistryCommand(): Promise<void> {
   }
 
   const entries = listSourceRegistryEntries(filter);
-  const match = categoryArg === undefined && localeArg === undefined && minTierArg === undefined
-    ? undefined
-    : selectSourceRegistryEntriesForIntent({
-      category: filter.category,
-      locale: filter.locale,
-      minSupportTier: filter.minSupportTier
-    });
+  const match =
+    categoryArg === undefined && localeArg === undefined && minTierArg === undefined
+      ? undefined
+      : selectSourceRegistryEntriesForIntent({
+          category: filter.category,
+          locale: filter.locale,
+          minSupportTier: filter.minSupportTier
+        });
 
-  console.log(JSON.stringify({
-    ok: true,
-    filter,
-    entries,
-    ...(match === undefined ? {} : { summary: summarizeSourceRegistryMatch({ ...match, entries }) })
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        filter,
+        entries,
+        ...(match === undefined ? {} : { summary: summarizeSourceRegistryMatch({ ...match, entries }) })
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runSourceCoverageReadinessCommand(): Promise<void> {
@@ -772,10 +831,7 @@ async function runSourceCoverageReadinessCommand(): Promise<void> {
     process.stdout.write(formatSourceCoverageReadinessRetryCommandsAsLines(audit));
   } else if (format === "retry-plan") {
     const retryPlan = buildSourceCoverageReadinessRetryPlan(audit);
-    process.stdout.write(formatSourceCoverageReadinessRetryPlanMarkdown(
-      retryPlan,
-      checkSourceCoverageReadinessRetryPlan(retryPlan, sourceCoverageRetryPlanCheckOptionsFromArgs())
-    ));
+    process.stdout.write(formatSourceCoverageReadinessRetryPlanMarkdown(retryPlan, checkSourceCoverageReadinessRetryPlan(retryPlan, sourceCoverageRetryPlanCheckOptionsFromArgs())));
   } else {
     throw new Error("--format must be json, lines, targets, retry-commands, or retry-plan for source-coverage-readiness");
   }
@@ -876,7 +932,10 @@ async function browserRecipeCanaryProbe(url: string, requiredSelectors: string[]
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15_000 });
     const presentSelectors: string[] = [];
     for (const selector of requiredSelectors) {
-      const count = await page.locator(selector).count().catch(() => 0);
+      const count = await page
+        .locator(selector)
+        .count()
+        .catch(() => 0);
       if (count > 0) {
         presentSelectors.push(selector);
       }
@@ -888,7 +947,10 @@ async function browserRecipeCanaryProbe(url: string, requiredSelectors: string[]
 }
 
 function splitCsvArg(value: string): string[] {
-  return value.split(",").map((part) => part.trim()).filter((part) => part.length > 0);
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 async function runSourceCoverageCalibrateCommand(): Promise<void> {
@@ -902,7 +964,7 @@ async function runSourceCoverageCalibrateCommand(): Promise<void> {
   const locale = localeArg === undefined ? undefined : parseLocaleSegmentArg(localeArg);
   const minSupportTier = minTierArg === undefined ? undefined : parseSupportTierArg(minTierArg);
   const promotionSummaries = await loadPromotionSummariesFromArgs();
-  const runRoot = resolve(getArgValue("--run-root") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-coverage-calibration-")));
+  const runRoot = resolve(getArgValue("--run-root") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-coverage-calibration-"))));
   const paths = sourceCoverageCalibrationLoopOutputPaths(runRoot);
   const outputDir = resolve(getArgValue("--output-dir") ?? paths.promotionDir);
   const promotionSummaryFile = join(outputDir, "promotion-summary.json");
@@ -938,27 +1000,37 @@ async function runSourceCoverageCalibrateCommand(): Promise<void> {
   await writeFile(targetFile, plan.targetLines, "utf8");
   await writeJsonFile(paths.planFile, plan);
   await writeCoverageRetryPlanFiles(paths, plan.audit, retryPlanCheckOptions);
-  await writeFile(paths.reportFile, formatSourceCoverageCalibrationLoopReport({
-    plan,
-    files: paths,
-    retryPlanCheckOptions
-  }), "utf8");
+  await writeFile(
+    paths.reportFile,
+    formatSourceCoverageCalibrationLoopReport({
+      plan,
+      files: paths,
+      retryPlanCheckOptions
+    }),
+    "utf8"
+  );
 
   if (hasFlag("--plan-only") || hasFlag("--dry-run") || plan.targetCount === 0) {
     const ok = hasFlag("--fail-not-ready") ? plan.audit.ok : plan.targetCount > 0 || plan.audit.ok;
-    console.log(JSON.stringify({
-      ok,
-      mode: "plan_only",
-      runRoot,
-      targetFile,
-      planFile: paths.planFile,
-      initialReadinessFile: paths.initialReadinessFile,
-      retryPlanFile: paths.retryPlanFile,
-      retryPlanJsonFile: paths.retryPlanJsonFile,
-      retryPlanCheckFile: paths.retryPlanCheckFile,
-      reportFile: paths.reportFile,
-      plan
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok,
+          mode: "plan_only",
+          runRoot,
+          targetFile,
+          planFile: paths.planFile,
+          initialReadinessFile: paths.initialReadinessFile,
+          retryPlanFile: paths.retryPlanFile,
+          retryPlanJsonFile: paths.retryPlanJsonFile,
+          retryPlanCheckFile: paths.retryPlanCheckFile,
+          reportFile: paths.reportFile,
+          plan
+        },
+        null,
+        2
+      )
+    );
     if (!ok) {
       process.exitCode = 1;
     }
@@ -1003,37 +1075,47 @@ async function runSourceCoverageCalibrateCommand(): Promise<void> {
   });
   await writeJsonFile(paths.finalReadinessFile, finalAudit);
   await writeCoverageRetryPlanFiles(paths, finalAudit, retryPlanCheckOptions);
-  await writeFile(paths.reportFile, formatSourceCoverageCalibrationLoopReport({
-    plan,
-    files: paths,
-    manifest: batch.manifest,
-    promotion,
-    promotionReview,
-    finalAudit,
-    retryPlanCheckOptions
-  }), "utf8");
+  await writeFile(
+    paths.reportFile,
+    formatSourceCoverageCalibrationLoopReport({
+      plan,
+      files: paths,
+      manifest: batch.manifest,
+      promotion,
+      promotionReview,
+      finalAudit,
+      retryPlanCheckOptions
+    }),
+    "utf8"
+  );
   const ok = batch.manifest.failedCount === 0 && (!hasFlag("--fail-not-ready") || finalAudit.ok);
-  console.log(JSON.stringify({
-    ok,
-    mode: "executed",
-    runRoot,
-    targetFile,
-    planFile: paths.planFile,
-    manifestPath: paths.manifestFile,
-    promotionSummaryFile,
-    promotionReviewFile: paths.promotionReviewFile,
-    initialReadinessFile: paths.initialReadinessFile,
-    finalReadinessFile: paths.finalReadinessFile,
-    retryPlanFile: paths.retryPlanFile,
-    retryPlanJsonFile: paths.retryPlanJsonFile,
-    retryPlanCheckFile: paths.retryPlanCheckFile,
-    reportFile: paths.reportFile,
-    initialAudit: plan.audit,
-    manifest: batch.manifest,
-    promotion,
-    promotionReview,
-    finalAudit
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok,
+        mode: "executed",
+        runRoot,
+        targetFile,
+        planFile: paths.planFile,
+        manifestPath: paths.manifestFile,
+        promotionSummaryFile,
+        promotionReviewFile: paths.promotionReviewFile,
+        initialReadinessFile: paths.initialReadinessFile,
+        finalReadinessFile: paths.finalReadinessFile,
+        retryPlanFile: paths.retryPlanFile,
+        retryPlanJsonFile: paths.retryPlanJsonFile,
+        retryPlanCheckFile: paths.retryPlanCheckFile,
+        reportFile: paths.reportFile,
+        initialAudit: plan.audit,
+        manifest: batch.manifest,
+        promotion,
+        promotionReview,
+        finalAudit
+      },
+      null,
+      2
+    )
+  );
   if (!ok) {
     process.exitCode = 1;
   }
@@ -1044,14 +1126,11 @@ async function runSourceCoverageRetryPlanCommand(): Promise<void> {
   if (retryPlanPath === undefined) {
     throw new Error("source-coverage-retry-plan requires --retry-plan <profile-headed-retry-plan.json>");
   }
-  let plan = filterSourceCoverageReadinessRetryPlan(
-    parseSourceCoverageReadinessRetryPlan(await readFile(retryPlanPath, "utf8")),
-    {
-      platform: getArgValue("--platform") as SourcePlatform | undefined,
-      priority: retryPlanPriorityFromArgs(),
-      limit: getArgValue("--limit") === undefined ? undefined : parseBoundedIntegerArg("--limit", 1, 1, 1000)
-    }
-  );
+  let plan = filterSourceCoverageReadinessRetryPlan(parseSourceCoverageReadinessRetryPlan(await readFile(retryPlanPath, "utf8")), {
+    platform: getArgValue("--platform") as SourcePlatform | undefined,
+    priority: retryPlanPriorityFromArgs(),
+    limit: getArgValue("--limit") === undefined ? undefined : parseBoundedIntegerArg("--limit", 1, 1, 1000)
+  });
   const format = getArgValue("--format") ?? "json";
   const checkOptions = sourceCoverageRetryPlanCheckOptionsFromArgs();
   if (hasFlag("--only-check-ok")) {
@@ -1072,11 +1151,7 @@ async function runSourceCoverageRetryPlanCommand(): Promise<void> {
   }
 }
 
-function renderSourceCoverageRetryPlanOutput(
-  plan: ReturnType<typeof parseSourceCoverageReadinessRetryPlan>,
-  format: string,
-  checkOptions: SourceCoverageReadinessRetryPlanCheckOptions = {}
-): string {
+function renderSourceCoverageRetryPlanOutput(plan: ReturnType<typeof parseSourceCoverageReadinessRetryPlan>, format: string, checkOptions: SourceCoverageReadinessRetryPlanCheckOptions = {}): string {
   if (format === "json") {
     return `${JSON.stringify({ ok: true, retryPlan: plan }, null, 2)}\n`;
   }
@@ -1139,11 +1214,7 @@ async function runDestinationRecoveryPlanCommand(): Promise<void> {
   }
 }
 
-function renderDestinationRecoveryPlanOutput(
-  plan: Awaited<ReturnType<typeof buildDestinationRecoveryPlanFromRunDir>>,
-  format: string,
-  checkOptions: DestinationRecoveryPlanCheckOptions = {}
-): string {
+function renderDestinationRecoveryPlanOutput(plan: Awaited<ReturnType<typeof buildDestinationRecoveryPlanFromRunDir>>, format: string, checkOptions: DestinationRecoveryPlanCheckOptions = {}): string {
   if (format === "json") {
     return `${JSON.stringify({ ok: true, recoveryPlan: plan }, null, 2)}\n`;
   }
@@ -1183,11 +1254,7 @@ function retryPlanPriorityFromArgs(): SourceCoverageReadinessRetryPriority | und
   return priority;
 }
 
-async function writeCoverageRetryPlanFiles(
-  paths: ReturnType<typeof sourceCoverageCalibrationLoopOutputPaths>,
-  audit: ReturnType<typeof buildSourceCoverageReadinessAudit>,
-  checkOptions: SourceCoverageReadinessRetryPlanCheckOptions = {}
-): Promise<void> {
+async function writeCoverageRetryPlanFiles(paths: ReturnType<typeof sourceCoverageCalibrationLoopOutputPaths>, audit: ReturnType<typeof buildSourceCoverageReadinessAudit>, checkOptions: SourceCoverageReadinessRetryPlanCheckOptions = {}): Promise<void> {
   const retryPlan = buildSourceCoverageReadinessRetryPlan(audit);
   const retryPlanCheck = checkSourceCoverageReadinessRetryPlan(retryPlan, checkOptions);
   await writeFile(paths.retryPlanFile, formatSourceCoverageReadinessRetryPlanMarkdown(retryPlan, retryPlanCheck), "utf8");
@@ -1203,15 +1270,21 @@ async function runSourceNavigationRecipesCommand(): Promise<void> {
   const sourceStrategy = describeSourceStrategy(url);
   const sourceNavigationPlan = describeSourceNavigationPlan({ sourceStrategy });
   const recipePlan = describeSourceNavigationRecipePlan(sourceNavigationPlan);
-  console.log(JSON.stringify({
-    ok: true,
-    sourceStrategy: {
-      platform: sourceStrategy.platform,
-      family: sourceStrategy.sourceFamily
-    },
-    summary: summarizeSourceNavigationRecipePlan(recipePlan),
-    recipePlan
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        sourceStrategy: {
+          platform: sourceStrategy.platform,
+          family: sourceStrategy.sourceFamily
+        },
+        summary: summarizeSourceNavigationRecipePlan(recipePlan),
+        recipePlan
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runSourceNavigationCalibrateCommand(): Promise<void> {
@@ -1219,7 +1292,7 @@ async function runSourceNavigationCalibrateCommand(): Promise<void> {
   if (!url) {
     throw new Error("source-navigation-calibrate requires --url <url>");
   }
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-calibrate-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-calibrate-")));
   const result = await runSourceNavigationCalibration({
     url,
     runDir,
@@ -1232,15 +1305,21 @@ async function runSourceNavigationCalibrateCommand(): Promise<void> {
     profileName: getArgValue("--profile"),
     browserChannel: browserChannelFromArgs()
   });
-  console.log(JSON.stringify({
-    ok: true,
-    runDir,
-    sourceStrategy: result.sourceStrategy,
-    recipeSummary: result.recipeSummary,
-    calibrationSummary: result.report.summary,
-    artifacts: result.artifacts,
-    report: result.report
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        runDir,
+        sourceStrategy: result.sourceStrategy,
+        recipeSummary: result.recipeSummary,
+        calibrationSummary: result.report.summary,
+        artifacts: result.artifacts,
+        report: result.report
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runSourceNavigationCalibrateBatchCommand(): Promise<void> {
@@ -1251,7 +1330,7 @@ async function runSourceNavigationCalibrateBatchCommand(): Promise<void> {
   const targets = parseSourceNavigationCalibrationBatchTargets(await readFile(urlsFile, "utf8"));
   const repeat = parsePositiveIntegerArg("--repeat", 1);
   const calibrationConcurrency = parseBoundedIntegerArg("--calibration-concurrency", 1, 1, 5);
-  const runRoot = resolve(getArgValue("--run-root") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-calibration-batch-")));
+  const runRoot = resolve(getArgValue("--run-root") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-calibration-batch-"))));
   const manifestPath = join(runRoot, "calibration-batch-manifest.json");
   const calibrationRuntime = calibrationRuntimeFromArgs();
   const selectorHintFiles = selectorHintFilePathsFromArgs();
@@ -1273,12 +1352,18 @@ async function runSourceNavigationCalibrateBatchCommand(): Promise<void> {
     browserChannel: calibrationRuntime.browserChannel,
     stopOnError: hasFlag("--stop-on-error")
   });
-  console.log(JSON.stringify({
-    ok: batch.manifest.failedCount === 0,
-    runRoot,
-    manifestPath,
-    manifest: batch.manifest
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: batch.manifest.failedCount === 0,
+        runRoot,
+        manifestPath,
+        manifest: batch.manifest
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function executeSourceNavigationCalibrationBatch(input: {
@@ -1309,16 +1394,7 @@ async function executeSourceNavigationCalibrationBatch(input: {
     concurrency: input.concurrency,
     stopOnError: input.stopOnError,
     runAttempt: (attempt) => runSourceNavigationCalibrationBatchAttempt(input, attempt),
-    onProgress: (progressResults) => writeSourceNavigationCalibrationBatchManifest(
-      input.manifestPath,
-      input.runRoot,
-      input.targets,
-      input.repeat,
-      input.concurrency,
-      progressResults,
-      calibrationRuntimeFromBatchInput(input),
-      input.selectorHintFiles
-    )
+    onProgress: (progressResults) => writeSourceNavigationCalibrationBatchManifest(input.manifestPath, input.runRoot, input.targets, input.repeat, input.concurrency, progressResults, calibrationRuntimeFromBatchInput(input), input.selectorHintFiles)
   });
 
   return {
@@ -1455,10 +1531,7 @@ async function runSourceNavigationCalibration(input: {
   const paths = input.profileName === undefined ? undefined : profilePaths(input.profileName);
   const sourceStrategy = describeSourceStrategy(input.url);
   const sourceNavigationPlan = describeSourceNavigationPlan({ sourceStrategy });
-  const recipePlan = applySourceNavigationSelectorHintsToRecipePlan(
-    describeSourceNavigationRecipePlan(sourceNavigationPlan),
-    input.selectorHints
-  );
+  const recipePlan = applySourceNavigationSelectorHintsToRecipePlan(describeSourceNavigationRecipePlan(sourceNavigationPlan), input.selectorHints);
   const artifactWriter = new ArtifactWriter();
   const leaseManager = new LeaseManager();
   const pool = new BrowserPool(leaseManager, {
@@ -1479,7 +1552,7 @@ async function runSourceNavigationCalibration(input: {
     ...(input.profileName === undefined || paths === undefined
       ? {}
       : {
-          storagePolicy: input.persistentProfile ? "persistent-profile" as const : "storage-state" as const,
+          storagePolicy: input.persistentProfile ? ("persistent-profile" as const) : ("storage-state" as const),
           profileName: input.profileName,
           storageStatePath: paths.storageStatePath,
           userDataDir: paths.userDataDir
@@ -1539,15 +1612,23 @@ async function writeSourceNavigationCalibrationBatchManifest(
   runtime: SourceNavigationCalibrationRuntime,
   selectorHintFiles: string[]
 ): Promise<void> {
-  await writeFile(manifestPath, `${JSON.stringify(buildSourceNavigationCalibrationBatchManifest({
-    runRoot,
-    targets,
-    repeat,
-    concurrency,
-    attempts: results,
-    runtime,
-    selectorHintFiles
-  }), null, 2)}\n`, "utf8");
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      buildSourceNavigationCalibrationBatchManifest({
+        runRoot,
+        targets,
+        repeat,
+        concurrency,
+        attempts: results,
+        runtime,
+        selectorHintFiles
+      }),
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
 }
 
 function calibrationRuntimeFromArgs(): SourceNavigationCalibrationRuntime {
@@ -1555,11 +1636,7 @@ function calibrationRuntimeFromArgs(): SourceNavigationCalibrationRuntime {
   const browserChannel = browserChannelFromArgs();
   return {
     headed: hasFlag("--headed"),
-    storagePolicy: profileName === undefined
-      ? "ephemeral"
-      : hasFlag("--persistent-profile")
-        ? "persistent-profile"
-        : "storage-state",
+    storagePolicy: profileName === undefined ? "ephemeral" : hasFlag("--persistent-profile") ? "persistent-profile" : "storage-state",
     ...(profileName === undefined ? {} : { profileName }),
     ...(browserChannel === undefined ? {} : { browserChannel })
   };
@@ -1571,19 +1648,10 @@ function assertCalibrationConcurrencyCompatible(concurrency: number, runtime: So
   }
 }
 
-function calibrationRuntimeFromBatchInput(input: {
-  headed: boolean;
-  persistentProfile: boolean;
-  profileName?: string | undefined;
-  browserChannel?: string | undefined;
-}): SourceNavigationCalibrationRuntime {
+function calibrationRuntimeFromBatchInput(input: { headed: boolean; persistentProfile: boolean; profileName?: string | undefined; browserChannel?: string | undefined }): SourceNavigationCalibrationRuntime {
   return {
     headed: input.headed,
-    storagePolicy: input.profileName === undefined
-      ? "ephemeral"
-      : input.persistentProfile
-        ? "persistent-profile"
-        : "storage-state",
+    storagePolicy: input.profileName === undefined ? "ephemeral" : input.persistentProfile ? "persistent-profile" : "storage-state",
     ...(input.profileName === undefined ? {} : { profileName: input.profileName }),
     ...(input.browserChannel === undefined ? {} : { browserChannel: input.browserChannel })
   };
@@ -1616,16 +1684,22 @@ async function runSourceNavigationCatalogCommand(): Promise<void> {
   if (format !== "json") {
     throw new Error("--format must be json or selector-hints for source-navigation-catalog");
   }
-  console.log(JSON.stringify({
-    ok: true,
-    sourceStrategy: {
-      platform: sourceStrategy.platform,
-      family: sourceStrategy.sourceFamily
-    },
-    recipeSummary: summarizeSourceNavigationRecipePlan(recipePlan),
-    ...(calibrationInputs === undefined ? {} : { calibrationInputs: summarizeCalibrationInputs(calibrationInputs) }),
-    catalog
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        sourceStrategy: {
+          platform: sourceStrategy.platform,
+          family: sourceStrategy.sourceFamily
+        },
+        recipeSummary: summarizeSourceNavigationRecipePlan(recipePlan),
+        ...(calibrationInputs === undefined ? {} : { calibrationInputs: summarizeCalibrationInputs(calibrationInputs) }),
+        catalog
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function runSourceNavigationExportRecipesCommand(): Promise<void> {
@@ -1651,20 +1725,26 @@ async function runSourceNavigationExportRecipesCommand(): Promise<void> {
     await writeJsonFile(exportOutputFile, exportBundle);
   }
   const ok = !hasFlag("--fail-empty-export") || exportBundle.status !== "empty";
-  console.log(JSON.stringify({
-    ok,
-    sourceStrategy: {
-      platform: sourceStrategy.platform,
-      family: sourceStrategy.sourceFamily
-    },
-    ...(calibrationInputs === undefined ? {} : { calibrationInputs: summarizeCalibrationInputs(calibrationInputs) }),
-    catalogSummary: catalog.summary,
-    outputFiles: {
-      ...(actionsOutputFile === undefined ? {} : { actions: resolve(actionsOutputFile) }),
-      ...(exportOutputFile === undefined ? {} : { export: resolve(exportOutputFile) })
-    },
-    export: exportBundle
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok,
+        sourceStrategy: {
+          platform: sourceStrategy.platform,
+          family: sourceStrategy.sourceFamily
+        },
+        ...(calibrationInputs === undefined ? {} : { calibrationInputs: summarizeCalibrationInputs(calibrationInputs) }),
+        catalogSummary: catalog.summary,
+        outputFiles: {
+          ...(actionsOutputFile === undefined ? {} : { actions: resolve(actionsOutputFile) }),
+          ...(exportOutputFile === undefined ? {} : { export: resolve(exportOutputFile) })
+        },
+        export: exportBundle
+      },
+      null,
+      2
+    )
+  );
   if (!ok) {
     process.exitCode = 1;
   }
@@ -1684,13 +1764,19 @@ async function runSourceNavigationPromoteBatchCommand(): Promise<void> {
   const promotionPath = join(resolve(outputDir), "promotion-summary.json");
   await writeJsonFile(promotionPath, promotion);
   const ok = !hasFlag("--fail-empty-export") || promotion.emptyGroupCount === 0;
-  console.log(JSON.stringify({
-    ok,
-    manifestPath: resolve(manifestPath),
-    outputDir: promotion.outputDir,
-    promotionPath,
-    promotion
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok,
+        manifestPath: resolve(manifestPath),
+        outputDir: promotion.outputDir,
+        promotionPath,
+        promotion
+      },
+      null,
+      2
+    )
+  );
   if (!ok) {
     process.exitCode = 1;
   }
@@ -1698,8 +1784,7 @@ async function runSourceNavigationPromoteBatchCommand(): Promise<void> {
 
 async function runSourceNavigationPromotionReviewCommand(): Promise<void> {
   const promotionDir = getArgValue("--promotion-dir");
-  const promotionSummaryPath = getArgValue("--promotion-summary")
-    ?? (promotionDir === undefined ? undefined : join(resolve(promotionDir), "promotion-summary.json"));
+  const promotionSummaryPath = getArgValue("--promotion-summary") ?? (promotionDir === undefined ? undefined : join(resolve(promotionDir), "promotion-summary.json"));
   if (promotionSummaryPath === undefined) {
     throw new Error("source-navigation-promotion-review requires --promotion-summary <path> or --promotion-dir <path>");
   }
@@ -1718,11 +1803,17 @@ async function runSourceNavigationPromotionReviewCommand(): Promise<void> {
       }
     }
   } else if (format === "json") {
-    console.log(JSON.stringify({
-      ok,
-      promotionSummaryPath: resolve(promotionSummaryPath),
-      review
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok,
+          promotionSummaryPath: resolve(promotionSummaryPath),
+          review
+        },
+        null,
+        2
+      )
+    );
   } else {
     throw new Error("--format must be json or commands");
   }
@@ -1747,12 +1838,7 @@ function sourceNavigationPromotionEvidenceRunOptionsFromArgs(): SourceNavigation
   };
 }
 
-function optionalBoundedIntegerArg<K extends keyof SourceNavigationPromotionEvidenceRunOptions>(
-  name: string,
-  min: number,
-  max: number,
-  key: K
-): Partial<Pick<SourceNavigationPromotionEvidenceRunOptions, K>> {
+function optionalBoundedIntegerArg<K extends keyof SourceNavigationPromotionEvidenceRunOptions>(name: string, min: number, max: number, key: K): Partial<Pick<SourceNavigationPromotionEvidenceRunOptions, K>> {
   const raw = getArgValue(name);
   if (raw === undefined) {
     return {};
@@ -1869,49 +1955,55 @@ async function runEvidenceRunCommand(): Promise<void> {
     }
   });
   const result = await runEvidenceWorkflow(input);
-  console.log(JSON.stringify({
-    ok: result.ok,
-    runDir: result.runDir,
-    reportPath: result.reportPath,
-    platform: result.platformCapabilities.platform,
-    sourceStrategy: {
-      platform: result.sourceStrategy.platform,
-      family: result.sourceStrategy.sourceFamily
-    },
-    sourceRegistry: result.assessment.sourceRegistry,
-    sourceNavigationPlan: result.assessment.sourceNavigationPlan,
-    sourceNavigationExecutionPlan: result.assessment.sourceNavigationExecutionPlan,
-    sourceNavigationRecipePlan: result.assessment.sourceNavigationRecipePlan,
-    sourceNavigationCalibration: result.assessment.sourceNavigationCalibration,
-    sourceNavigationExecution: result.assessment.sourceNavigationExecution,
-    sourceNavigationFollowUps: result.assessment.sourceNavigationFollowUps,
-    destinationTriage: result.assessment.destinationTriage,
-    destinationDeepeningProposals: result.assessment.destinationDeepeningProposals,
-    destinationDeepeningExecution: result.assessment.destinationDeepeningExecution,
-    mediaId: result.platformCapabilities.mediaId,
-    claims: result.claims.length,
-    claimGate: result.claimGate,
-    frameSampling: result.assessment.frameSampling,
-    stageTimings: result.stageTimings,
-    artifacts: {
-      ocr: result.ocrRecords.length,
-      officialApi: result.officialApiRecords.length,
-      sourceStrategy: result.sourceStrategyRecords.length,
-      sourceRegistry: result.sourceRegistryRecords.length,
-      sourceNavigationPlan: result.sourceNavigationPlanRecords.length,
-      sourceNavigationExecutionPlan: result.sourceNavigationExecutionPlanRecords.length,
-      sourceNavigationRecipePlan: result.sourceNavigationRecipePlanRecords.length,
-      sourceNavigationCalibration: result.sourceNavigationCalibrationRecords.length,
-      sourceNavigationActions: result.sourceNavigationActionRecords.length,
-      sourceNavigationFollowUps: result.sourceNavigationFollowUpRecords.length,
-      destinationCandidates: result.destinationCandidateRecords.length,
-      destinationTriage: result.destinationTriageRecords.length,
-      destinationDeepeningProposals: result.destinationDeepeningProposalRecords.length,
-      destinationDeepeningRuns: result.destinationDeepeningRunRecords.length,
-      overlayDismissal: result.overlayDismissalRecords.length,
-      obstruction: result.obstructionRecords.length
-    }
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: result.ok,
+        runDir: result.runDir,
+        reportPath: result.reportPath,
+        platform: result.platformCapabilities.platform,
+        sourceStrategy: {
+          platform: result.sourceStrategy.platform,
+          family: result.sourceStrategy.sourceFamily
+        },
+        sourceRegistry: result.assessment.sourceRegistry,
+        sourceNavigationPlan: result.assessment.sourceNavigationPlan,
+        sourceNavigationExecutionPlan: result.assessment.sourceNavigationExecutionPlan,
+        sourceNavigationRecipePlan: result.assessment.sourceNavigationRecipePlan,
+        sourceNavigationCalibration: result.assessment.sourceNavigationCalibration,
+        sourceNavigationExecution: result.assessment.sourceNavigationExecution,
+        sourceNavigationFollowUps: result.assessment.sourceNavigationFollowUps,
+        destinationTriage: result.assessment.destinationTriage,
+        destinationDeepeningProposals: result.assessment.destinationDeepeningProposals,
+        destinationDeepeningExecution: result.assessment.destinationDeepeningExecution,
+        mediaId: result.platformCapabilities.mediaId,
+        claims: result.claims.length,
+        claimGate: result.claimGate,
+        frameSampling: result.assessment.frameSampling,
+        stageTimings: result.stageTimings,
+        artifacts: {
+          ocr: result.ocrRecords.length,
+          officialApi: result.officialApiRecords.length,
+          sourceStrategy: result.sourceStrategyRecords.length,
+          sourceRegistry: result.sourceRegistryRecords.length,
+          sourceNavigationPlan: result.sourceNavigationPlanRecords.length,
+          sourceNavigationExecutionPlan: result.sourceNavigationExecutionPlanRecords.length,
+          sourceNavigationRecipePlan: result.sourceNavigationRecipePlanRecords.length,
+          sourceNavigationCalibration: result.sourceNavigationCalibrationRecords.length,
+          sourceNavigationActions: result.sourceNavigationActionRecords.length,
+          sourceNavigationFollowUps: result.sourceNavigationFollowUpRecords.length,
+          destinationCandidates: result.destinationCandidateRecords.length,
+          destinationTriage: result.destinationTriageRecords.length,
+          destinationDeepeningProposals: result.destinationDeepeningProposalRecords.length,
+          destinationDeepeningRuns: result.destinationDeepeningRunRecords.length,
+          overlayDismissal: result.overlayDismissalRecords.length,
+          obstruction: result.obstructionRecords.length
+        }
+      },
+      null,
+      2
+    )
+  );
   if (!result.ok) {
     process.exitCode = 1;
   }
@@ -1974,7 +2066,7 @@ async function runClaimGateCommand(): Promise<void> {
 }
 
 async function runMediaSmoke(): Promise<void> {
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-media-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-media-")));
   const fixture = await startMediaFixtureServer();
   const service = new FarmService();
   const agentId = "media-smoke-agent";
@@ -2019,14 +2111,10 @@ async function runMediaSmoke(): Promise<void> {
 }
 
 async function runSmoke(): Promise<void> {
-  const runDir = getArgValue("--run-dir") ?? await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-"));
+  const runDir = getArgValue("--run-dir") ?? (await mkdtemp(join(tmpdir(), "browser-agent-mcp-farm-")));
   const fixture = await startFixtureServer();
   const service = new FarmService();
-  const urls = [
-    `${fixture.baseUrl}/alpha`,
-    `${fixture.baseUrl}/bravo`,
-    `${fixture.baseUrl}/charlie`
-  ];
+  const urls = [`${fixture.baseUrl}/alpha`, `${fixture.baseUrl}/bravo`, `${fixture.baseUrl}/charlie`];
 
   try {
     const captures = await Promise.all(
@@ -2091,11 +2179,8 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
 }
 
 async function startMediaFixtureServer(): Promise<{ baseUrl: string; close: () => Promise<void> }> {
-  const tinyPng = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
-    "base64"
-  );
-  const svg = Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><rect width=\"10\" height=\"10\" fill=\"#0f766e\"/></svg>", "utf8");
+  const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=", "base64");
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#0f766e"/></svg>', "utf8");
   const captions = Buffer.from("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nmedia smoke caption\n", "utf8");
   const fakeMp4 = Buffer.from([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]);
 
@@ -2215,7 +2300,7 @@ function escapeHtml(value: string): string {
         return "&lt;";
       case ">":
         return "&gt;";
-      case "\"":
+      case '"':
         return "&quot;";
       case "'":
         return "&#39;";
@@ -2464,17 +2549,19 @@ async function waitForEnterOrTimeout(waitMs: number): Promise<void> {
 
   const readline = createInterface({ input: process.stdin, output: process.stderr });
   try {
-    await Promise.race([
-      readline.question("Press Enter when login/consent is complete...").then(() => undefined),
-      new Promise<void>((resolvePromise) => setTimeout(resolvePromise, waitMs))
-    ]);
+    await Promise.race([readline.question("Press Enter when login/consent is complete...").then(() => undefined), new Promise<void>((resolvePromise) => setTimeout(resolvePromise, waitMs))]);
   } finally {
     readline.close();
   }
 }
 
 function sanitizeArg(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "profile";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "profile"
+  );
 }
 
 type BrowserStorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
@@ -2545,7 +2632,10 @@ function browserChannelFromArgs(): string | undefined {
 }
 
 function parseNumberList(value: string): number[] {
-  return value.split(",").map((part) => Number(part.trim())).filter((part) => Number.isFinite(part));
+  return value
+    .split(",")
+    .map((part) => Number(part.trim()))
+    .filter((part) => Number.isFinite(part));
 }
 
 function parsePositiveIntegerArg(name: string, fallback: number): number {
@@ -2585,7 +2675,10 @@ function parseBoundedIntegerArg(name: string, fallback: number, min: number, max
 }
 
 function splitCommaArg(value: string): string[] {
-  return value.split(",").map((part) => part.trim()).filter(Boolean);
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function parseInformationCategoryArg(value: string): NonNullable<SourceRegistryFilter["category"]> {
@@ -2611,18 +2704,9 @@ function parseSupportTierArg(value: string): SourceRegistryFilter["minSupportTie
 }
 
 async function loadCalibrationReportsFromArgs(): Promise<SourceNavigationCalibrationReportLoadResult | undefined> {
-  const files = [
-    ...singleArgList("--calibration-file"),
-    ...splitCommaArg(getArgValue("--calibration-files") ?? "")
-  ];
-  const runDirs = [
-    ...singleArgList("--calibration-run-dir"),
-    ...splitCommaArg(getArgValue("--calibration-run-dirs") ?? "")
-  ];
-  const batchManifests = [
-    ...singleArgList("--calibration-batch-manifest"),
-    ...splitCommaArg(getArgValue("--calibration-batch-manifests") ?? "")
-  ];
+  const files = [...singleArgList("--calibration-file"), ...splitCommaArg(getArgValue("--calibration-files") ?? "")];
+  const runDirs = [...singleArgList("--calibration-run-dir"), ...splitCommaArg(getArgValue("--calibration-run-dirs") ?? "")];
+  const batchManifests = [...singleArgList("--calibration-batch-manifest"), ...splitCommaArg(getArgValue("--calibration-batch-manifests") ?? "")];
   if (files.length + runDirs.length + batchManifests.length === 0) {
     return undefined;
   }
@@ -2630,18 +2714,9 @@ async function loadCalibrationReportsFromArgs(): Promise<SourceNavigationCalibra
 }
 
 async function loadPromotionSummariesFromArgs(): Promise<ReturnType<typeof parseSourceNavigationPromotionSummary>[]> {
-  const summaryFiles = [
-    ...singleArgList("--promotion-summary"),
-    ...splitCommaArg(getArgValue("--promotion-summaries") ?? "")
-  ];
-  const summaryDirs = [
-    ...singleArgList("--promotion-dir"),
-    ...splitCommaArg(getArgValue("--promotion-dirs") ?? "")
-  ];
-  const paths = [
-    ...summaryFiles,
-    ...summaryDirs.map((dir) => join(resolve(dir), "promotion-summary.json"))
-  ];
+  const summaryFiles = [...singleArgList("--promotion-summary"), ...splitCommaArg(getArgValue("--promotion-summaries") ?? "")];
+  const summaryDirs = [...singleArgList("--promotion-dir"), ...splitCommaArg(getArgValue("--promotion-dirs") ?? "")];
+  const paths = [...summaryFiles, ...summaryDirs.map((dir) => join(resolve(dir), "promotion-summary.json"))];
   return Promise.all(paths.map(async (path) => parseSourceNavigationPromotionSummary(await readFile(path, "utf8"))));
 }
 
@@ -2650,19 +2725,14 @@ async function loadSelectorHintsFromArgs(): Promise<SourceNavigationDestinationS
 }
 
 function selectorHintFilePathsFromArgs(): string[] {
-  return [
-    ...singleArgList("--selector-hints-file"),
-    ...splitCommaArg(getArgValue("--selector-hints-files") ?? "")
-  ].map((path) => resolve(path));
+  return [...singleArgList("--selector-hints-file"), ...splitCommaArg(getArgValue("--selector-hints-files") ?? "")].map((path) => resolve(path));
 }
 
 async function loadSelectorHintsFromFiles(files: string[]): Promise<SourceNavigationDestinationSelectorHintLine[]> {
   if (files.length === 0) {
     return [];
   }
-  const parsed = await Promise.all(files.map(async (path) =>
-    parseSourceNavigationDestinationSelectorHintsAsLines(await readFile(path, "utf8"))
-  ));
+  const parsed = await Promise.all(files.map(async (path) => parseSourceNavigationDestinationSelectorHintsAsLines(await readFile(path, "utf8"))));
   return parsed.flat();
 }
 

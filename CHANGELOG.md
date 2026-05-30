@@ -59,6 +59,10 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Changed
 
+- **Biome lint + format gate** (`npm run lint`, wired into `verify`): formats the codebase
+  (space indent, double quotes, semicolons, no trailing commas, 320 col) and lints with the
+  recommended rules (non-null-assertion / regex-exec-assignment / test-cookie exceptions
+  documented in `biome.json`). `lint:fix` applies safe fixes.
 - **Split `evidence-runner.ts`** (3064 → 2689 lines) along stage seams: the pure
   text-script/destination-query helpers moved to `evidence-runner-text.ts` and the public
   option/result/assessment/claim data model to `evidence-runner-types.ts` (re-exported, so

@@ -10,17 +10,7 @@ import type { StructuredData } from "./structured-extractor.js";
 // The typed facts we hold the extractor accountable for. A fixed schema keeps
 // precision honest: an unlabeled field the extractor happens to emit is not graded,
 // and a labeled field it fails to emit is a recall miss.
-export const GRADED_FIELDS = [
-  "type",
-  "name",
-  "price.value",
-  "price.currency",
-  "rating.value",
-  "rating.scale",
-  "rating.count",
-  "title",
-  "canonical"
-] as const;
+export const GRADED_FIELDS = ["type", "name", "price.value", "price.currency", "rating.value", "rating.scale", "rating.count", "title", "canonical"] as const;
 
 export type GradedField = (typeof GRADED_FIELDS)[number];
 

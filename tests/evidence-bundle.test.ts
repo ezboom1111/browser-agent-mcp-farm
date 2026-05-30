@@ -4,15 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ArtifactWriter } from "../src/artifact-writer.js";
-import {
-  buildBundleManifest,
-  exportBundleArchive,
-  merkleRoot,
-  signManifest,
-  verifyBundle,
-  verifyBundleArchive,
-  verifyManifestSignature
-} from "../src/evidence-bundle.js";
+import { buildBundleManifest, exportBundleArchive, merkleRoot, signManifest, verifyBundle, verifyBundleArchive, verifyManifestSignature } from "../src/evidence-bundle.js";
 
 let dirs: string[] = [];
 
@@ -26,7 +18,12 @@ async function makeRun(): Promise<{ runDir: string; textPath: string }> {
   dirs.push(runDir);
   const writer = new ArtifactWriter();
   const records = await writer.writeCaptureBundle({
-    runDir, sourceUrl: "https://example.com/", contextToken: "ctx", pageId: "p", captureId: "c", text: "evidence one"
+    runDir,
+    sourceUrl: "https://example.com/",
+    contextToken: "ctx",
+    pageId: "p",
+    captureId: "c",
+    text: "evidence one"
   });
   const textRecord = records.find((record) => record.kind === "text");
   if (!textRecord) {
@@ -72,8 +69,7 @@ describe("evidence-bundle", () => {
     const manifest = await buildBundleManifest(runDir);
     const forged = {
       ...manifest,
-      artifacts: manifest.artifacts.map((artifact, index) =>
-        index === 0 ? { ...artifact, sha256: "0".repeat(64) } : artifact)
+      artifacts: manifest.artifacts.map((artifact, index) => (index === 0 ? { ...artifact, sha256: "0".repeat(64) } : artifact))
     };
 
     const result = await verifyBundle(runDir, forged);

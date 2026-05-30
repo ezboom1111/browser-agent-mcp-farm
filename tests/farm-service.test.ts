@@ -69,15 +69,25 @@ describe("FarmService cite-or-fail authoring surface", () => {
     expect(read.content).toContain("4500");
 
     const grounded = await service.addClaim({
-      runDir, artifactId, claim: "The price was 4500 KRW", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "4500" }
+      runDir,
+      artifactId,
+      claim: "The price was 4500 KRW",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      anchor: { type: "text_span", quote: "4500" }
     });
     expect(grounded.appended).toBe(true);
     expect(grounded.ok).toBe(true);
 
     const ungrounded = await service.addClaim({
-      runDir, artifactId, claim: "The shop is permanently closed", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "permanently closed" }
+      runDir,
+      artifactId,
+      claim: "The shop is permanently closed",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      anchor: { type: "text_span", quote: "permanently closed" }
     });
     expect(ungrounded.appended).toBe(true);
     expect(ungrounded.ok).toBe(false); // quote absent from the cited bytes
@@ -86,8 +96,13 @@ describe("FarmService cite-or-fail authoring surface", () => {
   it("rejects a claim citing an unregistered artifact", async () => {
     const { service, runDir } = await newRun();
     const result = await service.addClaim({
-      runDir, artifactId: "nope", claim: "x", claimType: "text",
-      evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "x" }
+      runDir,
+      artifactId: "nope",
+      claim: "x",
+      claimType: "text",
+      evidenceKind: "page_text",
+      verificationLevel: "grounded",
+      anchor: { type: "text_span", quote: "x" }
     });
     expect(result.appended).toBe(false);
     expect(result.ok).toBe(false);

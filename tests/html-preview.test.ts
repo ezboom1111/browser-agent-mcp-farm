@@ -35,4 +35,3 @@ describe("buildHtmlPreview", () => {
     expect(html).toContain("raw/preview.html");
   });
 });
-

@@ -12,7 +12,10 @@ afterEach(cleanup);
 // can cite a genuinely registered, hash-verified artifact (cite-or-fail happy path).
 async function textArtifactId(runDir: string): Promise<string> {
   const raw = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-  const records = raw.split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>);
+  const records = raw
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
   const textRecord = records.find((r) => r.kind === "text");
   if (textRecord === undefined) {
     throw new Error("no text artifact found in run");
@@ -98,7 +101,10 @@ describe("cli claim-gate command", () => {
     expect(gate.out).toContain('"ok": true');
 
     const logRaw = await readFile(logFile, "utf8");
-    const entries = logRaw.split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>);
+    const entries = logRaw
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
     expect(entries).toHaveLength(1);
     expect(entries[0]!.seq).toBe(1);
     expect(entries[0]!.prevHash).toBe("0".repeat(64));
@@ -127,7 +133,10 @@ describe("cli claim-gate command", () => {
     expect(second.exitCode).toBe(1);
 
     const logRaw = await readFile(logFile, "utf8");
-    const entries = logRaw.split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>);
+    const entries = logRaw
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
     expect(entries).toHaveLength(2);
     expect(entries[0]!.ok).toBe(false);
     expect(Number(entries[0]!.errorCount)).toBeGreaterThanOrEqual(1);

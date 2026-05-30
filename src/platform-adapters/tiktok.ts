@@ -1,11 +1,6 @@
 import { capability, type PlatformCapabilityMap, type PlatformEvidenceAdapter } from "./types.js";
 
-const TIKTOK_SOURCES = [
-  "https://developers.tiktok.com/doc/display-api-overview/",
-  "https://developers.tiktok.com/doc/tiktok-api-v2-video-query/",
-  "https://developers.tiktok.com/doc/about-research-api/",
-  "https://developers.tiktok.com/doc/research-api-specs-query-videos/"
-];
+const TIKTOK_SOURCES = ["https://developers.tiktok.com/doc/display-api-overview/", "https://developers.tiktok.com/doc/tiktok-api-v2-video-query/", "https://developers.tiktok.com/doc/about-research-api/", "https://developers.tiktok.com/doc/research-api-specs-query-videos/"];
 
 export class TikTokEvidenceAdapter implements PlatformEvidenceAdapter {
   readonly platform = "tiktok" as const;
@@ -24,11 +19,7 @@ export class TikTokEvidenceAdapter implements PlatformEvidenceAdapter {
       ...(video === undefined ? {} : { mediaId: video.id, accountHint: video.username }),
       confidence: video === undefined ? "medium" : "high",
       sources: TIKTOK_SOURCES,
-      warnings: [
-        "Display API video query is limited to videos owned by the authorized user.",
-        "Research API access is application- and eligibility-gated.",
-        "Short links may require browser resolution before a stable media ID can be known."
-      ],
+      warnings: ["Display API video query is limited to videos owned by the authorized user.", "Research API access is application- and eligibility-gated.", "Short links may require browser resolution before a stable media ID can be known."],
       capabilities: {
         metadata: capability({
           name: "metadata",

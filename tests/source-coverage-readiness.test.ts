@@ -40,16 +40,8 @@ describe("source coverage readiness", () => {
     });
 
     expect(audit.ok).toBe(false);
-    expect(audit.items.map((item) => item.platform)).toEqual([
-      "naver_search",
-      "google_search",
-      "daum_search"
-    ]);
-    expect(audit.items.map((item) => item.status)).toEqual([
-      "not_promoted",
-      "ready",
-      "needs_repeated_calibration"
-    ]);
+    expect(audit.items.map((item) => item.platform)).toEqual(["naver_search", "google_search", "daum_search"]);
+    expect(audit.items.map((item) => item.status)).toEqual(["not_promoted", "ready", "needs_repeated_calibration"]);
     expect(audit.readyCount).toBe(1);
     expect(audit.notReadyActionableCount).toBe(2);
     expect(formatSourceCoverageReadinessTargetsAsLines(audit)).toContain("naver_search https://search.naver.com/search.naver");
@@ -75,18 +67,12 @@ describe("source coverage readiness", () => {
       blockedCount: 1
     });
     googleGroup.files.selectorHints = "C:\\promotion\\google_search\\selector-hints.tsv";
-    googleGroup.blockedSignalCounts = [
-      { signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection", "obstruction-check"] }
-    ];
+    googleGroup.blockedSignalCounts = [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection", "obstruction-check"] }];
     const audit = buildSourceCoverageReadinessAudit({
       category: "search",
       locale: "ko-KR",
       query: "seoul hotel",
-      promotionSummaries: [
-        promotionSummary([
-          googleGroup
-        ])
-      ]
+      promotionSummaries: [promotionSummary([googleGroup])]
     });
 
     const google = audit.items.find((item) => item.platform === "google_search");
@@ -99,14 +85,7 @@ describe("source coverage readiness", () => {
         storagePolicy: "persistent-profile",
         browserChannel: "chrome",
         selectorHintFiles: ["C:\\promotion\\google_search\\selector-hints.tsv"],
-        profileSetupArgv: expect.arrayContaining([
-          "auth-login",
-          "--profile",
-          "google_search-profile",
-          "--url",
-          "--browser-channel",
-          "chrome"
-        ]),
+        profileSetupArgv: expect.arrayContaining(["auth-login", "--profile", "google_search-profile", "--url", "--browser-channel", "chrome"]),
         argv: [
           "node",
           ".\\dist\\cli.js",
@@ -128,17 +107,13 @@ describe("source coverage readiness", () => {
         ]
       }
     });
-    expect(google?.blockedSignalCounts).toEqual([
-      { signal: "captcha-delivery.com", count: 7, actionKeys: ["obstruction-check", "result-selection"] }
-    ]);
+    expect(google?.blockedSignalCounts).toEqual([{ signal: "captcha-delivery.com", count: 7, actionKeys: ["obstruction-check", "result-selection"] }]);
     expect(google?.profileHeadedRetry?.profileSetupUrl).toContain("https://www.google.com/search");
     expect(google?.nextActions[0]).toContain("profile/headed");
     const retryCommands = formatSourceCoverageReadinessRetryCommandsAsLines(audit);
     expect(retryCommands).toContain("auth-login --profile 'google_search-profile' --url 'https://www.google.com/search");
     expect(retryCommands).toContain("--browser-channel 'chrome'");
-    expect(retryCommands).toContain(
-      "source-coverage-calibrate --platform 'google_search' --query 'seoul hotel' --repeat '2' --headed --browser-channel 'chrome' --profile 'google_search-profile' --persistent-profile"
-    );
+    expect(retryCommands).toContain("source-coverage-calibrate --platform 'google_search' --query 'seoul hotel' --repeat '2' --headed --browser-channel 'chrome' --profile 'google_search-profile' --persistent-profile");
     expect(retryCommands).toContain("--selector-hints-file 'C:\\promotion\\google_search\\selector-hints.tsv'");
   });
 
@@ -148,9 +123,7 @@ describe("source coverage readiness", () => {
       blockedCount: 1
     });
     googleGroup.files.selectorHints = "C:\\promotion\\google_search\\selector-hints.tsv";
-    googleGroup.blockedSignalCounts = [
-      { signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }
-    ];
+    googleGroup.blockedSignalCounts = [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }];
     const daumGroup = promotionGroup("daum_search", "search", "empty", 0, {
       calibrationReportCount: 2,
       blockedCount: 1
@@ -159,12 +132,7 @@ describe("source coverage readiness", () => {
       category: "search",
       locale: "ko-KR",
       query: "seoul hotel",
-      promotionSummaries: [
-        promotionSummary([
-          daumGroup,
-          googleGroup
-        ])
-      ]
+      promotionSummaries: [promotionSummary([daumGroup, googleGroup])]
     });
 
     const plan = buildSourceCoverageReadinessRetryPlan(audit);
@@ -178,9 +146,7 @@ describe("source coverage readiness", () => {
           priority: "top_slot_blocked",
           matchedTopRank: 2,
           selectorHintFiles: ["C:\\promotion\\google_search\\selector-hints.tsv"],
-          blockedSignalCounts: [
-            { signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }
-          ]
+          blockedSignalCounts: [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }]
         },
         {
           order: 2,
@@ -207,9 +173,7 @@ describe("source coverage readiness", () => {
       blockedCount: 1
     });
     googleGroup.files.selectorHints = "C:\\promotion\\google_search\\selector-hints.tsv";
-    googleGroup.blockedSignalCounts = [
-      { signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }
-    ];
+    googleGroup.blockedSignalCounts = [{ signal: "captcha-delivery.com", count: 7, actionKeys: ["result-selection"] }];
     const audit = buildSourceCoverageReadinessAudit({
       category: "search",
       locale: "ko-KR",
@@ -243,15 +207,21 @@ describe("source coverage readiness", () => {
       calibrationReportCount: 2,
       blockedCount: 1
     });
-    const genericGroup = promotionGroup("google_maps", "map", "empty", 0, {
-      calibrationReportCount: 2,
-      blockedCount: 1
-    }, undefined, "map");
+    const genericGroup = promotionGroup(
+      "google_maps",
+      "map",
+      "empty",
+      0,
+      {
+        calibrationReportCount: 2,
+        blockedCount: 1
+      },
+      undefined,
+      "map"
+    );
     const audit = buildSourceCoverageReadinessAudit({
       query: "seoul hotel",
-      promotionSummaries: [
-        promotionSummary([googleGroup, daumGroup, genericGroup])
-      ]
+      promotionSummaries: [promotionSummary([googleGroup, daumGroup, genericGroup])]
     });
     const plan = buildSourceCoverageReadinessRetryPlan(audit);
 
@@ -372,14 +342,9 @@ describe("source coverage readiness", () => {
     expect(missingProfileMarkdown).toContain("- OK: no");
     expect(missingProfileMarkdown).toContain("`profile_missing` item 1 platform `google_search`");
     expect(brokenCheck.ok).toBe(false);
-    expect(brokenCheck.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining([
-      "retry_command_missing_headed",
-      "retry_command_missing_browser_channel_flag",
-      "retry_command_missing_profile_flag",
-      "retry_command_missing_persistent_profile",
-      "retry_command_missing_selector_hints_flag",
-      "retry_command_missing_selector_hint_file"
-    ]));
+    expect(brokenCheck.issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining(["retry_command_missing_headed", "retry_command_missing_browser_channel_flag", "retry_command_missing_profile_flag", "retry_command_missing_persistent_profile", "retry_command_missing_selector_hints_flag", "retry_command_missing_selector_hint_file"])
+    );
   });
 
   it("separates destination extraction readiness from general capture readiness", () => {
@@ -389,31 +354,45 @@ describe("source coverage readiness", () => {
       query: "seongsu cafe",
       promotionSummaries: [
         promotionSummary([
-          promotionGroup("naver_map", "map", "ready", 1, {
-            calibrationReportCount: 2,
-            maintainedRecipeReadyCount: 1,
-            calibrationRequiredCount: 0,
-            recommendedActionCount: 1,
-            maintainedDefaultReadyCount: 1
-          }, destinationExtraction({
-            candidateCount: 1,
-            calibrationRequiredCount: 1,
-            clientStateProbeRunCount: 2,
-            clientStateProbeOkRunCount: 2,
-            clientStateProbeUniqueCandidateCount: 176
-          })),
-          promotionGroup("google_maps", "map", "ready", 2, {
-            calibrationReportCount: 2,
-            maintainedRecipeReadyCount: 2,
-            calibrationRequiredCount: 0,
-            recommendedActionCount: 2,
-            maintainedDefaultReadyCount: 2
-          }, destinationExtraction({
-            candidateCount: 1,
-            readyActionCount: 1,
-            readyActionKeys: ["destination-followup"],
-            maintainedReadyCount: 1
-          }))
+          promotionGroup(
+            "naver_map",
+            "map",
+            "ready",
+            1,
+            {
+              calibrationReportCount: 2,
+              maintainedRecipeReadyCount: 1,
+              calibrationRequiredCount: 0,
+              recommendedActionCount: 1,
+              maintainedDefaultReadyCount: 1
+            },
+            destinationExtraction({
+              candidateCount: 1,
+              calibrationRequiredCount: 1,
+              clientStateProbeRunCount: 2,
+              clientStateProbeOkRunCount: 2,
+              clientStateProbeUniqueCandidateCount: 176
+            })
+          ),
+          promotionGroup(
+            "google_maps",
+            "map",
+            "ready",
+            2,
+            {
+              calibrationReportCount: 2,
+              maintainedRecipeReadyCount: 2,
+              calibrationRequiredCount: 0,
+              recommendedActionCount: 2,
+              maintainedDefaultReadyCount: 2
+            },
+            destinationExtraction({
+              candidateCount: 1,
+              readyActionCount: 1,
+              readyActionKeys: ["destination-followup"],
+              maintainedReadyCount: 1
+            })
+          )
         ])
       ]
     });
@@ -452,33 +431,34 @@ describe("source coverage readiness", () => {
   });
 
   it("carries destination discovery diagnostics into readiness next actions", () => {
-    const naverGroup = promotionGroup("naver_map", "map", "ready", 1, {
-      calibrationReportCount: 2,
-      maintainedRecipeReadyCount: 1,
-      calibrationRequiredCount: 1,
-      recommendedActionCount: 1,
-      maintainedDefaultReadyCount: 1
-    }, destinationExtraction({
-      candidateCount: 1,
-      calibrationRequiredCount: 1,
-      discoveryRunCount: 2,
-      discoveryPromotableCandidateCount: 1,
-      discoveryNonPromotableCandidateCount: 1,
-      discoverySelectorHintCount: 1,
-      discoveryWarningCounts: [
-        { warning: "login_or_account_surface", count: 1 }
-      ]
-    }));
+    const naverGroup = promotionGroup(
+      "naver_map",
+      "map",
+      "ready",
+      1,
+      {
+        calibrationReportCount: 2,
+        maintainedRecipeReadyCount: 1,
+        calibrationRequiredCount: 1,
+        recommendedActionCount: 1,
+        maintainedDefaultReadyCount: 1
+      },
+      destinationExtraction({
+        candidateCount: 1,
+        calibrationRequiredCount: 1,
+        discoveryRunCount: 2,
+        discoveryPromotableCandidateCount: 1,
+        discoveryNonPromotableCandidateCount: 1,
+        discoverySelectorHintCount: 1,
+        discoveryWarningCounts: [{ warning: "login_or_account_surface", count: 1 }]
+      })
+    );
     naverGroup.files.selectorHints = "C:\\promotion\\naver_map\\selector-hints.tsv";
     const audit = buildSourceCoverageReadinessAudit({
       category: "map_local",
       locale: "ko-KR",
       query: "seongsu cafe",
-      promotionSummaries: [
-        promotionSummary([
-          naverGroup
-        ])
-      ]
+      promotionSummaries: [promotionSummary([naverGroup])]
     });
 
     const naver = audit.items.find((item) => item.platform === "naver_map");
@@ -489,12 +469,8 @@ describe("source coverage readiness", () => {
       discoveryNonPromotableCandidateCount: 1,
       discoverySelectorHintCount: 1,
       selectorHintFiles: ["C:\\promotion\\naver_map\\selector-hints.tsv"],
-      reasons: expect.arrayContaining([
-        expect.stringContaining("Global destination discovery found 1 promotable destination target(s) and 1 selector hint")
-      ]),
-      nextActions: expect.arrayContaining([
-        expect.stringContaining("selector hints")
-      ])
+      reasons: expect.arrayContaining([expect.stringContaining("Global destination discovery found 1 promotable destination target(s) and 1 selector hint")]),
+      nextActions: expect.arrayContaining([expect.stringContaining("selector hints")])
     });
   });
 });
@@ -554,9 +530,7 @@ function promotionGroup(
   };
 }
 
-function destinationExtraction(
-  input: Partial<NonNullable<SourceNavigationPromotionSummary["groups"][number]["destinationExtraction"]>> = {}
-): NonNullable<SourceNavigationPromotionSummary["groups"][number]["destinationExtraction"]> {
+function destinationExtraction(input: Partial<NonNullable<SourceNavigationPromotionSummary["groups"][number]["destinationExtraction"]>> = {}): NonNullable<SourceNavigationPromotionSummary["groups"][number]["destinationExtraction"]> {
   return {
     candidateCount: 0,
     readyActionCount: 0,

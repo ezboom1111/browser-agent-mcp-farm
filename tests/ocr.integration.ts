@@ -26,10 +26,13 @@ describe.skipIf(!integrationEnabled)("OCR integration", () => {
 
   it("extracts profile metadata from real OCR fixture screenshots through optional tesseract.js", async () => {
     await expectTesseractInstalled();
-    const executableAvailable = await chromium.launch({ headless: true }).then(async (browser) => {
-      await browser.close();
-      return true;
-    }).catch(() => false);
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
 
     if (!executableAvailable) {
       console.warn("Skipping OCR integration test because Playwright Chromium is not installed.");
@@ -114,7 +117,10 @@ describe.skipIf(!integrationEnabled)("OCR integration", () => {
 
       const textRecords = result.records.filter((record) => record.kind === "text" && record.status === "ok");
       expect(textRecords.length, testCase.name).toBeGreaterThan(0);
-      expect(result.records.some((record) => record.evidence_kind === "ocr_text"), testCase.name).toBe(true);
+      expect(
+        result.records.some((record) => record.evidence_kind === "ocr_text"),
+        testCase.name
+      ).toBe(true);
       const metadata = await readOcrMetadata(runDir, result.records);
       expect(metadata.ocr.textProfile, testCase.name).toMatchObject(testCase.expectedProfile);
       if (testCase.minimumPriceLikeTokenCount !== undefined) {
@@ -184,7 +190,7 @@ function escapeHtml(value: string): string {
         return "&lt;";
       case ">":
         return "&gt;";
-      case "\"":
+      case '"':
         return "&quot;";
       case "'":
         return "&#39;";

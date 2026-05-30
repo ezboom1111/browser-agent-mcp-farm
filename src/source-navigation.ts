@@ -218,9 +218,7 @@ function searchTemplate(platform: SourcePlatform) {
       target("visible-filters", "visible_filters", "page_screenshot", false, "Visible tab, filter, sort, and sponsored/organic markers.")
     ],
     unsupportedActions: [],
-    warnings: [
-      `Search snippets from ${platform} are evidence of what the portal displayed, not proof of destination content.`
-    ]
+    warnings: [`Search snippets from ${platform} are evidence of what the portal displayed, not proof of destination content.`]
   };
 }
 
@@ -242,9 +240,7 @@ function mapTemplate(platform: SourcePlatform) {
       target("place-destination-links", "structured_page_data", "metadata", false, "Visible website, menu, review, booking, or place-detail links resolved as bounded child evidence only when followed.")
     ],
     unsupportedActions: [],
-    warnings: [
-      `${platform} rankings, labels, and place panels can change with viewport, login state, locale, and time.`
-    ]
+    warnings: [`${platform} rankings, labels, and place panels can change with viewport, login state, locale, and time.`]
   };
 }
 
@@ -264,12 +260,8 @@ function blogTemplate(platform: SourcePlatform) {
       target("embedded-ocr", "ocr_text", "ocr_text", false, "OCR over text embedded in screenshots or images."),
       target("article-destination-links", "structured_page_data", "metadata", false, "Visible source, related article, profile, official, or external links resolved as bounded child evidence only when followed.")
     ],
-    unsupportedActions: [
-      unsupported("member-only-bypass", "member-only content bypass", "Do not bypass Cafe or blog membership/login walls.")
-    ],
-    warnings: [
-      `${platform} comments and embedded media should be cited separately when a claim depends on them.`
-    ]
+    unsupportedActions: [unsupported("member-only-bypass", "member-only content bypass", "Do not bypass Cafe or blog membership/login walls.")],
+    warnings: [`${platform} comments and embedded media should be cited separately when a claim depends on them.`]
   };
 }
 
@@ -296,9 +288,7 @@ function travelTemplate(platform: SourcePlatform) {
       unsupported("payment", "payment or checkout", "Do not enter payment flows or submit purchase actions."),
       unsupported("account-change", "account-changing action", "Do not modify profile, loyalty, or account settings.")
     ],
-    warnings: [
-      `${platform} prices and availability are volatile; cite timestamped screenshots and visible query parameters.`
-    ]
+    warnings: [`${platform} prices and availability are volatile; cite timestamped screenshots and visible query parameters.`]
   };
 }
 
@@ -313,7 +303,15 @@ function commerceTemplate(platform: SourcePlatform) {
       action("product-card", "select_result", "Capture visible product or offer cards.", "Product claims require visible card evidence with price, seller, shipping, and ranking context.", true, "page_screenshot"),
       action("seller-terms", "select_result", "Capture visible seller, shipping, fee, return, and coupon terms when claims depend on them.", "List cards can hide material seller or delivery terms.", true, "page_screenshot", "conditional"),
       action("price-ocr", "run_ocr", "Run OCR over image-rendered price, coupon, and shipping badges when enabled.", "Marketplace prices and badges may be rendered visually.", true, "ocr_text", "conditional"),
-      action("destination-followup", "follow_destination", "Resolve visible product-detail, review, seller, or brand destinations as separate child evidence.", "Claims about product details, seller pages, review pages, or marketplace destinations need child artifacts in addition to list-card evidence.", true, "metadata", "conditional")
+      action(
+        "destination-followup",
+        "follow_destination",
+        "Resolve visible product-detail, review, seller, or brand destinations as separate child evidence.",
+        "Claims about product details, seller pages, review pages, or marketplace destinations need child artifacts in addition to list-card evidence.",
+        true,
+        "metadata",
+        "conditional"
+      )
     ],
     extractionTargets: [
       target("query-state", "query_state", "metadata", true, "Query, locale, currency, filters, sort, seller, and shipping/fee visibility."),
@@ -328,9 +326,7 @@ function commerceTemplate(platform: SourcePlatform) {
       unsupported("purchase", "purchase or checkout", "Do not buy, reserve, subscribe, or enter checkout/payment flows."),
       unsupported("account-change", "account-changing action", "Do not modify profile, address, membership, seller, or account settings.")
     ],
-    warnings: [
-      `${platform} product prices, availability, seller terms, shipping, coupons, and rankings are volatile; cite timestamped screenshots and visible query/filter parameters.`
-    ]
+    warnings: [`${platform} product prices, availability, seller terms, shipping, coupons, and rankings are volatile; cite timestamped screenshots and visible query/filter parameters.`]
   };
 }
 
@@ -339,7 +335,15 @@ function videoSocialTemplate(platform: SourcePlatform) {
     plannedActions: [
       action("obstruction-check", "classify_obstruction", "Classify login walls, app interstitials, bot blocks, age/region gates, and unavailable media.", "Obstructions must become evidence instead of hidden assumptions.", true, "browser_obstruction"),
       action("visible-metadata", "capture_page_state", "Capture visible title/caption/profile/channel/player state.", "Metadata claims must cite browser-visible or official API evidence.", true, "page_screenshot"),
-      action("destination-followup", "follow_destination", "Resolve visible profile, canonical post/video, external bio, or source links as separate child evidence.", "Claims about linked social profiles, external sites, or related media need destination artifacts in addition to visible metadata.", true, "metadata", "conditional"),
+      action(
+        "destination-followup",
+        "follow_destination",
+        "Resolve visible profile, canonical post/video, external bio, or source links as separate child evidence.",
+        "Claims about linked social profiles, external sites, or related media need destination artifacts in addition to visible metadata.",
+        true,
+        "metadata",
+        "conditional"
+      ),
       action("frame-sampling", "sample_video_frames", "Sample browser-visible frames for visual claims.", "Visual claims require timestamped frame screenshot artifacts.", true, "frame_screenshot", "conditional"),
       action("overlay-ocr", "run_ocr", "Run OCR over sampled frames for visible overlay text when enabled.", "Overlay text is a screenshot derivative and must cite OCR artifacts.", true, "ocr_text", "conditional")
     ],
@@ -356,9 +360,7 @@ function videoSocialTemplate(platform: SourcePlatform) {
       unsupported("gate-bypass", "login, app, age, region, CAPTCHA, or bot-gate bypass", "Record gates as browser-visible obstructions instead of bypassing them."),
       unsupported("social-write", "like, follow, comment, post, message, or share", "Evidence runs must not perform account-changing social actions.")
     ],
-    warnings: [
-      `${platform} visual claims need frame screenshots; full video/audio understanding remains unverified without transcript or audio artifacts.`
-    ]
+    warnings: [`${platform} visual claims need frame screenshots; full video/audio understanding remains unverified without transcript or audio artifacts.`]
   };
 }
 
@@ -385,10 +387,7 @@ function portalTemplate(platform: SourcePlatform) {
       unsupported("comment-write", "comment, like, share, or reaction", "Do not perform account-changing news or community actions."),
       unsupported("unbounded-feed-crawl", "unbounded news feed crawl", "Keep news pagination and feed expansion bounded.")
     ],
-    warnings: [
-      `${platform} news modules are volatile and may vary by locale, personalization, time, publisher availability, and ranking experiments.`,
-      `Portal snippets from ${platform} prove only browser-visible portal display; destination article claims need separate evidence.`
-    ]
+    warnings: [`${platform} news modules are volatile and may vary by locale, personalization, time, publisher availability, and ranking experiments.`, `Portal snippets from ${platform} prove only browser-visible portal display; destination article claims need separate evidence.`]
   };
 }
 
@@ -406,24 +405,12 @@ function genericTemplate(platform: SourcePlatform) {
       target("media-index", "media_gallery", "media_index", false, "Accessible image-like media index."),
       target("obstruction", "obstruction", "browser_obstruction", false, "Browser-visible access or availability obstruction.")
     ],
-    unsupportedActions: [
-      unsupported("unknown-mutating-action", "unknown mutating action", "Do not click actions that may submit, purchase, post, delete, or modify state.")
-    ],
-    warnings: [
-      `No specialized navigation recipe is registered for ${platform}; keep follow-up actions conservative.`
-    ]
+    unsupportedActions: [unsupported("unknown-mutating-action", "unknown mutating action", "Do not click actions that may submit, purchase, post, delete, or modify state.")],
+    warnings: [`No specialized navigation recipe is registered for ${platform}; keep follow-up actions conservative.`]
   };
 }
 
-function action(
-  key: string,
-  kind: SourceNavigationActionKind,
-  label: string,
-  reason: string,
-  requiresCapture: boolean,
-  evidenceKind: EvidenceKind,
-  status: SourceNavigationActionStatus = "planned"
-): SourceNavigationAction {
+function action(key: string, kind: SourceNavigationActionKind, label: string, reason: string, requiresCapture: boolean, evidenceKind: EvidenceKind, status: SourceNavigationActionStatus = "planned"): SourceNavigationAction {
   return {
     key,
     kind,
@@ -435,13 +422,7 @@ function action(
   };
 }
 
-function target(
-  key: string,
-  kind: SourceExtractionTargetKind,
-  evidenceKind: EvidenceKind,
-  required: boolean,
-  note: string
-): SourceExtractionTarget {
+function target(key: string, kind: SourceExtractionTargetKind, evidenceKind: EvidenceKind, required: boolean, note: string): SourceExtractionTarget {
   return {
     key,
     kind,

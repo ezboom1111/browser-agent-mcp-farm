@@ -38,9 +38,10 @@ function renderHtml(runDir: string, outputPath: string, artifacts: ArtifactRow[]
   const screenshotCards = screenshotRows.map(visualCard).join("\n");
   const mediaCards = imageMediaRows.map(visualCard).join("\n");
 
-  const tableRows = allRows.map((artifact) => {
-    const href = relLink(outputPath, runDir, artifact.path!);
-    return `<tr>
+  const tableRows = allRows
+    .map((artifact) => {
+      const href = relLink(outputPath, runDir, artifact.path!);
+      return `<tr>
       <td>${escapeHtml(artifact.kind ?? "")}</td>
       <td><a href="${href}">${escapeHtml(artifact.path ?? "")}</a></td>
       <td>${escapeHtml(artifact.source_url ?? "")}</td>
@@ -48,7 +49,8 @@ function renderHtml(runDir: string, outputPath: string, artifacts: ArtifactRow[]
       <td>${artifact.bytes ?? ""}</td>
       <td><code>${escapeHtml((artifact.sha256 ?? "").slice(0, 16))}</code></td>
     </tr>`;
-  }).join("\n");
+    })
+    .join("\n");
 
   return `<!doctype html>
 <html lang="ko">
@@ -119,7 +121,7 @@ function escapeHtml(value: string): string {
         return "&lt;";
       case ">":
         return "&gt;";
-      case "\"":
+      case '"':
         return "&quot;";
       case "'":
         return "&#39;";

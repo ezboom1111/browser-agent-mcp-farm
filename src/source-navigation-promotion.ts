@@ -41,12 +41,7 @@ export interface SourceNavigationPromotionSummary {
   warnings: string[];
 }
 
-export type SourceNavigationPromotionReviewStatus =
-  | "ready"
-  | "blocked"
-  | "needs_repeated_calibration"
-  | "manual_review_required"
-  | "empty";
+export type SourceNavigationPromotionReviewStatus = "ready" | "blocked" | "needs_repeated_calibration" | "manual_review_required" | "empty";
 
 export interface SourceNavigationPromotionEvidenceRunCommand {
   url: string;
@@ -142,17 +137,11 @@ export interface SourceNavigationPromotionReview {
   warnings: string[];
 }
 
-export async function promoteSourceNavigationCalibrationBatch(input: {
-  manifest: SourceNavigationCalibrationBatchManifest;
-  outputDir: string;
-}): Promise<SourceNavigationPromotionSummary> {
+export async function promoteSourceNavigationCalibrationBatch(input: { manifest: SourceNavigationCalibrationBatchManifest; outputDir: string }): Promise<SourceNavigationPromotionSummary> {
   const outputDir = resolve(input.outputDir);
   await mkdir(outputDir, { recursive: true });
   const groups: SourceNavigationPromotionGroup[] = [];
-  const warnings: string[] = [
-    "Promotion writes explicit action files only; it does not execute browser actions.",
-    "Review catalog/export files before passing generated actions into evidence-run."
-  ];
+  const warnings: string[] = ["Promotion writes explicit action files only; it does not execute browser actions.", "Review catalog/export files before passing generated actions into evidence-run."];
 
   for (const hint of input.manifest.catalogHints) {
     const groupDir = join(outputDir, sanitizeFileBase(`${hint.platform}-${hint.sourceFamily}`));
@@ -191,11 +180,7 @@ export async function promoteSourceNavigationCalibrationBatch(input: {
         actions: actionsPath,
         selectorHints: selectorHintsPath
       },
-      warnings: [
-        ...calibrationInputs.warnings,
-        ...catalog.warnings,
-        ...exportBundle.warnings
-      ]
+      warnings: [...calibrationInputs.warnings, ...catalog.warnings, ...exportBundle.warnings]
     });
   }
 
@@ -212,10 +197,7 @@ export async function promoteSourceNavigationCalibrationBatch(input: {
   };
 }
 
-export function reviewSourceNavigationPromotion(
-  summary: SourceNavigationPromotionSummary,
-  options: SourceNavigationPromotionReviewOptions = {}
-): SourceNavigationPromotionReview {
+export function reviewSourceNavigationPromotion(summary: SourceNavigationPromotionSummary, options: SourceNavigationPromotionReviewOptions = {}): SourceNavigationPromotionReview {
   const evidenceRunOptions = normalizeEvidenceRunOptions(options.evidenceRunOptions);
   const groups = summary.groups.map((group) => reviewPromotionGroup(group, evidenceRunOptions));
   const readyActionFiles = groups
@@ -242,11 +224,7 @@ export function reviewSourceNavigationPromotion(
     readyActionFiles,
     groups,
     ...(hasEvidenceRunOptions(evidenceRunOptions) ? { evidenceRunOptions } : {}),
-    warnings: [
-      ...summary.warnings,
-      "Run the generated evidence-run commands only after reviewing the matching catalog/export files.",
-      ...(readyActionFiles.length === 0 ? ["No ready action files were found in this promotion summary."] : [])
-    ]
+    warnings: [...summary.warnings, "Run the generated evidence-run commands only after reviewing the matching catalog/export files.", ...(readyActionFiles.length === 0 ? ["No ready action files were found in this promotion summary."] : [])]
   };
 }
 
@@ -290,10 +268,7 @@ function stripJsonBom(input: string): string {
   return input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
 }
 
-function reviewPromotionGroup(
-  group: SourceNavigationPromotionGroup,
-  evidenceRunOptions: SourceNavigationPromotionEvidenceRunOptions
-): SourceNavigationPromotionGroupReview {
+function reviewPromotionGroup(group: SourceNavigationPromotionGroup, evidenceRunOptions: SourceNavigationPromotionEvidenceRunOptions): SourceNavigationPromotionGroupReview {
   const runtime = normalizeRuntime(group.runtime);
   const status = classifyPromotionGroup(group);
   const reasons = reasonsForPromotionGroup(group, status);
@@ -324,11 +299,7 @@ function classifyPromotionGroup(group: SourceNavigationPromotionGroup): SourceNa
   if (group.status === "ready" && group.actionCount > 0) {
     return "ready";
   }
-  if (
-    group.catalogSummary.calibrationReportCount < group.catalogSummary.minimumCalibrationRunsRequired ||
-    group.catalogSummary.singleRunReadyCount > 0 ||
-    group.catalogSummary.calibrationRequiredCount > 0
-  ) {
+  if (group.catalogSummary.calibrationReportCount < group.catalogSummary.minimumCalibrationRunsRequired || group.catalogSummary.singleRunReadyCount > 0 || group.catalogSummary.calibrationRequiredCount > 0) {
     return "needs_repeated_calibration";
   }
   if (group.catalogSummary.manualReviewCount > 0 || group.catalogSummary.manualValueCount > 0) {
@@ -337,15 +308,9 @@ function classifyPromotionGroup(group: SourceNavigationPromotionGroup): SourceNa
   return "empty";
 }
 
-function reasonsForPromotionGroup(
-  group: SourceNavigationPromotionGroup,
-  status: SourceNavigationPromotionReviewStatus
-): string[] {
+function reasonsForPromotionGroup(group: SourceNavigationPromotionGroup, status: SourceNavigationPromotionReviewStatus): string[] {
   if (status === "ready") {
-    return [
-      `${group.actionCount} maintained read-only action(s) are ready for explicit evidence-run execution.`,
-      "Review catalog.json and export.json before using the generated actions.json file."
-    ];
+    return [`${group.actionCount} maintained read-only action(s) are ready for explicit evidence-run execution.`, "Review catalog.json and export.json before using the generated actions.json file."];
   }
   const reasons: string[] = ["No maintained read-only action file is ready for this group."];
   if (status === "blocked") {
@@ -398,15 +363,13 @@ function summarizeBlockedSignals(catalog: SourceNavigationRecipeCatalog): Source
 }
 
 function formatBlockedSignalCounts(counts: SourceNavigationBlockedSignalCount[]): string {
-  return counts.slice(0, 8).map((entry) =>
-    `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`
-  ).join(", ");
+  return counts
+    .slice(0, 8)
+    .map((entry) => `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`)
+    .join(", ");
 }
 
-function summarizeDestinationExtraction(
-  catalog: SourceNavigationRecipeCatalog,
-  exportBundle: SourceNavigationMaintainedRecipeExport
-): SourceNavigationDestinationExtractionPromotionSummary {
+function summarizeDestinationExtraction(catalog: SourceNavigationRecipeCatalog, exportBundle: SourceNavigationMaintainedRecipeExport): SourceNavigationDestinationExtractionPromotionSummary {
   const destinationEntries = catalog.entries.filter((entry) => isDestinationExtractionOperation(entry.operation));
   const readyActions = exportBundle.actions.filter((action) => isDestinationExtractionOperation(action.operation));
   const discovery = summarizeDestinationDiscovery(destinationEntries.map((entry) => entry.destinationDiscovery).filter((entry): entry is SourceNavigationDestinationDiscoveryCatalogSummary => entry !== undefined));
@@ -448,9 +411,7 @@ function summarizeDestinationDiscovery(
   };
 }
 
-function summarizeClientStateProbes(
-  summaries: SourceNavigationClientStateProbeCatalogSummary[]
-): Pick<SourceNavigationDestinationExtractionPromotionSummary, "clientStateProbeRunCount" | "clientStateProbeOkRunCount" | "clientStateProbeUniqueCandidateCount"> {
+function summarizeClientStateProbes(summaries: SourceNavigationClientStateProbeCatalogSummary[]): Pick<SourceNavigationDestinationExtractionPromotionSummary, "clientStateProbeRunCount" | "clientStateProbeOkRunCount" | "clientStateProbeUniqueCandidateCount"> {
   return {
     clientStateProbeRunCount: summaries.reduce((sum, summary) => sum + summary.runCount, 0),
     clientStateProbeOkRunCount: summaries.reduce((sum, summary) => sum + summary.okRunCount, 0),
@@ -458,41 +419,21 @@ function summarizeClientStateProbes(
   };
 }
 
-function mergeWarningCounts(
-  warnings: Array<{ warning: string; count: number }>
-): Array<{ warning: string; count: number }> {
+function mergeWarningCounts(warnings: Array<{ warning: string; count: number }>): Array<{ warning: string; count: number }> {
   const counts = new Map<string, number>();
   for (const warning of warnings) {
     counts.set(warning.warning, (counts.get(warning.warning) ?? 0) + warning.count);
   }
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([warning, count]) => ({ warning, count }));
+  return [...counts.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([warning, count]) => ({ warning, count }));
 }
 
-function buildEvidenceRunCommand(
-  url: string,
-  actionsFile: string,
-  runtime: SourceNavigationCalibrationRuntime,
-  sourceNavigationOptions: SourceNavigationPromotionEvidenceRunOptions
-): SourceNavigationPromotionEvidenceRunCommand {
+function buildEvidenceRunCommand(url: string, actionsFile: string, runtime: SourceNavigationCalibrationRuntime, sourceNavigationOptions: SourceNavigationPromotionEvidenceRunOptions): SourceNavigationPromotionEvidenceRunCommand {
   const runtimeArgs = evidenceRunRuntimeArgs(runtime);
   const sourceNavigationArgs = evidenceRunSourceNavigationArgs(sourceNavigationOptions);
   return {
     url,
     actionsFile,
-    argv: [
-      "node",
-      ".\\dist\\cli.js",
-      "evidence-run",
-      "--url",
-      url,
-      ...runtimeArgs,
-      ...sourceNavigationArgs,
-      "--source-navigation",
-      "--source-navigation-actions-file",
-      actionsFile
-    ],
+    argv: ["node", ".\\dist\\cli.js", "evidence-run", "--url", url, ...runtimeArgs, ...sourceNavigationArgs, "--source-navigation", "--source-navigation-actions-file", actionsFile],
     powershellCommand: `node .\\dist\\cli.js evidence-run --url ${quotePowerShellValue(url)}${formatRuntimeArgsForPowerShell(runtime)}${formatSourceNavigationArgsForPowerShell(sourceNavigationOptions)} --source-navigation --source-navigation-actions-file ${quotePowerShellValue(actionsFile)}`,
     ...(hasEvidenceRunOptions(sourceNavigationOptions) ? { sourceNavigationOptions } : {})
   };
@@ -524,7 +465,7 @@ function formatRuntimeArgsForPowerShell(runtime: SourceNavigationCalibrationRunt
   if (args.length === 0) {
     return "";
   }
-  return ` ${args.map((arg) => arg.startsWith("--") ? arg : quotePowerShellValue(arg)).join(" ")}`;
+  return ` ${args.map((arg) => (arg.startsWith("--") ? arg : quotePowerShellValue(arg))).join(" ")}`;
 }
 
 function evidenceRunSourceNavigationArgs(options: SourceNavigationPromotionEvidenceRunOptions): string[] {

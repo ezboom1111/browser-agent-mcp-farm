@@ -34,7 +34,11 @@ async function agentAProducesBundle(privPem: string): Promise<BundleArchive> {
   dirs.push(runDir);
   const writer = new ArtifactWriter();
   await writer.writeCaptureBundle({
-    runDir, sourceUrl: "https://example.com/menu", contextToken: "ctxA", pageId: "pA", captureId: "a1",
+    runDir,
+    sourceUrl: "https://example.com/menu",
+    contextToken: "ctxA",
+    pageId: "pA",
+    captureId: "a1",
     text: "Latte — 4500 KRW"
   });
   const archive = await exportBundleArchive(runDir, { privateKeyPem: privPem });

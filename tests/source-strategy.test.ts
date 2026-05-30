@@ -36,11 +36,7 @@ describe("describeSourceStrategy", () => {
   });
 
   it("classifies Yahoo Search vertical subdomains as search surfaces", () => {
-    for (const url of [
-      "https://images.search.yahoo.com/search/images?p=tokyo+hotel",
-      "https://news.search.yahoo.com/search?p=tokyo+hotel",
-      "https://video.search.yahoo.com/search/video?p=tokyo+hotel"
-    ]) {
+    for (const url of ["https://images.search.yahoo.com/search/images?p=tokyo+hotel", "https://news.search.yahoo.com/search?p=tokyo+hotel", "https://video.search.yahoo.com/search/video?p=tokyo+hotel"]) {
       expect(describeSourceStrategy(url)).toMatchObject({
         platform: "yahoo_search",
         sourceFamily: "search",
@@ -55,10 +51,7 @@ describe("describeSourceStrategy", () => {
       platform: "agoda",
       sourceFamily: "travel_booking"
     });
-    expect(strategy.evidencePlan).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: "offer_snapshot", status: "primary" }),
-      expect.objectContaining({ key: "booking_actions", status: "unsupported" })
-    ]));
+    expect(strategy.evidencePlan).toEqual(expect.arrayContaining([expect.objectContaining({ key: "offer_snapshot", status: "primary" }), expect.objectContaining({ key: "booking_actions", status: "unsupported" })]));
     expect(strategy.warnings.join("\n")).toContain("prices and availability are volatile");
   });
 

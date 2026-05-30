@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type FingerprintSchema, type ProxyConfigSchema } from "./schemas.js";
+import type { FingerprintSchema, ProxyConfigSchema } from "./schemas.js";
 import { FarmError } from "./farm-error.js";
 import type { AcquireContextInput } from "./schemas.js";
 import type { z } from "zod";
@@ -92,10 +92,7 @@ export class LeaseManager {
     if (this.maxContexts !== undefined) {
       const active = this.activeContextCount();
       if (active >= this.maxContexts) {
-        throw new FarmError(
-          "capacity_exhausted",
-          `Lease capacity exhausted: ${active}/${this.maxContexts} active contexts — release or wait for expiry`
-        );
+        throw new FarmError("capacity_exhausted", `Lease capacity exhausted: ${active}/${this.maxContexts} active contexts — release or wait for expiry`);
       }
     }
     const ttlMs = input.ttlMs ?? this.defaultTtlMs;

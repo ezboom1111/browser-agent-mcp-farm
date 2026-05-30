@@ -3,28 +3,11 @@ import { uniqueSorted as uniqueStrings } from "./util/collections.js";
 import { reviewSourceNavigationPromotion, type SourceNavigationBlockedSignalCount, type SourceNavigationDestinationExtractionPromotionSummary, type SourceNavigationPromotionGroupReview, type SourceNavigationPromotionReviewStatus, type SourceNavigationPromotionSummary } from "./source-navigation-promotion.js";
 import { describeSourceNavigationPlan } from "./source-navigation.js";
 import { describeSourceNavigationRecipePlan } from "./source-navigation-recipes.js";
-import {
-  listSourceRegistryEntries,
-  type InformationCategory,
-  type LocaleSegment,
-  type SourceRegistryEntry,
-  type SourceRegistryFilter,
-  type SourceRegistryTopSlot,
-  type SourceSupportTier
-} from "./source-registry.js";
+import { listSourceRegistryEntries, type InformationCategory, type LocaleSegment, type SourceRegistryEntry, type SourceRegistryFilter, type SourceRegistryTopSlot, type SourceSupportTier } from "./source-registry.js";
 import type { SourceNavigationCalibrationBatchTarget } from "./source-navigation-calibration-batch.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
 
-export type SourceCoverageReadinessStatus =
-  | "ready"
-  | "blocked"
-  | "needs_repeated_calibration"
-  | "manual_review_required"
-  | "promoted_empty"
-  | "not_promoted"
-  | "skipped_derivative"
-  | "skipped_private"
-  | "planning_only";
+export type SourceCoverageReadinessStatus = "ready" | "blocked" | "needs_repeated_calibration" | "manual_review_required" | "promoted_empty" | "not_promoted" | "skipped_derivative" | "skipped_private" | "planning_only";
 
 export interface SourceCoverageReadinessAuditInput {
   category?: InformationCategory | undefined;
@@ -50,12 +33,7 @@ export interface SourceCoverageReadinessProfileHeadedRetryCommand {
   powershellCommand: string;
 }
 
-export type SourceCoverageDestinationExtractionReadinessStatus =
-  | "ready"
-  | "blocked"
-  | "needs_repeated_calibration"
-  | "not_promoted"
-  | "not_applicable";
+export type SourceCoverageDestinationExtractionReadinessStatus = "ready" | "blocked" | "needs_repeated_calibration" | "not_promoted" | "not_applicable";
 
 export interface SourceCoverageDestinationExtractionReadiness {
   status: SourceCoverageDestinationExtractionReadinessStatus;
@@ -148,10 +126,7 @@ export interface SourceCoverageReadinessRetryPlan {
   warnings: string[];
 }
 
-export type SourceCoverageReadinessRetryPlanCommandFormat =
-  | "commands"
-  | "setup-commands"
-  | "retry-commands";
+export type SourceCoverageReadinessRetryPlanCommandFormat = "commands" | "setup-commands" | "retry-commands";
 
 export interface SourceCoverageReadinessRetryPlanFilter {
   platform?: SourcePlatform | undefined;
@@ -185,33 +160,11 @@ export interface SourceCoverageReadinessRetryPlanCheckOptions {
   profileExists?: ((profileName: string) => boolean) | undefined;
 }
 
-const STATUS_ORDER: SourceCoverageReadinessStatus[] = [
-  "ready",
-  "blocked",
-  "needs_repeated_calibration",
-  "manual_review_required",
-  "promoted_empty",
-  "not_promoted",
-  "skipped_derivative",
-  "skipped_private",
-  "planning_only"
-];
+const STATUS_ORDER: SourceCoverageReadinessStatus[] = ["ready", "blocked", "needs_repeated_calibration", "manual_review_required", "promoted_empty", "not_promoted", "skipped_derivative", "skipped_private", "planning_only"];
 
-const PROMOTION_STATUS_ORDER: SourceNavigationPromotionReviewStatus[] = [
-  "ready",
-  "blocked",
-  "needs_repeated_calibration",
-  "manual_review_required",
-  "empty"
-];
+const PROMOTION_STATUS_ORDER: SourceNavigationPromotionReviewStatus[] = ["ready", "blocked", "needs_repeated_calibration", "manual_review_required", "empty"];
 
-const DESTINATION_EXTRACTION_STATUS_ORDER: SourceCoverageDestinationExtractionReadinessStatus[] = [
-  "ready",
-  "blocked",
-  "needs_repeated_calibration",
-  "not_promoted",
-  "not_applicable"
-];
+const DESTINATION_EXTRACTION_STATUS_ORDER: SourceCoverageDestinationExtractionReadinessStatus[] = ["ready", "blocked", "needs_repeated_calibration", "not_promoted", "not_applicable"];
 
 export function buildSourceCoverageReadinessAudit(input: SourceCoverageReadinessAuditInput = {}): SourceCoverageReadinessAudit {
   const filter: SourceRegistryFilter = {
@@ -223,17 +176,17 @@ export function buildSourceCoverageReadinessAudit(input: SourceCoverageReadiness
   };
   const topRankMax = normalizeTopRankMax(input.topRankMax, input.category, input.locale);
   const query = input.query?.trim() || defaultCoverageQuery(input.category, input.locale, input.sourceFamily);
-  const promotionGroups = (input.promotionSummaries ?? [])
-    .flatMap((summary) => reviewSourceNavigationPromotion(summary).groups);
-  const entries = sortEntries(listSourceRegistryEntries(filter), input.category, input.locale)
-    .filter((entry) => matchesTopRank(entry, input.category, input.locale, topRankMax));
-  const items = entries.map((entry) => buildReadinessItem(entry, {
-    category: input.category,
-    locale: input.locale,
-    query,
-    topRankMax,
-    promotionGroups
-  }));
+  const promotionGroups = (input.promotionSummaries ?? []).flatMap((summary) => reviewSourceNavigationPromotion(summary).groups);
+  const entries = sortEntries(listSourceRegistryEntries(filter), input.category, input.locale).filter((entry) => matchesTopRank(entry, input.category, input.locale, topRankMax));
+  const items = entries.map((entry) =>
+    buildReadinessItem(entry, {
+      category: input.category,
+      locale: input.locale,
+      query,
+      topRankMax,
+      promotionGroups
+    })
+  );
   const statusCounts = countStatuses(items);
   const actionableEntryCount = items.filter((item) => isActionableStatus(item.status)).length;
   const readyCount = statusCounts.ready;
@@ -241,9 +194,7 @@ export function buildSourceCoverageReadinessAudit(input: SourceCoverageReadiness
   const profileHeadedRetryCount = items.filter((item) => item.profileHeadedRetry !== undefined).length;
   const destinationExtractionStatusCounts = countDestinationExtractionStatuses(items);
   const destinationExtractionReadyCount = destinationExtractionStatusCounts.ready;
-  const destinationExtractionNotReadyCount = items.filter((item) =>
-    item.destinationExtraction.status !== "ready" && item.destinationExtraction.status !== "not_applicable"
-  ).length;
+  const destinationExtractionNotReadyCount = items.filter((item) => item.destinationExtraction.status !== "ready" && item.destinationExtraction.status !== "not_applicable").length;
   return {
     schemaVersion: "1.0",
     executionPolicy: "coverage_readiness_audit_only",
@@ -284,19 +235,14 @@ export function formatSourceCoverageReadinessRetryCommandsAsLines(audit: SourceC
     if (retry === undefined) {
       return [];
     }
-    return [
-      ...(retry.profileSetupPowerShellCommand === undefined ? [] : [retry.profileSetupPowerShellCommand]),
-      retry.powershellCommand
-    ];
+    return [...(retry.profileSetupPowerShellCommand === undefined ? [] : [retry.profileSetupPowerShellCommand]), retry.powershellCommand];
   });
   return commands.join("\n") + (commands.length > 0 ? "\n" : "");
 }
 
 export function buildSourceCoverageReadinessRetryPlan(audit: SourceCoverageReadinessAudit): SourceCoverageReadinessRetryPlan {
   const retryItems = audit.items
-    .filter((item): item is SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand } =>
-      item.profileHeadedRetry !== undefined
-    )
+    .filter((item): item is SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand } => item.profileHeadedRetry !== undefined)
     .sort(compareRetryItems)
     .map((item, index): SourceCoverageReadinessRetryPlanItem => {
       const matchedTopRank = minimumTopRank(item);
@@ -311,9 +257,11 @@ export function buildSourceCoverageReadinessRetryPlan(audit: SourceCoverageReadi
         browserChannel: item.profileHeadedRetry.browserChannel,
         storagePolicy: item.profileHeadedRetry.storagePolicy,
         selectorHintFiles: item.profileHeadedRetry.selectorHintFiles,
-        ...(item.profileHeadedRetry.profileSetupPowerShellCommand === undefined ? {} : {
-          profileSetupPowerShellCommand: item.profileHeadedRetry.profileSetupPowerShellCommand
-        }),
+        ...(item.profileHeadedRetry.profileSetupPowerShellCommand === undefined
+          ? {}
+          : {
+              profileSetupPowerShellCommand: item.profileHeadedRetry.profileSetupPowerShellCommand
+            }),
         powershellCommand: item.profileHeadedRetry.powershellCommand,
         blockedSignalCounts: item.blockedSignalCounts,
         reasons: item.reasons,
@@ -334,17 +282,11 @@ export function buildSourceCoverageReadinessRetryPlan(audit: SourceCoverageReadi
   };
 }
 
-export function formatSourceCoverageReadinessRetryPlanAsMarkdown(
-  audit: SourceCoverageReadinessAudit,
-  check?: SourceCoverageReadinessRetryPlanCheck | undefined
-): string {
+export function formatSourceCoverageReadinessRetryPlanAsMarkdown(audit: SourceCoverageReadinessAudit, check?: SourceCoverageReadinessRetryPlanCheck | undefined): string {
   return formatSourceCoverageReadinessRetryPlanMarkdown(buildSourceCoverageReadinessRetryPlan(audit), check);
 }
 
-export function checkSourceCoverageReadinessRetryPlan(
-  plan: SourceCoverageReadinessRetryPlan,
-  options: SourceCoverageReadinessRetryPlanCheckOptions = {}
-): SourceCoverageReadinessRetryPlanCheck {
+export function checkSourceCoverageReadinessRetryPlan(plan: SourceCoverageReadinessRetryPlan, options: SourceCoverageReadinessRetryPlanCheckOptions = {}): SourceCoverageReadinessRetryPlanCheck {
   const issues: SourceCoverageReadinessRetryPlanCheckIssue[] = [];
   plan.items.forEach((item, index) => {
     const expectedOrder = index + 1;
@@ -384,10 +326,7 @@ export function checkSourceCoverageReadinessRetryPlan(
   };
 }
 
-export function filterSourceCoverageReadinessRetryPlan(
-  plan: SourceCoverageReadinessRetryPlan,
-  filter: SourceCoverageReadinessRetryPlanFilter = {}
-): SourceCoverageReadinessRetryPlan {
+export function filterSourceCoverageReadinessRetryPlan(plan: SourceCoverageReadinessRetryPlan, filter: SourceCoverageReadinessRetryPlanFilter = {}): SourceCoverageReadinessRetryPlan {
   const limit = filter.limit === undefined ? undefined : normalizeRetryPlanLimit(filter.limit);
   const filteredItems = plan.items
     .filter((item) => filter.platform === undefined || item.platform === filter.platform)
@@ -401,21 +340,13 @@ export function filterSourceCoverageReadinessRetryPlan(
     ...plan,
     itemCount: filteredItems.length,
     items: filteredItems,
-    warnings: [
-      ...plan.warnings,
-      ...(hasRetryPlanFilter(filter) ? [`Retry plan filtered from ${plan.itemCount} to ${filteredItems.length} item(s).`] : [])
-    ]
+    warnings: [...plan.warnings, ...(hasRetryPlanFilter(filter) ? [`Retry plan filtered from ${plan.itemCount} to ${filteredItems.length} item(s).`] : [])]
   };
 }
 
-export function filterSourceCoverageReadinessRetryPlanByCheck(
-  plan: SourceCoverageReadinessRetryPlan,
-  options: SourceCoverageReadinessRetryPlanCheckOptions = {}
-): SourceCoverageReadinessRetryPlan {
+export function filterSourceCoverageReadinessRetryPlanByCheck(plan: SourceCoverageReadinessRetryPlan, options: SourceCoverageReadinessRetryPlanCheckOptions = {}): SourceCoverageReadinessRetryPlan {
   const check = checkSourceCoverageReadinessRetryPlan(plan, options);
-  const failingItemOrders = new Set(check.issues
-    .filter((issue) => issue.severity === "error" && issue.itemOrder !== undefined)
-    .map((issue) => issue.itemOrder!));
+  const failingItemOrders = new Set(check.issues.filter((issue) => issue.severity === "error" && issue.itemOrder !== undefined).map((issue) => issue.itemOrder!));
   const filteredItems = plan.items
     .filter((item) => !failingItemOrders.has(item.order))
     .map((item, index) => ({
@@ -426,24 +357,12 @@ export function filterSourceCoverageReadinessRetryPlanByCheck(
     ...plan,
     itemCount: filteredItems.length,
     items: filteredItems,
-    warnings: [
-      ...plan.warnings,
-      `Retry plan check filter removed ${plan.items.length - filteredItems.length} item(s) with preflight errors.`
-    ]
+    warnings: [...plan.warnings, `Retry plan check filter removed ${plan.items.length - filteredItems.length} item(s) with preflight errors.`]
   };
 }
 
-export function formatSourceCoverageReadinessRetryPlanMarkdown(
-  plan: SourceCoverageReadinessRetryPlan,
-  check?: SourceCoverageReadinessRetryPlanCheck | undefined
-): string {
-  const lines = [
-    "# Source Coverage Profile/Headed Retry Plan",
-    "",
-    `- Query: ${plan.query}`,
-    `- Retry item count: ${plan.itemCount}`,
-    ""
-  ];
+export function formatSourceCoverageReadinessRetryPlanMarkdown(plan: SourceCoverageReadinessRetryPlan, check?: SourceCoverageReadinessRetryPlanCheck | undefined): string {
+  const lines = ["# Source Coverage Profile/Headed Retry Plan", "", `- Query: ${plan.query}`, `- Retry item count: ${plan.itemCount}`, ""];
   if (plan.items.length === 0) {
     lines.push("No blocked source slots have profile/headed retry commands.", "");
   }
@@ -472,15 +391,7 @@ export function formatSourceCoverageReadinessRetryPlanMarkdown(
 }
 
 function appendSourceCoverageRetryPlanCheckMarkdown(lines: string[], check: SourceCoverageReadinessRetryPlanCheck): void {
-  lines.push(
-    "## Preflight Check",
-    "",
-    `- OK: ${check.ok ? "yes" : "no"}`,
-    `- Items checked: ${check.itemCount}`,
-    `- Errors: ${check.errorCount}`,
-    `- Warnings: ${check.warningCount}`,
-    ""
-  );
+  lines.push("## Preflight Check", "", `- OK: ${check.ok ? "yes" : "no"}`, `- Items checked: ${check.itemCount}`, `- Errors: ${check.errorCount}`, `- Warnings: ${check.warningCount}`, "");
   if (check.issues.length === 0) {
     lines.push("No preflight check issues were found.", "");
   } else {
@@ -494,12 +405,7 @@ function appendSourceCoverageRetryPlanCheckMarkdown(lines: string[], check: Sour
 }
 
 function formatSourceCoverageRetryPlanCheckIssueMarkdown(issue: SourceCoverageReadinessRetryPlanCheckIssue): string {
-  const details = [
-    issue.severity,
-    `\`${issue.code}\``,
-    ...(issue.itemOrder === undefined ? [] : [`item ${issue.itemOrder}`]),
-    ...(issue.platform === undefined ? [] : [`platform \`${issue.platform}\``])
-  ].join(" ");
+  const details = [issue.severity, `\`${issue.code}\``, ...(issue.itemOrder === undefined ? [] : [`item ${issue.itemOrder}`]), ...(issue.platform === undefined ? [] : [`platform \`${issue.platform}\``])].join(" ");
   return `- ${details}: ${issue.message}`;
 }
 
@@ -514,11 +420,7 @@ function hasRetryPlanFilter(filter: SourceCoverageReadinessRetryPlanFilter): boo
   return filter.platform !== undefined || filter.priority !== undefined || filter.limit !== undefined;
 }
 
-function checkRetryCommand(
-  item: SourceCoverageReadinessRetryPlanItem,
-  issues: SourceCoverageReadinessRetryPlanCheckIssue[],
-  options: SourceCoverageReadinessRetryPlanCheckOptions
-): void {
+function checkRetryCommand(item: SourceCoverageReadinessRetryPlanItem, issues: SourceCoverageReadinessRetryPlanCheckIssue[], options: SourceCoverageReadinessRetryPlanCheckOptions): void {
   const command = item.powershellCommand;
   requireCommandPart(command, "source-coverage-calibrate", "retry_command_missing_calibrate", item, issues);
   requireCommandPart(command, "--platform", "retry_command_missing_platform_flag", item, issues);
@@ -538,11 +440,7 @@ function checkRetryCommand(
   }
 }
 
-function checkProfileExists(
-  item: SourceCoverageReadinessRetryPlanItem,
-  issues: SourceCoverageReadinessRetryPlanCheckIssue[],
-  options: SourceCoverageReadinessRetryPlanCheckOptions
-): void {
+function checkProfileExists(item: SourceCoverageReadinessRetryPlanItem, issues: SourceCoverageReadinessRetryPlanCheckIssue[], options: SourceCoverageReadinessRetryPlanCheckOptions): void {
   if (options.profileExists === undefined || item.profileName.trim().length === 0) {
     return;
   }
@@ -551,10 +449,7 @@ function checkProfileExists(
   }
 }
 
-function checkSetupCommand(
-  item: SourceCoverageReadinessRetryPlanItem,
-  issues: SourceCoverageReadinessRetryPlanCheckIssue[]
-): void {
+function checkSetupCommand(item: SourceCoverageReadinessRetryPlanItem, issues: SourceCoverageReadinessRetryPlanCheckIssue[]): void {
   const command = item.profileSetupPowerShellCommand;
   if (command === undefined) {
     issues.push(retryPlanIssue("warning", "setup_command_missing", item, "Retry item has no auth-login setup command."));
@@ -569,24 +464,13 @@ function checkSetupCommand(
   requireCommandPart(command, "--url", "setup_command_missing_url", item, issues);
 }
 
-function requireCommandPart(
-  command: string,
-  expected: string,
-  code: string,
-  item: SourceCoverageReadinessRetryPlanItem,
-  issues: SourceCoverageReadinessRetryPlanCheckIssue[]
-): void {
+function requireCommandPart(command: string, expected: string, code: string, item: SourceCoverageReadinessRetryPlanItem, issues: SourceCoverageReadinessRetryPlanCheckIssue[]): void {
   if (!command.includes(expected)) {
     issues.push(retryPlanIssue("error", code, item, `Command for ${item.platform} is missing ${expected}.`));
   }
 }
 
-function retryPlanIssue(
-  severity: SourceCoverageReadinessRetryPlanCheckSeverity,
-  code: string,
-  item: SourceCoverageReadinessRetryPlanItem,
-  message: string
-): SourceCoverageReadinessRetryPlanCheckIssue {
+function retryPlanIssue(severity: SourceCoverageReadinessRetryPlanCheckSeverity, code: string, item: SourceCoverageReadinessRetryPlanItem, message: string): SourceCoverageReadinessRetryPlanCheckIssue {
   return {
     severity,
     code,
@@ -596,10 +480,7 @@ function retryPlanIssue(
   };
 }
 
-export function formatSourceCoverageReadinessRetryPlanCommandsAsLines(
-  plan: SourceCoverageReadinessRetryPlan,
-  format: SourceCoverageReadinessRetryPlanCommandFormat = "commands"
-): string {
+export function formatSourceCoverageReadinessRetryPlanCommandsAsLines(plan: SourceCoverageReadinessRetryPlan, format: SourceCoverageReadinessRetryPlanCommandFormat = "commands"): string {
   const commands = plan.items.flatMap((item) => {
     const lines: string[] = [];
     if (format !== "retry-commands" && item.profileSetupPowerShellCommand !== undefined) {
@@ -643,17 +524,10 @@ export function parseSourceCoverageReadinessRetryPlan(input: string): SourceCove
 }
 
 export function sourceCoverageReadinessCalibrationTargets(audit: SourceCoverageReadinessAudit): SourceNavigationCalibrationBatchTarget[] {
-  return audit.items
-    .filter((item): item is SourceCoverageReadinessItem & { calibrationTarget: SourceNavigationCalibrationBatchTarget } =>
-      item.calibrationTarget !== undefined && shouldCalibrateStatus(item.status)
-    )
-    .map((item) => item.calibrationTarget);
+  return audit.items.filter((item): item is SourceCoverageReadinessItem & { calibrationTarget: SourceNavigationCalibrationBatchTarget } => item.calibrationTarget !== undefined && shouldCalibrateStatus(item.status)).map((item) => item.calibrationTarget);
 }
 
-function compareRetryItems(
-  left: SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand },
-  right: SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand }
-): number {
+function compareRetryItems(left: SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand }, right: SourceCoverageReadinessItem & { profileHeadedRetry: SourceCoverageReadinessProfileHeadedRetryCommand }): number {
   const leftRank = minimumTopRank(left) ?? Number.POSITIVE_INFINITY;
   const rightRank = minimumTopRank(right) ?? Number.POSITIVE_INFINITY;
   if (leftRank !== rightRank) {
@@ -689,9 +563,7 @@ function buildReadinessItem(
   const retryUrl = calibrationTarget?.url ?? matchingPromotionGroups[0]?.url;
   const selectorHintFiles = selectorHintFilesForGroups(matchingPromotionGroups);
   const blockedSignalCounts = blockedSignalCountsForGroups(matchingPromotionGroups);
-  const profileHeadedRetry = status === "blocked"
-    ? buildProfileHeadedRetryCommand(entry.platform, input.query, retryUrl, selectorHintFiles)
-    : undefined;
+  const profileHeadedRetry = status === "blocked" ? buildProfileHeadedRetryCommand(entry.platform, input.query, retryUrl, selectorHintFiles) : undefined;
   const destinationExtraction = destinationExtractionReadinessFor({
     calibrationTarget,
     matchingPromotionGroups,
@@ -742,23 +614,16 @@ function formatBlockedSignalCounts(counts: SourceNavigationBlockedSignalCount[])
   if (counts.length === 0) {
     return "none recorded";
   }
-  return counts.slice(0, 8).map((entry) =>
-    `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`
-  ).join(", ");
+  return counts
+    .slice(0, 8)
+    .map((entry) => `${entry.signal}:${entry.count}${entry.actionKeys.length === 0 ? "" : ` (${entry.actionKeys.join(",")})`}`)
+    .join(", ");
 }
 
-function destinationExtractionReadinessFor(input: {
-  calibrationTarget: SourceNavigationCalibrationBatchTarget | undefined;
-  matchingPromotionGroups: SourceNavigationPromotionGroupReview[];
-  sourceStatus: SourceCoverageReadinessStatus;
-}): SourceCoverageDestinationExtractionReadiness {
-  const plannedCandidateCount = input.calibrationTarget === undefined
-    ? 0
-    : destinationExtractionCandidateCountForUrl(input.calibrationTarget.url);
+function destinationExtractionReadinessFor(input: { calibrationTarget: SourceNavigationCalibrationBatchTarget | undefined; matchingPromotionGroups: SourceNavigationPromotionGroupReview[]; sourceStatus: SourceCoverageReadinessStatus }): SourceCoverageDestinationExtractionReadiness {
+  const plannedCandidateCount = input.calibrationTarget === undefined ? 0 : destinationExtractionCandidateCountForUrl(input.calibrationTarget.url);
   const merged = mergeDestinationExtractionSummaries(input.matchingPromotionGroups.map((group) => group.destinationExtraction));
-  const selectorHintFiles = uniqueStrings(input.matchingPromotionGroups.flatMap((group) =>
-    group.files.selectorHints === undefined ? [] : [group.files.selectorHints]
-  ));
+  const selectorHintFiles = uniqueStrings(input.matchingPromotionGroups.flatMap((group) => (group.files.selectorHints === undefined ? [] : [group.files.selectorHints])));
   const candidateCount = Math.max(plannedCandidateCount, merged.candidateCount);
   const base = {
     candidateCount,
@@ -818,14 +683,8 @@ function destinationExtractionReadinessFor(input: {
   return {
     status: "needs_repeated_calibration",
     ...base,
-    reasons: [
-      "Destination extraction candidates exist, but no maintained destination-extraction action has been promoted yet.",
-      ...destinationDiscoveryReadinessReasons(merged)
-    ],
-    nextActions: [
-      "Run repeated read-only calibration until stable destination selectors can be promoted.",
-      ...destinationDiscoveryNextActions(merged)
-    ]
+    reasons: ["Destination extraction candidates exist, but no maintained destination-extraction action has been promoted yet.", ...destinationDiscoveryReadinessReasons(merged)],
+    nextActions: ["Run repeated read-only calibration until stable destination selectors can be promoted.", ...destinationDiscoveryNextActions(merged)]
   };
 }
 
@@ -844,9 +703,7 @@ function isDestinationExtractionOperation(operation: string): boolean {
   return operation === "extract_destinations" || operation === "extract_client_state_destinations";
 }
 
-function mergeDestinationExtractionSummaries(
-  summaries: SourceNavigationDestinationExtractionPromotionSummary[]
-): SourceNavigationDestinationExtractionPromotionSummary {
+function mergeDestinationExtractionSummaries(summaries: SourceNavigationDestinationExtractionPromotionSummary[]): SourceNavigationDestinationExtractionPromotionSummary {
   const readyActionKeys = new Set<string>();
   const merged: SourceNavigationDestinationExtractionPromotionSummary = {
     candidateCount: 0,
@@ -883,10 +740,7 @@ function mergeDestinationExtractionSummaries(
     merged.clientStateProbeRunCount += summary.clientStateProbeRunCount ?? 0;
     merged.clientStateProbeOkRunCount += summary.clientStateProbeOkRunCount ?? 0;
     merged.clientStateProbeUniqueCandidateCount += summary.clientStateProbeUniqueCandidateCount ?? 0;
-    merged.discoveryWarningCounts = mergeWarningCounts([
-      ...merged.discoveryWarningCounts,
-      ...(summary.discoveryWarningCounts ?? [])
-    ]);
+    merged.discoveryWarningCounts = mergeWarningCounts([...merged.discoveryWarningCounts, ...(summary.discoveryWarningCounts ?? [])]);
     for (const actionKey of summary.readyActionKeys) {
       readyActionKeys.add(actionKey);
     }
@@ -895,24 +749,18 @@ function mergeDestinationExtractionSummaries(
   return merged;
 }
 
-function destinationDiscoveryReadinessReasons(
-  merged: SourceNavigationDestinationExtractionPromotionSummary
-): string[] {
+function destinationDiscoveryReadinessReasons(merged: SourceNavigationDestinationExtractionPromotionSummary): string[] {
   if (merged.discoveryPromotableCandidateCount > 0) {
     return [`Global destination discovery found ${merged.discoveryPromotableCandidateCount} promotable destination target(s) and ${merged.discoverySelectorHintCount} selector hint(s), but the maintained selector catalog has not captured them yet.`];
   }
   if (merged.discoveryNonPromotableCandidateCount > 0) {
-    const warningText = merged.discoveryWarningCounts.length === 0
-      ? "no warning counts"
-      : merged.discoveryWarningCounts.map((entry) => `${entry.warning}:${entry.count}`).join(", ");
+    const warningText = merged.discoveryWarningCounts.length === 0 ? "no warning counts" : merged.discoveryWarningCounts.map((entry) => `${entry.warning}:${entry.count}`).join(", ");
     return [`Global destination discovery found only non-promotable destination target(s); warning pressure: ${warningText}.`];
   }
   return [];
 }
 
-function destinationDiscoveryNextActions(
-  merged: SourceNavigationDestinationExtractionPromotionSummary
-): string[] {
+function destinationDiscoveryNextActions(merged: SourceNavigationDestinationExtractionPromotionSummary): string[] {
   if (merged.discoveryPromotableCandidateCount > 0) {
     return ["Inspect catalog destinationDiscovery selector hints and sample targets, add narrower provider selectors, then rerun repeated calibration and promotion."];
   }
@@ -922,28 +770,19 @@ function destinationDiscoveryNextActions(
   return [];
 }
 
-function mergeWarningCounts(
-  warnings: Array<{ warning: string; count: number }>
-): Array<{ warning: string; count: number }> {
+function mergeWarningCounts(warnings: Array<{ warning: string; count: number }>): Array<{ warning: string; count: number }> {
   const counts = new Map<string, number>();
   for (const warning of warnings) {
     counts.set(warning.warning, (counts.get(warning.warning) ?? 0) + warning.count);
   }
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([warning, count]) => ({ warning, count }));
+  return [...counts.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([warning, count]) => ({ warning, count }));
 }
 
 function selectorHintFilesForGroups(groups: SourceNavigationPromotionGroupReview[]): string[] {
-  return uniqueStrings(groups.flatMap((group) =>
-    group.files.selectorHints === undefined ? [] : [group.files.selectorHints]
-  ));
+  return uniqueStrings(groups.flatMap((group) => (group.files.selectorHints === undefined ? [] : [group.files.selectorHints])));
 }
 
-function classifyEntry(
-  entry: SourceRegistryEntry,
-  matchingPromotionGroups: SourceNavigationPromotionGroupReview[]
-): SourceCoverageReadinessStatus {
+function classifyEntry(entry: SourceRegistryEntry, matchingPromotionGroups: SourceNavigationPromotionGroupReview[]): SourceCoverageReadinessStatus {
   if (entry.evidenceRole === "user_controlled") {
     return "skipped_private";
   }
@@ -972,20 +811,11 @@ function bestPromotionStatus(groups: SourceNavigationPromotionGroupReview[]): So
   return undefined;
 }
 
-function matchingGroups(
-  entry: SourceRegistryEntry,
-  groups: SourceNavigationPromotionGroupReview[]
-): SourceNavigationPromotionGroupReview[] {
-  return groups.filter((group) =>
-    group.platform === entry.platform && entry.sourceFamilies.includes(group.sourceFamily)
-  );
+function matchingGroups(entry: SourceRegistryEntry, groups: SourceNavigationPromotionGroupReview[]): SourceNavigationPromotionGroupReview[] {
+  return groups.filter((group) => group.platform === entry.platform && entry.sourceFamilies.includes(group.sourceFamily));
 }
 
-function reasonsForEntry(
-  entry: SourceRegistryEntry,
-  status: SourceCoverageReadinessStatus,
-  matchingPromotionGroups: SourceNavigationPromotionGroupReview[]
-): string[] {
+function reasonsForEntry(entry: SourceRegistryEntry, status: SourceCoverageReadinessStatus, matchingPromotionGroups: SourceNavigationPromotionGroupReview[]): string[] {
   if (status === "ready") {
     return ["At least one matching promotion group has maintained explicit read-only actions."];
   }
@@ -1027,47 +857,10 @@ function nextActionsForStatus(status: SourceCoverageReadinessStatus): string[] {
   }
 }
 
-function buildProfileHeadedRetryCommand(
-  platform: SourcePlatform,
-  query: string,
-  profileSetupUrl: string | undefined,
-  selectorHintFiles: string[] = []
-): SourceCoverageReadinessProfileHeadedRetryCommand {
+function buildProfileHeadedRetryCommand(platform: SourcePlatform, query: string, profileSetupUrl: string | undefined, selectorHintFiles: string[] = []): SourceCoverageReadinessProfileHeadedRetryCommand {
   const profileName = `${safeProfileName(platform)}-profile`;
-  const profileSetupArgv = profileSetupUrl === undefined
-    ? undefined
-    : [
-        "node",
-        ".\\dist\\cli.js",
-        "auth-login",
-        "--profile",
-        profileName,
-        "--url",
-        profileSetupUrl,
-        "--wait-ms",
-        "120000",
-        "--browser-channel",
-        "chrome",
-        "--persistent-profile"
-      ];
-  const argv = [
-    "node",
-    ".\\dist\\cli.js",
-    "source-coverage-calibrate",
-    "--platform",
-    platform,
-    "--query",
-    query,
-    "--repeat",
-    "2",
-    "--headed",
-    "--browser-channel",
-    "chrome",
-    "--profile",
-    profileName,
-    "--persistent-profile",
-    ...selectorHintFiles.flatMap((file) => ["--selector-hints-file", file])
-  ];
+  const profileSetupArgv = profileSetupUrl === undefined ? undefined : ["node", ".\\dist\\cli.js", "auth-login", "--profile", profileName, "--url", profileSetupUrl, "--wait-ms", "120000", "--browser-channel", "chrome", "--persistent-profile"];
+  const argv = ["node", ".\\dist\\cli.js", "source-coverage-calibrate", "--platform", platform, "--query", query, "--repeat", "2", "--headed", "--browser-channel", "chrome", "--profile", profileName, "--persistent-profile", ...selectorHintFiles.flatMap((file) => ["--selector-hints-file", file])];
   return {
     strategy: "profile_headed_calibration",
     profileName,
@@ -1075,25 +868,27 @@ function buildProfileHeadedRetryCommand(
     browserChannel: "chrome",
     selectorHintFiles,
     ...(profileSetupUrl === undefined ? {} : { profileSetupUrl }),
-    ...(profileSetupArgv === undefined ? {} : {
-      profileSetupArgv,
-      profileSetupPowerShellCommand: profileSetupArgv.map(quotePowerShellArg).join(" ")
-    }),
+    ...(profileSetupArgv === undefined
+      ? {}
+      : {
+          profileSetupArgv,
+          profileSetupPowerShellCommand: profileSetupArgv.map(quotePowerShellArg).join(" ")
+        }),
     argv,
     powershellCommand: argv.map(quotePowerShellArg).join(" ")
   };
 }
 
 function safeProfileName(platform: SourcePlatform): string {
-  return platform.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "source";
+  return (
+    platform
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "source"
+  );
 }
 
-function calibrationTargetFor(
-  entry: SourceRegistryEntry,
-  query: string,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): SourceNavigationCalibrationBatchTarget | undefined {
+function calibrationTargetFor(entry: SourceRegistryEntry, query: string, category: InformationCategory | undefined, locale: LocaleSegment | undefined): SourceNavigationCalibrationBatchTarget | undefined {
   const plan = buildSourceNavigationCalibrationTargetPlan({
     platform: entry.platform,
     category,
@@ -1104,36 +899,18 @@ function calibrationTargetFor(
   return plan.targets[0];
 }
 
-function matchingTopSlots(
-  entry: SourceRegistryEntry,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined,
-  topRankMax: number | undefined
-): SourceRegistryTopSlot[] {
-  return entry.topSlots.filter((slot) =>
-    (category === undefined || slot.category === category)
-    && (locale === undefined || slot.segment === locale)
-    && (topRankMax === undefined || slot.rank <= topRankMax)
-  );
+function matchingTopSlots(entry: SourceRegistryEntry, category: InformationCategory | undefined, locale: LocaleSegment | undefined, topRankMax: number | undefined): SourceRegistryTopSlot[] {
+  return entry.topSlots.filter((slot) => (category === undefined || slot.category === category) && (locale === undefined || slot.segment === locale) && (topRankMax === undefined || slot.rank <= topRankMax));
 }
 
-function matchesTopRank(
-  entry: SourceRegistryEntry,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined,
-  topRankMax: number | undefined
-): boolean {
+function matchesTopRank(entry: SourceRegistryEntry, category: InformationCategory | undefined, locale: LocaleSegment | undefined, topRankMax: number | undefined): boolean {
   if (topRankMax === undefined) {
     return true;
   }
   return matchingTopSlots(entry, category, locale, topRankMax).length > 0;
 }
 
-function sortEntries(
-  entries: SourceRegistryEntry[],
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): SourceRegistryEntry[] {
+function sortEntries(entries: SourceRegistryEntry[], category: InformationCategory | undefined, locale: LocaleSegment | undefined): SourceRegistryEntry[] {
   return [...entries].sort((left, right) => {
     const leftRank = rankingScore(left, category, locale);
     const rightRank = rankingScore(right, category, locale);
@@ -1147,11 +924,7 @@ function sortEntries(
   });
 }
 
-function rankingScore(
-  entry: SourceRegistryEntry,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): number {
+function rankingScore(entry: SourceRegistryEntry, category: InformationCategory | undefined, locale: LocaleSegment | undefined): number {
   const slots = matchingTopSlots(entry, category, locale, undefined);
   if (slots.length === 0) {
     return Number.POSITIVE_INFINITY;
@@ -1159,11 +932,7 @@ function rankingScore(
   return Math.min(...slots.map((slot) => slot.rank));
 }
 
-function normalizeTopRankMax(
-  topRankMax: number | undefined,
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined
-): number | undefined {
+function normalizeTopRankMax(topRankMax: number | undefined, category: InformationCategory | undefined, locale: LocaleSegment | undefined): number | undefined {
   if (topRankMax === undefined) {
     return category !== undefined && locale !== undefined ? 3 : undefined;
   }
@@ -1173,11 +942,7 @@ function normalizeTopRankMax(
   return topRankMax;
 }
 
-function defaultCoverageQuery(
-  category: InformationCategory | undefined,
-  locale: LocaleSegment | undefined,
-  sourceFamily: SourceFamily | undefined
-): string {
+function defaultCoverageQuery(category: InformationCategory | undefined, locale: LocaleSegment | undefined, sourceFamily: SourceFamily | undefined): string {
   if (locale === "ko-KR" && (category === "map_local" || category === "review_reputation" || sourceFamily === "map")) {
     return "seongsu cafe";
   }
@@ -1204,9 +969,7 @@ function countStatuses(items: SourceCoverageReadinessItem[]): Record<SourceCover
   return counts;
 }
 
-function countDestinationExtractionStatuses(
-  items: SourceCoverageReadinessItem[]
-): Record<SourceCoverageDestinationExtractionReadinessStatus, number> {
+function countDestinationExtractionStatuses(items: SourceCoverageReadinessItem[]): Record<SourceCoverageDestinationExtractionReadinessStatus, number> {
   const counts = Object.fromEntries(DESTINATION_EXTRACTION_STATUS_ORDER.map((status) => [status, 0])) as Record<SourceCoverageDestinationExtractionReadinessStatus, number>;
   for (const item of items) {
     counts[item.destinationExtraction.status] += 1;
@@ -1219,16 +982,11 @@ function isActionableStatus(status: SourceCoverageReadinessStatus): boolean {
 }
 
 function shouldCalibrateStatus(status: SourceCoverageReadinessStatus): boolean {
-  return status === "not_promoted"
-    || status === "needs_repeated_calibration"
-    || status === "promoted_empty"
-    || status === "blocked";
+  return status === "not_promoted" || status === "needs_repeated_calibration" || status === "promoted_empty" || status === "blocked";
 }
 
 function quotePowerShellArg(value: string): string {
-  return value.startsWith("--") || value === "node" || value === ".\\dist\\cli.js" || value === "source-coverage-calibrate" || value === "auth-login"
-    ? value
-    : quotePowerShellValue(value);
+  return value.startsWith("--") || value === "node" || value === ".\\dist\\cli.js" || value === "source-coverage-calibrate" || value === "auth-login" ? value : quotePowerShellValue(value);
 }
 
 function quotePowerShellValue(value: string): string {

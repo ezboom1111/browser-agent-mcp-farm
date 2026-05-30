@@ -54,4 +54,3 @@ export async function removeProfile(profileName: string): Promise<{ ok: true; pr
   await rm(paths.root, { recursive: true, force: true });
   return { ok: true, profileName, root: paths.root };
 }
-

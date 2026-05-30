@@ -50,7 +50,7 @@ describe("ArtifactWriter", () => {
       contextToken: "ctx_test",
       pageId: "page_test",
       captureId: "audio-guard",
-      html: "<html><body><audio src=\"clip.mp3\"></audio>spoken words</body></html>",
+      html: '<html><body><audio src="clip.mp3"></audio>spoken words</body></html>',
       text: "spoken words",
       screenshot: Buffer.from("fake-png"),
       metadata: { title: "Audio page" },
@@ -116,7 +116,7 @@ describe("ArtifactWriter", () => {
     await expect(readFile(join(runDir, "media", "media", "001-image.png"), "utf8")).resolves.toBe("fake-image");
 
     const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
-    expect(ledger).toContain("\"kind\":\"media\"");
+    expect(ledger).toContain('"kind":"media"');
     expect(ledger).toContain("media/media/001-image.png");
   });
 
@@ -143,7 +143,7 @@ describe("ArtifactWriter", () => {
 
     expect(records.some((record) => record.path === "structured/captioned.transcripts/001-captions.json")).toBe(true);
     const transcript = await readFile(join(runDir, "structured", "captioned.transcripts", "001-captions.json"), "utf8");
-    expect(transcript).toContain("\"cueCount\": 1");
+    expect(transcript).toContain('"cueCount": 1');
     expect(transcript).toContain("caption text");
 
     const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");

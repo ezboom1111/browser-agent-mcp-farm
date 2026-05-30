@@ -62,22 +62,24 @@ describe("collectOfficialApiEvidence", () => {
       mediaIdBlockedReadyCredentialCount: 0,
       ok: false
     });
-    expect(report.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        key: "youtube-videos",
-        credentialRef: "FARM_TEST_YOUTUBE_KEY",
-        status: "ready",
-        credentialStatus: "ready",
-        nextAction: "ready_for_live_api_call"
-      }),
-      expect.objectContaining({
-        key: "youtube-captions",
-        credentialRef: "FARM_TEST_YOUTUBE_OAUTH_TOKEN",
-        status: "missing_env",
-        credentialStatus: "missing_env",
-        nextAction: "set_credential_env"
-      })
-    ]));
+    expect(report.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "youtube-videos",
+          credentialRef: "FARM_TEST_YOUTUBE_KEY",
+          status: "ready",
+          credentialStatus: "ready",
+          nextAction: "ready_for_live_api_call"
+        }),
+        expect.objectContaining({
+          key: "youtube-captions",
+          credentialRef: "FARM_TEST_YOUTUBE_OAUTH_TOKEN",
+          status: "missing_env",
+          credentialStatus: "missing_env",
+          nextAction: "set_credential_env"
+        })
+      ])
+    );
     expect(JSON.stringify(report)).not.toContain("SECRET_TEST_KEY");
   });
 
@@ -115,21 +117,23 @@ describe("collectOfficialApiEvidence", () => {
       mediaIdBlockedReadyCredentialCount: 0,
       ok: false
     });
-    expect(report.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        key: "youtube-videos",
-        credentialRef: "FARM_TEST_YOUTUBE_KEY",
-        status: "missing_media_id",
-        credentialStatus: "missing_env",
-        nextAction: "use_direct_media_url_or_followup",
-        reason: "a stable media ID could not be parsed from this URL"
-      }),
-      expect.objectContaining({
-        key: "youtube-captions",
-        status: "missing_media_id",
-        credentialStatus: "missing_reference"
-      })
-    ]));
+    expect(report.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "youtube-videos",
+          credentialRef: "FARM_TEST_YOUTUBE_KEY",
+          status: "missing_media_id",
+          credentialStatus: "missing_env",
+          nextAction: "use_direct_media_url_or_followup",
+          reason: "a stable media ID could not be parsed from this URL"
+        }),
+        expect.objectContaining({
+          key: "youtube-captions",
+          status: "missing_media_id",
+          credentialStatus: "missing_reference"
+        })
+      ])
+    );
     expect(report.warnings).toContain("Official API lookups for this platform require a stable media ID; use a direct item URL or destination follow-up before live API collection.");
   });
 
@@ -149,14 +153,16 @@ describe("collectOfficialApiEvidence", () => {
       mediaIdBlockedReadyCredentialCount: 1,
       ok: false
     });
-    expect(report.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        key: "youtube-videos",
-        status: "missing_media_id",
-        credentialStatus: "ready",
-        nextAction: "use_direct_media_url_or_followup"
-      })
-    ]));
+    expect(report.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "youtube-videos",
+          status: "missing_media_id",
+          credentialStatus: "ready",
+          nextAction: "use_direct_media_url_or_followup"
+        })
+      ])
+    );
     expect(JSON.stringify(report)).not.toContain("SECRET_TEST_KEY");
   });
 
@@ -178,9 +184,7 @@ describe("collectOfficialApiEvidence", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.stringContaining("official API lookup requires a stable media ID")
-    ]));
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining("official API lookup requires a stable media ID")]));
     expect(result.records.filter((record) => record.evidence_kind === "official_api_metadata")).toHaveLength(2);
     const metadata = await readOfficialApiMetadata(runDir, "api-official-api-youtube-videos-missing-media-id.metadata.json");
     expect(metadata.officialApi).toMatchObject({
@@ -191,14 +195,16 @@ describe("collectOfficialApiEvidence", () => {
       nextAction: "use_direct_media_url_or_followup"
     });
     const cache = await readOfficialApiCache(runDir);
-    expect(cache.officialApiCache).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        key: "youtube-videos",
-        status: "missing_media_id",
-        credentialStatus: "ready",
-        nextAction: "use_direct_media_url_or_followup"
-      })
-    ]));
+    expect(cache.officialApiCache).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "youtube-videos",
+          status: "missing_media_id",
+          credentialStatus: "ready",
+          nextAction: "use_direct_media_url_or_followup"
+        })
+      ])
+    );
     expect(JSON.stringify(cache)).not.toContain("SECRET_TEST_KEY");
   });
 
@@ -206,7 +212,10 @@ describe("collectOfficialApiEvidence", () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-api-redact-"));
     runDirs.push(runDir);
     process.env.FARM_TEST_YOUTUBE_KEY = "SECRET_TEST_KEY";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "dQw4w9WgXcQ", tokenEcho: "SECRET_TEST_KEY" }] }), { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "dQw4w9WgXcQ", tokenEcho: "SECRET_TEST_KEY" }] }), { status: 200 }))
+    );
 
     await collectOfficialApiEvidence({
       runDir,
@@ -229,7 +238,10 @@ describe("collectOfficialApiEvidence", () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-api-error-redact-"));
     runDirs.push(runDir);
     process.env.FARM_TEST_YOUTUBE_KEY = "SECRET_TEST_KEY";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: `bad key SECRET_TEST_KEY` }), { status: 403 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: `bad key SECRET_TEST_KEY` }), { status: 403 }))
+    );
 
     await collectOfficialApiEvidence({
       runDir,
@@ -252,13 +264,22 @@ describe("collectOfficialApiEvidence", () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-api-youtube-quota-"));
     runDirs.push(runDir);
     process.env.FARM_TEST_YOUTUBE_KEY = "SECRET_TEST_KEY";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      error: {
-        code: 403,
-        message: "The request cannot be completed because you have exceeded your quota.",
-        errors: [{ reason: "quotaExceeded" }]
-      }
-    }), { status: 403 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 403,
+                message: "The request cannot be completed because you have exceeded your quota.",
+                errors: [{ reason: "quotaExceeded" }]
+              }
+            }),
+            { status: 403 }
+          )
+      )
+    );
 
     await collectOfficialApiEvidence({
       runDir,
@@ -273,22 +294,29 @@ describe("collectOfficialApiEvidence", () => {
     const metadata = await readOfficialApiMetadata(runDir, "api-official-api-youtube-videos-failed.metadata.json");
     expect(metadata.officialApi.failureKind).toBe("quota_exceeded");
     const cache = await readOfficialApiCache(runDir);
-    expect(cache.officialApiCache).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: "youtube-videos", status: "error", failureKind: "quota_exceeded" })
-    ]));
+    expect(cache.officialApiCache).toEqual(expect.arrayContaining([expect.objectContaining({ key: "youtube-videos", status: "error", failureKind: "quota_exceeded" })]));
   });
 
   it("classifies Instagram ownership errors without leaking token values", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-api-instagram-owner-"));
     runDirs.push(runDir);
     process.env.FARM_TEST_INSTAGRAM_TOKEN = "SECRET_INSTAGRAM_TOKEN";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      error: {
-        message: "Unsupported get request. Object with ID 'ABC123' does not exist, cannot be loaded due to missing permissions, or does not support this operation. SECRET_INSTAGRAM_TOKEN",
-        type: "IGApiException",
-        code: 100
-      }
-    }), { status: 400 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                message: "Unsupported get request. Object with ID 'ABC123' does not exist, cannot be loaded due to missing permissions, or does not support this operation. SECRET_INSTAGRAM_TOKEN",
+                type: "IGApiException",
+                code: 100
+              }
+            }),
+            { status: 400 }
+          )
+      )
+    );
 
     await collectOfficialApiEvidence({
       runDir,
@@ -315,12 +343,21 @@ describe("collectOfficialApiEvidence", () => {
     runDirs.push(permissionRunDir, rateRunDir);
     process.env.FARM_TEST_TIKTOK_TOKEN = "SECRET_TIKTOK_TOKEN";
 
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      error: {
-        code: "access_denied",
-        message: "permission denied for this video query"
-      }
-    }), { status: 403 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: "access_denied",
+                message: "permission denied for this video query"
+              }
+            }),
+            { status: 403 }
+          )
+      )
+    );
     await collectOfficialApiEvidence({
       runDir: permissionRunDir,
       sourceUrl: "https://www.tiktok.com/@example/video/1234567890123456789",
@@ -333,12 +370,21 @@ describe("collectOfficialApiEvidence", () => {
     let metadata = await readOfficialApiMetadata(permissionRunDir, "api-official-api-tiktok-video-query-failed.metadata.json");
     expect(metadata.officialApi.failureKind).toBe("permission_denied");
 
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      error: {
-        code: "rate_limit_exceeded",
-        message: "Too many requests"
-      }
-    }), { status: 429 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: "rate_limit_exceeded",
+                message: "Too many requests"
+              }
+            }),
+            { status: 429 }
+          )
+      )
+    );
     await collectOfficialApiEvidence({
       runDir: rateRunDir,
       sourceUrl: "https://www.tiktok.com/@example/video/1234567890123456789",

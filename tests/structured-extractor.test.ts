@@ -68,14 +68,20 @@ describe("extractStructuredData", () => {
     const table = data.tables[0];
     expect(table?.caption).toBe("Menu & Prices");
     expect(table?.headers).toEqual(["Item", "Price"]);
-    expect(table?.rows).toEqual([["Latte", "4,500"], ["Espresso", "3,000"]]);
+    expect(table?.rows).toEqual([
+      ["Latte", "4,500"],
+      ["Espresso", "3,000"]
+    ]);
   });
 
   it("treats a headerless table as all body rows", () => {
     const html = "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>";
     const data = extractStructuredData(html);
     expect(data.tables[0]?.headers).toEqual([]);
-    expect(data.tables[0]?.rows).toEqual([["a", "b"], ["c", "d"]]);
+    expect(data.tables[0]?.rows).toEqual([
+      ["a", "b"],
+      ["c", "d"]
+    ]);
   });
 
   it("emits no tables for plain HTML", () => {
