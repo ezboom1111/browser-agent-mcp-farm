@@ -487,7 +487,13 @@ export const RegisterEvidenceInputSchema = z.object({
   text: z.string().min(1).describe("The evidence content to register (e.g. the exact text you will cite)."),
   evidenceKind: EvidenceKindSchema.default("page_text").describe("Typed kind of this evidence (default page_text)."),
   sourceUrl: z.url().describe("The source the evidence came from (recorded as provenance)."),
-  captureId: z.string().min(1).optional().describe("Optional id for the artifact filename.")
+  captureId: z.string().min(1).optional().describe("Optional id for the artifact filename."),
+  // Bring-your-own-capture provenance: when bytes come from an EXTERNAL capturer (Firecrawl,
+  // an operator agent, a human paste, a mobile mitmproxy session), record who/how/when. These
+  // are self-asserted by the caller and recorded — never treated as a trust guarantee.
+  captureMethod: z.string().min(1).optional().describe("How these bytes were captured, e.g. 'byo-firecrawl' / 'byo-operator' / 'byo-human' / 'byo-mobile-har' (default 'agent-authored')."),
+  capturedBy: z.string().min(1).optional().describe("Id of the tool/agent/human that captured these bytes (provenance)."),
+  capturedAt: z.string().min(1).optional().describe("ISO 8601 timestamp the bytes were captured (defaults to now).")
 });
 
 export const AddClaimInputSchema = z.object({

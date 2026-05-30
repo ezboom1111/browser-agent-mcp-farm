@@ -18,6 +18,11 @@ export interface ArtifactRecord {
   mime: string;
   source_url: string;
   capture_method: string;
+  // Provenance of who/what produced these bytes and when. Self-asserted by the capturer
+  // (a bring-your-own-capture source records its own id/method) — recorded, not cryptographically
+  // proven; the claim gate still only trusts that a claim's quote appears in these exact bytes.
+  captured_by?: string;
+  captured_at?: string;
   role: "evidence";
   status: ArtifactStatus;
   note?: string;
@@ -44,6 +49,8 @@ export interface CaptureBundleInput {
   mediaIndex?: unknown[];
   note?: string;
   captureMethod?: string;
+  capturedBy?: string;
+  capturedAt?: string;
   toolName?: string;
   evidenceKind?: EvidenceKind;
 }
@@ -64,11 +71,16 @@ export class ArtifactWriter {
     const status = input.status ?? "ok";
     const records: ArtifactRecord[] = [];
 
+    // Stamp one capturedAt for the whole bundle (caller-supplied for BYO-capture, else now)
+    // so every artifact in the bundle shares the same provenance time.
+    input.capturedAt ??= new Date().toISOString();
+
     const metadata = {
       sourceUrl: input.sourceUrl,
       contextToken: input.contextToken,
       pageId: input.pageId,
-      capturedAt: new Date().toISOString(),
+      capturedAt: input.capturedAt,
+      capturedBy: input.capturedBy,
       status,
       ...input.metadata
     };
@@ -194,12 +206,16 @@ export class ArtifactWriter {
       mime,
       source_url: input.sourceUrl,
       capture_method: input.captureMethod ?? "browser-agent-mcp-farm capture",
+      captured_at: input.capturedAt ?? new Date().toISOString(),
       role: "evidence",
       status,
       backend: "playwright-mcp",
       tool_name: input.toolName ?? "farm_capture",
       session_ref: input.contextToken
     };
+    if (input.capturedBy !== undefined) {
+      record.captured_by = input.capturedBy;
+    }
     const evidenceKind = input.evidenceKind ?? inferEvidenceKind(kind, relPath, input);
     if (evidenceKind !== undefined) {
       record.evidence_kind = evidenceKind;
