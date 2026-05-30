@@ -26,8 +26,10 @@
     "boundaries": "node scripts/check-boundaries.mjs",
     "prepack": "npm run build",
     "test": "vitest run",
-    "test:ci": "vitest run --reporter=default --reporter=json --outputFile=.status/vitest-result.json",
+    "test:ci": "vitest run --coverage --reporter=default --reporter=json --outputFile=.status/vitest-result.json",
+    "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/lease-manager.test.ts tests/artifact-writer.test.ts",
+    "check:browser": "node scripts/check-browser.mjs",
     "status": "node scripts/generate-status.mjs",
     "test:ocr-integration": "vitest run --config vitest.ocr.config.ts",
     "test:official-api": "vitest run --config vitest.official-api.config.ts",
@@ -38,7 +40,7 @@
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",
-    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run test:ci && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status"
+    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -55,6 +57,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.1.7",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   }
