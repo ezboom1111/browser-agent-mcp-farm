@@ -58,6 +58,14 @@ describe("runEvidenceWorkflow", () => {
         const priceCheck = parsed.crossCheck?.find((entry) => entry.field === "price.value");
         expect(priceCheck?.corroborated).toBe(false);
       }
+
+      // The run persists a per-run metrics.json observability sidecar.
+      const metrics = JSON.parse(await readFile(join(runDir, "metrics.json"), "utf8")) as {
+        stageCount?: number;
+        slowestStage?: { stage?: string } | null;
+      };
+      expect(metrics.stageCount ?? 0).toBeGreaterThan(0);
+      expect(metrics.slowestStage?.stage).toBeTruthy();
     } finally {
       await fixture.close();
     }

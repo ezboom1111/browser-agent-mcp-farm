@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
+import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
@@ -503,6 +504,13 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     claims,
     claimGate
   }), options.abortSignal));
+
+  // Persist per-run stage metrics (observability / SLO input) as an operational
+  // sidecar — deliberately OUTSIDE the artifact ledger/bundle, since it is not evidence.
+  await withAbort(
+    writeFile(join(options.runDir, "metrics.json"), `${JSON.stringify(summarizeStageTimings(stageTimings), null, 2)}\n`, "utf8"),
+    options.abortSignal
+  ).catch(() => undefined);
 
   return {
     ok: claimGate?.ok ?? true,
