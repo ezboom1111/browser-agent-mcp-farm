@@ -1,0 +1,3051 @@
+# Next Tasks
+
+## Current Handoff State
+
+Development is intentionally paused at the user's request. Do not continue the
+sequential development loop until asked to resume.
+
+Documentation entry points have been normalized:
+
+- `docs/DOCUMENTATION_MAP.md`: complete development-document map, reading order,
+  QA/QC references, release notes, and current verification caveat.
+- `docs/CLAUDE_HANDOFF.md`: concise Claude/Codex handoff with current repo
+  state, latest completed work, paused verification, and copyable prompt.
+- `docs/QA_QC_PROCESS.md`: quality gates, opt-in live tests, real-site
+  calibration loop, and verification criteria.
+- `docs/RELEASE_NOTES.md`: version/pass summary and rough update-size guide.
+
+Latest code change before the pause: scene-change hit-cap tuning through
+`denseSampling.sceneChangeMaxHits` and `--dense-scene-max-hits`. Focused tests
+and `npm run build` passed. The final full `npm run verify` after that latest
+change was interrupted by the user and must be rerun before the whole worktree
+is claimed fully verified.
+
+## Done In This Development Pass
+
+- Added blocked-child recovery advice to destination triage. When a blocked,
+  paywalled, private, or obstructed child page exposes deeper visible
+  candidates, the summary now records `blockedChildRecoveryAdvice` with
+  profile/headed command hints, sample URLs, and reasons explaining that
+  default depth-2 execution remains disabled.
+- Added a final-report line for blocked-child recovery advice, so QA can see
+  the next reviewed action without opening the raw triage JSON. This keeps the
+  recovery path explicit: prepare a user-controlled profile, retry headed, or
+  inspect the sampled recovery URL directly instead of treating it as an
+  automatic gate bypass.
+- Added workflow fixture coverage for the blocked-child recovery advice path.
+  The fixture follows a bounded destination to a visible login-wall child,
+  preserves a deeper recovery URL, marks the child blocked, reports
+  `retryRecommended: true`, emits profile/headed command hints, and still
+  produces no default depth-2 proposals.
+- Hardened blocked-child recovery advice command hints. The advice now records
+  a deterministic recovery profile name, `persistent-profile` storage policy,
+  `chrome` browser channel, setup URL, recovery URL, and full PowerShell
+  commands for both `auth-login` and headed `evidence-run`. This makes the
+  handoff copyable without relying on a `<profile>` placeholder or mixing
+  Chrome login with default Chromium replay.
+- Added machine-readable recovery command steps to
+  `blockedChildRecoveryAdvice`. The advice now includes ordered
+  `profile_setup` and `recovery_evidence_run` steps with `argv`,
+  `powershellCommand`, and purpose text, while `commandHints` is derived from
+  those same step commands. This lets QA scripts consume the JSON without
+  parsing final-report text.
+- Added `destination-recovery-plan --run-dir <evidence-run-dir>`, a read-only
+  CLI consumer for completed evidence runs. It scans `artifacts.jsonl` for
+  `destination_triage` artifacts, falls back to raw/structured artifact
+  discovery when the ledger is missing, extracts `blockedChildRecoveryAdvice`,
+  and prints JSON, Markdown, all commands, setup-only commands, or retry-only
+  commands without opening a browser.
+- Added destination recovery-plan preflight checks. `destination-recovery-plan
+  --format check` validates recovery command shape, and `--check-profiles`
+  checks whether the deterministic saved browser profile already exists before
+  the headed retry. `--fail-check` can fail the CLI on check errors, while
+  `--only-check-ok` filters command output to recovery items with no preflight
+  errors.
+- Improved the destination recovery Markdown handoff. `destination-recovery-plan
+  --format markdown` now includes a `Preflight Check` section with ok/error/
+  warning counts, issue codes, profile names, and command/profile readiness
+  notes. With `--check-profiles`, the same Markdown file shows whether the
+  Chrome persistent profile is already present before QA copies a retry command.
+- Hardened `destination-recovery-plan` for older or partial Naver Map recovery
+  artifacts. If a completed `destination_triage` artifact has
+  `blockedChildRecoveryCandidates` but no newer `blockedChildRecoveryAdvice`,
+  the CLI now synthesizes the same profile/headed recovery advice from the
+  sampled candidate URLs. The artifact reader also accepts UTF-8 files with a
+  leading BOM, which is common in Windows PowerShell handoff files.
+- Recovery plan items now expose whether advice came directly from the
+  artifact or was synthesized from recovery candidates. JSON includes
+  `adviceSource: "artifact_advice" | "recovery_candidates"` and
+  `synthesized: boolean`, and Markdown prints the advice source beside each
+  recovery item so QA can distinguish current triage output from compatibility
+  handoffs.
+- Improved source-coverage profile/headed retry Markdown handoffs.
+  `source-coverage-readiness --format retry-plan`,
+  `source-coverage-retry-plan --format markdown`, and generated
+  `profile-headed-retry-plan.md` files now include the same `Preflight Check`
+  summary as `--format check`, including selector-hint/profile readiness when
+  `--check-files` or `--check-profiles` is supplied. This keeps blocked
+  Google/Naver/TikTok/commerce/community retry commands and their readiness
+  failures in one QA artifact.
+- Expanded the information source coverage registry with mandatory `en-US`
+  representative top slots for public search, social feed, content/media,
+  community/forum, news/media, review/reputation, map/local, marketplace/
+  transaction, and knowledge/database categories. Added Walmart and eBay as
+  explicit English-language commerce registry entries, while keeping these
+  ranks as strategic calibration seeds rather than refreshed market-share
+  claims.
+- Added Walmart and eBay to provider-specific commerce recipe and safe-executor
+  fixture coverage. Their commerce plans are now `fixture_verified`, include
+  product/list, price, seller, and visible destination extraction candidates,
+  and the executor fixture verifies query/filter/sort/pagination, product-card,
+  seller/shipping, price-badge, and product/review/seller/brand destination
+  extraction without cart, checkout, purchase, or account-changing actions.
+- Verification for the blocked-child recovery advice pass:
+  `npm run build` passed, and
+  `npm test -- --run tests/destination-triage.test.ts
+  tests/evidence-runner.test.ts` passed with 2 files / 48 tests. Final
+  `npm run verify` passed with build, 33 test files / 336 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for the destination recovery-plan consumer pass:
+  `npm run build` passed, and
+  `npm test -- --run tests/destination-recovery-plan.test.ts
+  tests/destination-triage.test.ts tests/evidence-runner.test.ts` passed with
+  3 files / 53 tests. CLI smoke confirmed
+  `destination-recovery-plan --run-dir <missing-dir> --format json`,
+  `--format check --check-profiles`, and
+  `--format retry-commands --only-check-ok --check-profiles` return read-only
+  empty-plan outputs without opening a browser. Final `npm run verify` passed
+  with build, 34 test files / 341 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for the destination recovery Markdown preflight pass:
+  `npm run build` passed, and
+  `npm test -- --run tests/destination-recovery-plan.test.ts` passed with 1
+  file / 5 tests.
+- Verification for the destination recovery synthesis pass:
+  `npx vitest run tests/destination-recovery-plan.test.ts
+  tests/destination-triage.test.ts --testTimeout 60000` passed with 2 files /
+  35 tests, `npm run build` passed, and CLI smoke confirmed
+  `destination-recovery-plan --run-dir <bom-candidate-only-run>
+  --format retry-commands` emits a headed Chrome persistent-profile recovery
+  `evidence-run` command for `pcmap.place.naver.com`. Final `npm run verify`
+  passed with build, 34 test files / 350 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for the recovery advice-source visibility pass:
+  `npx vitest run tests/destination-recovery-plan.test.ts --testTimeout
+  60000` passed with 1 file / 6 tests, `npm run build` passed, and CLI smoke
+  confirmed `destination-recovery-plan --format json` and `--format markdown`
+  print `recovery_candidates` plus `synthesized` for candidate-only artifacts.
+  Final `npm run verify` passed with build, 34 test files / 350 tests, local
+  smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for the source-coverage retry-plan Markdown preflight pass:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-readiness.test.ts` passed with 1
+  file / 10 tests, and CLI smoke confirmed
+  `source-coverage-readiness --category search --locale ko-KR --format
+  retry-plan` renders a `Preflight Check` section. Plan-only
+  `source-coverage-calibrate --check-profiles` smoke confirmed generated
+  `profile-headed-retry-plan.md` includes the same preflight section. Final
+  `npm run verify` passed with build, 34 test files / 341 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for the `en-US` registry expansion pass:
+  `npm test -- --run tests/source-registry.test.ts
+  tests/source-navigation-calibration-targets.test.ts
+  tests/source-coverage-readiness.test.ts` passed with 3 files / 35 tests,
+  `npm run build` passed, and CLI smoke confirmed
+  `source-navigation-calibration-targets --category marketplace_transaction
+  --locale en-US --query "wireless earbuds" --format lines` emits Amazon,
+  Walmart, and eBay calibration targets first. Final `npm run verify` passed
+  with build, 34 test files / 343 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for the Walmart/eBay commerce fixture pass:
+  `npx vitest run tests/source-navigation-recipes.test.ts
+  tests/source-navigation-calibration-targets.test.ts
+  tests/source-registry.test.ts` passed with 3 files / 38 tests, and
+  `npx vitest run tests/source-navigation-executor.test.ts --testTimeout
+  60000` passed with 1 file / 37 tests. CLI smoke confirmed
+  `source-navigation-recipes --url "https://www.walmart.com/search?q=laptop"`
+  and `source-navigation-recipes --url
+  "https://www.ebay.com/sch/i.html?_nkw=laptop"` both return
+  `verificationStatus: "fixture_verified"`. Final `npm run verify` passed
+  with build, 34 test files / 343 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Ran a bounded repeated live calibration for `search.en-US` top-three slots
+  with query `tokyo hotel`. Google Search and Bing were classified as blocked
+  by browser-visible challenge signals in the unattended browser; Yahoo Search
+  promoted one maintained read-only `result-selection:capture` action.
+- Hardened Yahoo Search destination probe classification after that live run.
+  The first pass showed `www.yahoo.com` home and `yahoo.uservoice.com` feedback
+  links as promotable discovery hints; these are now classified as provider
+  shell / low-value navigation surfaces instead of destination candidates.
+- Re-ran Yahoo Search calibration after the hardening. Yahoo Search still
+  promotes the read-only result capture action, but destination discovery now
+  reports 0 promotable candidates, 22 non-promotable provider-shell/login
+  candidates, and 0 selector hints. The generated Yahoo action file passed an
+  explicit `evidence-run` final claim gate with 57 artifacts and 4 claims.
+- Verification for the Yahoo provider-shell hardening pass:
+  `npx vitest run tests/destination-triage.test.ts
+  tests/source-navigation-calibration.test.ts
+  tests/source-navigation-recipe-catalog.test.ts` passed with 3 files / 72
+  tests, `npm run build` passed, and final `npm run verify` passed with build,
+  34 test files / 343 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Recovered Google Search `search.en-US` calibration through the
+  `google-search-cdp` persistent Chrome profile. Repeated read-only calibration
+  for `tokyo hotel` promoted maintained `result-selection:capture` and
+  `destination-followup:extract_destinations` actions, with 0 blocked-signal
+  hits under the saved profile.
+- Hardened Google Search destination probe classification after the profile
+  pass. Google Home/WebHP, Labs Search, Google apps/product utility pages,
+  Search vertical links, and Maps vertical navigation links are now classified
+  as provider-shell / low-value navigation surfaces when discovered from
+  Google Search, while actual result candidates such as Wikipedia,
+  Booking.com, Expedia, TokioHotel.com, TripAdvisor, and Google Travel remain
+  eligible for bounded triage.
+- Re-ran Google Search calibration after the hardening. Destination discovery
+  now preserves selector hints for actual result candidates instead of Google
+  utility surfaces. The generated Google action file passed an explicit
+  profile-backed `evidence-run` final claim gate with 138 artifacts and 4
+  claims.
+- Fixed a profile-lock bug exposed by the Google follow-up retry. Child
+  evidence runs now avoid reusing a parent saved profile while the parent
+  browser context is still leased, so profile-backed search pages can spawn
+  external destination child captures without failing on `profile_in_use`.
+- Hardened browser obstruction classification for Korean travel bot/access
+  limitation pages. TripAdvisor-style Korean text such as "access temporarily
+  limited", "additional verification required", "abnormal behavior", and
+  "suspected robot" now classifies as `bot_block` instead of useful child
+  evidence.
+- Re-ran the Google Search action with the recommended bounded follow-up retry
+  budget: `--source-navigation-max-followups 5
+  --source-navigation-max-followups-per-domain 1`. The first corrected run
+  passed final claim gate and produced browser-visible child captures, but it
+  exposed an intent false positive: a hotel-commerce query for `tokyo hotel`
+  still treated the `Tokio Hotel` Wikipedia/music entity result as useful
+  child evidence because the visible result text contained a bare `hotel`
+  token.
+- Added destination query-intent usefulness hardening. Specialized intents now
+  require the selected child evidence to support the intent, not just overlap
+  the query terms. A singular `hotel` token or `Tokio_Hotel` entity URL no
+  longer makes Wikipedia, YouTube, or artist-homepage results commerce
+  evidence; price/offer reason codes now use the same commerce evidence
+  pattern rather than the old broad substring check.
+- Re-ran the Google Search action after the intent hardening. The live
+  profile-backed run passed final claim gate with 130 artifacts and 4 claims,
+  attempted 5 child destinations, marked 3 useful commerce child destinations
+  (Booking.com, Agoda, and Google Travel), marked 2 blocked travel child
+  destinations (TripAdvisor Korean access limitation and Expedia human/bot
+  challenge), and rejected Wikipedia/TokioHotel/YouTube candidates as generic
+  or media fallback candidates instead of trusted hotel evidence.
+- Verification for the Google Search provider-shell hardening pass:
+  `npx vitest run tests/destination-triage.test.ts
+  tests/source-navigation-calibration.test.ts
+  tests/source-navigation-recipe-catalog.test.ts` passed with 3 files / 72
+  tests, `npm run build` passed, and final `npm run verify` passed with build,
+  34 test files / 343 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for the Google child follow-up lock/obstruction pass:
+  `npx vitest run tests/browser-obstructions.test.ts tests/evidence-runner.test.ts
+  --testNamePattern "Korean travel|active parent profile"` passed with 2 tests,
+  `npx vitest run tests/browser-obstructions.test.ts
+  tests/evidence-runner.test.ts` passed with 2 files / 36 tests,
+  `npm run build` passed, and final `npm run verify` passed with build, 34
+  test files / 345 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for the destination intent triage refinement pass:
+  `npx vitest run tests/destination-triage.test.ts` passed with 1 file / 29
+  tests, `npm run build` passed, and a live profile-backed Google Search run
+  for `tokyo hotel` passed final claim gate with the corrected selected/rejected
+  child destination split above. Final `npm run verify` passed with build, 34
+  test files / 346 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Extended Google Search travel/hotel module extraction coverage after the
+  `tokyo hotel` live run proved Google Travel can be useful commerce evidence.
+  Manual-only Google Search recipe candidates now include Google travel/hotel
+  capture scopes, `/travel/hotels` and `/travel/search` real-site selectors,
+  explicit Google Travel fixture links, and SPA-style
+  `data-travel-url`/`data-hotel-url`/`data-offer-url` destination attributes.
+- Browser-visible destination extraction now recognizes
+  `data-travel-url`, `data-hotel-url`, and `data-offer-url` as supported
+  destination attributes, so travel/search result cards can expose hotel,
+  travel, and offer URLs without requiring parent-page clicks.
+- Verification for the Google travel/hotel extraction fixture pass:
+  `npx vitest run tests/source-navigation-recipes.test.ts
+  tests/source-navigation-executor.test.ts --testTimeout 60000` passed with 2
+  files / 50 tests, `npm run build` passed, and CLI smoke confirmed
+  `source-navigation-recipes --url "https://www.google.com/search?q=tokyo+hotel"`
+  reports Google Search as `fixture_verified` with 74 selector candidates and
+  125 capture-scope candidates including the new travel/hotel selectors. Final
+  `npm run verify` passed with build, 34 test files / 346 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Re-ran profile-backed live Google Search calibration for `tokyo hotel` after
+  adding the travel/hotel selectors. The first pass showed that broad
+  `div:has(... ) a[href]` extraction selectors can over-select unrelated
+  result links such as Wikipedia or YouTube when a module container is too
+  broad. Removed those broad Google news/video/travel extraction candidates
+  while keeping direct module links and capture scopes.
+- Added catalog selector preference for maintained `extract_destinations`
+  exports. Repeated calibration now treats broad `#rso` as a fallback shell and
+  prefers semantic, destination-specific selectors such as
+  `#search a[href*="/travel/hotels"]` over generic organic heading/video links
+  when both are stable and promotable.
+- Repeated profile-backed Google calibration after the regating passed with 0
+  blocked-signal hits, 72 selector candidates, 23 matched selectors, 125
+  capture-scope candidates, and 21 matched capture scopes. The direct
+  `/travel/hotels` selector matched once and its destination probe extracted
+  only `https://www.google.com/travel/hotels/Tokyo`.
+- Exporting maintained actions from the two regated calibration runs now writes
+  a `destination-followup:extract_destinations` action using
+  `#search a[href*="/travel/hotels"]` instead of `#rso` or a broad video/news
+  container selector.
+- Ran the exported focused Google Travel action file through profile-backed
+  `evidence-run`. The run passed final claim gate with 154 artifacts and 5
+  claims, requested exactly 1 follow-up, followed
+  `https://www.google.com/travel/hotels/Tokyo`, and destination triage reported
+  1 commerce candidate, 1 selected, 1 useful, 0 blocked, 0 off-topic, and
+  `retryRecommended: false`.
+- Verification for the Google Travel maintained-export regating pass:
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts
+  tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts
+  --testTimeout 60000` passed with 3 files / 75 tests. CLI smoke confirmed
+  Google Search now reports 70 selector candidates and 125 capture-scope
+  candidates. Final `npm run verify` passed with build, 34 test files / 347
+  tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm
+  audit vulnerabilities.
+- Hardened YouTube destination extraction promotion after the Google Travel
+  regating pattern. YouTube recipe candidates now include narrower search
+  result title, rich-grid title/thumbnail, and channel/handle selectors such
+  as `ytd-video-renderer a#video-title[href*="/watch"]`,
+  `ytd-rich-item-renderer a#video-title-link[href*="/watch"]`, and
+  `a#channel-thumbnail[href*="/@"]`, while broad renderer links such as
+  `ytd-video-renderer a[href]` and `ytd-rich-item-renderer a[href]` are treated
+  as broad fallback selectors for maintained export.
+- Reweighted maintained `extract_destinations` selector preference for
+  YouTube. Repeated calibration can still preserve channel/profile links as
+  candidates, but media title/thumbnail watch/Shorts selectors now outrank
+  duplicate-heavy channel thumbnail selectors when a content-media query needs
+  a direct child evidence page.
+- Added safe-executor fixture coverage for a YouTube search result shell. The
+  fixture verifies public result metadata, exact watch-link destination
+  extraction, thumbnail-frame capture, overlay-text capture, and the existing
+  unsupported raw-stream/social-write guards without clicking subscribe, like,
+  comment, share, login, or raw stream controls.
+- Ran repeated profile-backed Chrome calibration for
+  `https://www.youtube.com/results?search_query=seoul+cafe` through the
+  `google-search-cdp` persistent profile. Both runs completed with 0
+  blocked-signal hits, 51 selector candidates, 17 matched selectors, 19
+  capture-scope candidates, and 6 matched capture scopes. Exporting maintained
+  actions from those two runs now writes
+  `destination-followup:extract_destinations` with
+  `ytd-video-renderer a#video-title[href*="/watch"]` instead of a broad
+  renderer selector or duplicate-heavy channel thumbnail selector.
+- Ran the exported YouTube action file through profile-backed `evidence-run`.
+  The run passed final claim gate with 154 artifacts and 4 claims, extracted 10
+  visible watch-title candidates, attempted 1 bounded child video follow-up
+  because of the per-domain budget, marked the selected child useful, preserved
+  5 proposal-only depth-2 candidates, and reported
+  `retryRecommended: false`.
+- Verification for the YouTube destination extraction regating pass:
+  `npx vitest run tests/source-navigation-recipes.test.ts
+  tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-executor.test.ts
+  --testTimeout 60000` passed with 3 files / 77 tests. CLI smoke confirmed
+  `source-navigation-recipes --url
+  "https://www.youtube.com/results?search_query=seoul+cafe"` reports 51
+  selector candidates including the precise YouTube media selectors. Repeated
+  profile-backed calibration export wrote
+  `ytd-video-renderer a#video-title[href*="/watch"]`, and the focused
+  profile-backed evidence-run passed final claim gate. Final `npm run verify`
+  passed with build, 34 test files / 349 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Added blocked-child recovery candidate summaries to destination triage.
+  When a selected child destination is downgraded as blocked/paywalled/private
+  or has browser-obstruction warnings but exposes deeper visible candidates,
+  triage now preserves those candidates under
+  `blockedChildRecoveryCandidateCount` and
+  `blockedChildRecoveryCandidates` without promoting or executing them as
+  depth-2 proposals.
+- Added a final-report line for blocked child recovery candidates. This keeps
+  Naver Place service-limit runs auditable: QA can see the
+  `pcmap.place.naver.com/.../home` recovery candidate that the blocked child
+  exposed, while the default policy still avoids executing it as a gate-bypass.
+- Re-ran the promoted Naver Map client-state action file through
+  `evidence-run`. The run again extracted 10 parent Place candidates, selected
+  1 child, detected the Naver service-limit obstruction, kept final claim-gate
+  `ok: true`, and now reported `blockedChildRecoveryCandidateCount: 1` with a
+  `pcmap.place.naver.com/restaurant/.../home` sample in both JSON and the final
+  Markdown report.
+- Verification for the blocked-child recovery summary pass:
+  `npm run build` passed,
+  `npm test -- --run tests/destination-triage.test.ts
+  tests/evidence-runner.test.ts` passed with 2 files / 47 tests, and the live
+  promoted Naver Map `evidence-run` passed final claim-gate with the recovery
+  candidate summary populated. Final `npm run verify` passed with build,
+  33 test files / 335 tests, local smoke, public web smoke, media smoke,
+  proxy smoke, and 0 npm audit vulnerabilities.
+- Added client-state probe aggregate counts to promotion and coverage
+  readiness summaries. Destination-extraction summaries now preserve
+  `clientStateProbeRunCount`, `clientStateProbeOkRunCount`, and
+  `clientStateProbeUniqueCandidateCount`, and coverage calibration Markdown
+  readiness lines include those counts when present.
+- Re-ran live Naver Map coverage calibration after the client-state probe
+  hardening. The repeated headless read-only run for `성수 카페` succeeded
+  twice, promoted the Naver Map group as `ready`, exported 3 maintained actions
+  (`map-viewport`, `map-ocr`, and `destination-followup`), and marked
+  destination extraction `ready` with 1 ready action out of 2 candidates.
+- The promoted client-state destination follow-up was backed by 2 successful
+  client-state probe runs. The latest live promotion summary recorded
+  `clientStateProbeRunCount: 2`, `clientStateProbeOkRunCount: 2`, and
+  `clientStateProbeUniqueCandidateCount: 178`.
+- Ran the promoted Naver Map action file through `evidence-run`. Parent
+  execution extracted 10 client-state place candidates and attempted 1 bounded
+  child follow-up. The child reached `map.naver.com/p/entry/place/...`, but
+  Naver returned a visible service-limit page, so destination triage correctly
+  reported `status: "partial"`, `usefulCount: 0`, `blockedCount: 1`,
+  `retryRecommended: true`, and final claim-gate `ok: true`.
+- This moves Naver Map from capture-only to maintained natural-deepening
+  extraction-ready for the client-state route. It is still not useful-child
+  evidence-ready under unattended Chromium because the selected Naver Place
+  child page can be throttled by service-limit obstruction.
+- Verification for the live promotion QA and probe-aggregate pass:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-promotion.test.ts
+  tests/source-coverage-readiness.test.ts
+  tests/source-coverage-calibration-loop.test.ts` passed with 3 files /
+  26 tests, both live Naver Map coverage calibration and promoted
+  `evidence-run` passed, and final `npm run verify` passed with build,
+  33 test files / 334 tests, local smoke, public web smoke, media smoke,
+  proxy smoke, and 0 npm audit vulnerabilities.
+- Added read-only client-state destination probe diagnostics to source
+  navigation calibration. `extract_client_state_destinations` actions now read
+  the configured state key during calibration, run the shared
+  `naver_place_apollo` extractor, and record frame counts, parsed/truncated
+  frame counts, raw/unique candidate counts, sample executable URLs, canonical
+  original URLs, sample texts, and frame URLs.
+- Moved Naver Place client-state destination parsing into shared
+  `src/client-state-destinations.ts` so executor and calibration use the same
+  extraction rules. This prevents calibration from promoting a route that the
+  executor would later parse differently.
+- Hardened recipe catalog promotion for client-state extraction. Repeated
+  selector matches are no longer enough by themselves: maintained export now
+  requires repeated successful client-state probes that actually yield unique
+  destination candidates. A single successful probe can still produce
+  `single_run_ready`, but no successful probe remains `calibration_required`.
+- Verification for the client-state calibration-probe pass:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-calibration.test.ts
+  tests/source-navigation-recipe-catalog.test.ts
+  tests/source-navigation-executor.test.ts` passed with 3 files / 81 tests,
+  and `npm test -- --run tests/source-navigation-promotion.test.ts
+  tests/source-coverage-readiness.test.ts` passed with 2 files / 17 tests.
+  Final `npm run verify` passed with build, 33 test files / 334 tests, local
+  smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Connected source-coverage destination-extraction readiness to the new
+  client-state operation family. `source-coverage-readiness` now counts both
+  `extract_destinations` and `extract_client_state_destinations` when deriving
+  planned destination-extraction candidate counts from recipe plans, so Naver
+  Map no longer looks like it has only ordinary link extraction in coverage QA.
+- Updated readiness wording from operation-specific `extract_destinations`
+  copy to generic destination-extraction copy. This keeps retry plans and
+  coverage reports accurate for Naver Map client-state extraction and future
+  non-link destination extraction operations.
+- Verification for the coverage-readiness client-state pass:
+  `npm test -- --run tests/source-coverage-readiness.test.ts` passed with
+  1 file / 10 tests, `npm run build` passed, and CLI smoke confirmed
+  `source-coverage-readiness --category map_local --locale ko-KR --query
+  "seongsu cafe" --format json` reports Naver Map
+  `destinationExtraction.candidateCount: 2`. Final `npm run verify` passed
+  with build, 33 test files / 332 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Wired Naver Map client-state destination extraction into the manual
+  recipe/catalog/promotion path. Naver Map recipe plans now expose
+  `extract_client_state_destinations` as an alternative `destination-followup`
+  candidate with reviewed `#app-root`, `#_pcmap_list_scroll_container`, and
+  `#root` selectors plus `__APOLLO_STATE__` / `naver_place_apollo` defaults.
+- Recipe catalog calibration is now keyed by `actionKey + operation`, so
+  ordinary link extraction and client-state extraction can be calibrated and
+  promoted independently even though both execute under the planned
+  `destination-followup` action key.
+- Maintained recipe export now deduplicates by executable action key, and
+  promotion destination-extraction summaries count both `extract_destinations`
+  and `extract_client_state_destinations`. This lets repeated Naver Map
+  calibration export a single explicit action file for the client-state route
+  when link selectors are not ready.
+- Verification for the recipe/catalog/promotion pass:
+  `npm run build` passed,
+  `npm test -- source-navigation-recipes source-navigation-recipe-catalog
+  source-navigation-promotion` passed with 3 files / 43 tests, and CLI smoke
+  confirmed `source-navigation-recipes --url https://map.naver.com/p/search/cafe`
+  emits `extract_client_state_destinations`, `#app-root`, and
+  `__APOLLO_STATE__`. Final `npm run verify` passed with build, 33 test files
+  / 332 tests, local smoke, public web smoke, media smoke, proxy smoke, and
+  0 npm audit vulnerabilities.
+- Added the Naver Place executable-entry fallback. Client-state extraction now
+  emits `https://map.naver.com/p/entry/place/<id>` as the child run URL while
+  preserving `https://place.naver.com/<type>/<id>` as canonical `originalUrl`
+  with `urlResolutionMethod: "naver_place_entry_fallback"`. This removes the
+  observed local DNS failure for `place.naver.com` from the child evidence
+  path without losing provenance.
+- Added Naver Map/Place service-limit obstruction detection. The live child
+  run now reaches the Naver Map entry page, and the visible "service use
+  restricted / excessive access request" page is classified as `bot_block`.
+  Destination triage now reports the selected child as blocked instead of
+  merely weak/off-topic when Naver throttles the browser.
+- Live check after the fallback: explicit Naver Map client-state extraction for
+  the Korean `seongsu cafe` query extracted 2 candidates, attempted 1 child
+  follow-up at `map.naver.com/p/entry/place/1790076538`, captured 50 successful
+  browser artifacts in the child run, recorded 2 obstruction artifacts, and
+  passed final claim-gate. It still produced 0 useful child destinations
+  because the provider returned a service-limit page, so Naver Place remains
+  extraction-ready but not maintained useful-evidence-ready.
+- Verification for this pass:
+  `npm run build` passed,
+  `npm test -- source-navigation-executor destination-triage` passed with
+  2 files / 64 tests,
+  `npm test -- evidence-runner destination-url` passed with 2 files / 24 tests,
+  `npm test -- browser-obstructions evidence-runner destination-triage
+  source-navigation-executor` passed with 4 files / 97 tests, the live Naver
+  Map client-state smoke passed final claim-gate with blocked child evidence,
+  and final `npm run verify` passed with build, 33 test files / 330 tests,
+  local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Added the first child evidence-density hardening pass. Browser page capture
+  now reads visible text from all Playwright-accessible frames and records
+  `visibleTextFrames` metadata; visible-link metadata is frame-aware as well.
+  Local workflow coverage proves a child destination with query-matching text
+  only inside an iframe is marked useful by destination triage. Next Naver Place
+  work is live accessible child-page validation plus OCR/scoped capture tuning
+  for pages that render useful place text visually or behind provider frames.
+- Added child capture success/failure separation. Destination child evidence
+  now counts only successful page-capture artifacts as `browserCaptureRecords`
+  and reports failed/partial child opens through `browserCaptureFailedRecords`,
+  `browser_capture_failed`, and `failed_browser_capture`. This keeps failed
+  Naver Place/portal child opens from looking like successful browser evidence.
+- Added explicit Naver Place client-state destination extraction. BrowserPool
+  now has a generic frame-aware client-state snapshot API, and
+  `extract_client_state_destinations` can parse browser-received
+  `window.__APOLLO_STATE__` through the `naver_place_apollo` extractor to
+  derive bounded Naver Place follow-up destinations when visible Naver Map
+  cards expose no usable `href` or SPA URL attribute.
+- Added local executor fixture coverage for that client-state path. The next
+  task is to wire it into Naver Map recipe/catalog/promotion readiness so
+  repeated live calibration can promote state-bearing `#app-root` /
+  `#_pcmap_list_scroll_container` frames separately from ordinary
+  `extract_destinations` link selectors.
+- Hardened that client-state path for real Naver Map iframes. Optional
+  selectors are now validated through frame-aware selector inspection instead
+  of top-frame-only waits, and fixture coverage verifies that client state can
+  live only inside a visible iframe.
+- Live check: an explicit Naver Map run for `성수 카페` extracted 2
+  `place.naver.com/restaurant/...` candidates from `window.__APOLLO_STATE__`,
+  executed 1 bounded child follow-up, and passed final claim-gate. The selected
+  child Place page still produced empty browser-visible text, so triage counted
+  0 useful child destinations and recommended a wider follow-up retry. Next
+  work is Naver Place child evidence density: capture/OCR/selector scopes that
+  turn those child pages from "opened" into useful visible evidence.
+- Answered the Google/Naver deepening question explicitly in the product docs:
+  the system can already perform recipe-gated destination extraction, bounded
+  child evidence runs, post-capture usefulness verdicts, and explicit opt-in
+  depth-2 deepening, but broad natural traversal is not yet a default behavior.
+  It requires provider-maintained `extract_destinations` selectors, repeated
+  real-site calibration, and QA proving useful/low-value/off-topic/blocked
+  child verdicts.
+- Added SPA-style non-anchor destination extraction support. Explicit
+  `extract_destinations` actions now read visible URL attributes such as
+  `data-href`, `data-url`, `data-target-url`, `data-place-url`,
+  `data-source-url`, `data-item-url`, `data-product-url`, `data-profile-url`,
+  and `data-media-url` from visible cards/buttons with text, so provider
+  calibration is not limited to `<a href>` pages.
+- Added provider-scoped non-anchor destination selector candidates for Google
+  Search, Naver Search, Naver Map, KakaoMap, Google Maps, commerce product
+  cards, and video/social media/profile cards. These remain manual-only until
+  repeated read-only calibration promotes them.
+- Hardened promotion so broad generic SPA destination attributes such as
+  `#search [data-url]` and other broad shell-scoped `data-url`/`data-href`/
+  `data-target-url` selectors stay calibration-required instead of becoming
+  maintained `extract_destinations` exports. Scoped provider attributes such as
+  `#root [data-url*="place.naver.com"]` remain promotable after repeated
+  calibration.
+- Added destination-probe diagnostics to read-only calibration for
+  `extract_destinations`. Matched selectors now record whether usable HTTP(S)
+  destination links were actually extractable, including raw, usable, unique,
+  duplicate, anchor, attribute, and sample-URL counts. Recipe promotion now
+  rejects matched destination selectors when the probe finds zero usable links.
+- Extended destination probes with promotable/non-promotable sampled-link
+  classification. Probe diagnostics now count sampled links rejected as
+  low-value navigation/provider-shell, login/account, unsupported, or
+  source-family-weak-fit, and recipe promotion rejects destination selectors
+  that produce only non-promotable sampled links.
+- Added frame-aware selector calibration. `BrowserPool.inspectSelector` now
+  scans all Playwright-accessible frames and records frame counts plus first
+  matched/visible frame URLs. `BrowserPool.readLinkTargets` can extract
+  destination links from visible selectors inside frames, preserving frame
+  metadata on returned links and probe artifacts.
+- Re-ran a single live Naver Map read-only calibration for
+  `https://map.naver.com/p/search/%EC%84%B1%EC%88%98%20%EC%B9%B4%ED%8E%98`.
+  The run succeeded with 51 selector candidates, 5 matched selectors, 0 blocked
+  signal hits, and no matched Naver Place `data-*` selectors. Destination
+  follow-up still matched only the broad visible `#root a[href^="http"]`
+  fallback, confirming Naver Map remains capture-ready but
+  destination-extraction not-ready.
+- Re-ran the same live Naver Map calibration after adding destination probes.
+  The broad fallback probe found 2 usable links, but they were provider
+  shell/login URLs rather than place, review, booking, menu, or official-site
+  destinations. The broad fallback therefore remains non-promotable and Naver
+  Map still needs narrower real place/detail selectors.
+- Re-ran the live Naver Map calibration again after sampled-link
+  classification. The broad `#root a[href^="http"]` fallback still found 2
+  usable links, but `promotableCandidateCount` was 0 with
+  `login_or_account_surface`, `low_value_navigation_surface`, and
+  `source_family_weak_fit` warning counts. This keeps the source
+  destination-extraction not-ready even when a broad selector technically has
+  usable URLs.
+- Re-ran the live Naver Map calibration after frame-aware selector probing.
+  The report saw 5 frames and preserved first matched frame URLs for broad
+  matches, but no narrow Naver Place, entry-place, booking, or SmartPlace
+  selectors matched in any frame. That rules out a simple top-frame-only blind
+  spot for the current Naver Map run and keeps the next task focused on
+  provider-specific selector discovery.
+- Added global destination-discovery diagnostics for `extract_destinations`
+  calibration. When planned selectors miss, calibration now scans visible
+  anchors and SPA destination attributes across accessible frames and records
+  promotable/non-promotable sampled-link counts as a selector-discovery aid.
+- Hardened destination probe/discovery classification so same-document hash
+  links and Naver Map shell anchors such as `#section_content` and `#header`
+  are treated as low-value provider shell links, not promotable child
+  destinations. The follow-up live Naver Map calibration found 57 raw
+  candidates, 4 usable URLs, 0 promotable URLs, and 4 non-promotable URLs
+  consisting of Naver home/login links plus map-shell hash anchors.
+- Added classified sample-target diagnostics to destination probe and global
+  discovery output. Calibration artifacts now preserve sample target URL,
+  visible text, anchor/attribute source, attribute name, frame metadata when
+  available, and warning reasons for promotable and non-promotable samples.
+  This turns discovery output into an actionable handoff for designing the next
+  narrower provider selector.
+- Threaded global destination-discovery diagnostics into recipe catalog,
+  promotion, and source-coverage readiness outputs. `extract_destinations`
+  catalog entries now preserve aggregated discovery run counts, promotable and
+  non-promotable candidate totals, warning counts, and sampled target metadata.
+  Promotion summaries and coverage readiness audits carry the same discovery
+  pressure forward so QA can distinguish "promotable targets exist but no
+  narrow maintained selector is ready" from "only low-value/login/provider-shell
+  links are visible." Discovery still does not promote broad scans or create
+  child runs by itself.
+- Added manual selector hints derived from promotable global discovery sample
+  targets. Catalog entries now turn observed anchor targets into host/path-
+  scoped `a[href*="..."]` hints and observed SPA attribute targets into
+  host/path-scoped attribute hints such as
+  `[data-place-url*="place.naver.com/restaurant"]`. Promotion and coverage
+  readiness carry selector-hint counts forward, but hints remain
+  `manual_calibration_required` and must be wrapped in provider/card/container
+  scopes plus repeated calibration before maintained export.
+- Added `source-navigation-catalog --format selector-hints`. It prints
+  tab-separated manual calibration hint lines with platform, source family,
+  action key, selector, sample URL, host, path prefix, source, attribute name,
+  and promotion policy, so QA can copy observed discovery hints into the next
+  provider-specific selector pass without reading the full catalog JSON.
+- Added promotion-group selector-hint handoff files. `source-navigation-promote-batch`
+  now writes `selector-hints.tsv` beside each group's `catalog.json`,
+  `export.json`, and `actions.json`, and promotion summaries preserve
+  `files.selectorHints` for downstream QA tools.
+- Threaded selector-hint handoff paths into coverage readiness and calibration
+  loop reports. Destination-extraction readiness now carries
+  `selectorHintFiles`, and the Markdown report includes a `Selector Hints`
+  section so not-ready source slots point directly at the next provider-specific
+  selector calibration handoff.
+- Added provider/container scoped selector suggestions to discovery selector
+  hints. For example, a promotable Naver Place attribute sample now yields both
+  `[data-place-url*="place.naver.com/restaurant"]` and the next reviewed
+  calibration candidate `#root [data-place-url*="place.naver.com/restaurant"]`.
+  These suggestions remain manual calibration handoffs, not maintained recipes.
+- Added the selector-hint calibration input loop. `--selector-hints-file` and
+  `--selector-hints-files` now load TSV handoff rows and append scoped
+  suggestions to matching recipe action selector candidates for read-only
+  calibration. This is wired through `source-navigation-calibrate`,
+  `source-navigation-calibrate-batch`, and `source-coverage-calibrate`; loaded
+  hints remain manual calibration inputs and cannot become evidence-run actions
+  without repeated calibration and promotion.
+- Added selector-hint input provenance to the coverage calibration loop.
+  `source-coverage-calibrate` now records supplied hint file paths in the loop
+  plan, Markdown report, generated `source-navigation-calibrate-batch` command,
+  and calibration batch manifest. This keeps profile/headed provider retries
+  reproducible when a later Google/Naver/platform calibration pass starts from
+  a previous `selector-hints.tsv` handoff.
+- Added ordered blocked-slot retry plans. `source-coverage-readiness --format
+  retry-plan` now emits a Markdown QA handoff for profile/headed retries,
+  ordered by top-slot rank and support tier, with selector-hint files, setup
+  commands, retry commands, reasons, and next actions. This keeps Google,
+  Naver, TikTok, Expedia, community/forum, and commerce blocked-slot retries
+  reviewable without reading the raw JSON audit.
+- Added Google/Naver search vertical calibration target expansion.
+  `source-navigation-calibration-targets` and `source-coverage-calibrate` now
+  accept `--include-search-variants`, expanding Google Search into News,
+  Images, Videos, and local result targets, and Naver Search into View, News,
+  Images, Videos, Place, and Shopping targets. These are read-only calibration
+  seeds and must be promoted separately from broad search-page readiness.
+- Verification for Google/Naver search variant target expansion:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-calibration-targets.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 2 files / 17 tests, CLI smoke returned the expected Google
+  `tbm=nws|isch|vid|lcl` target lines, plan-only
+  `source-coverage-calibrate --include-search-variants` generated 13 search
+  targets for Korean search coverage, and final `npm run verify` passed with
+  build, 32 test files / 290 tests, local smoke, public web smoke, media smoke,
+  proxy smoke, and 0 npm audit vulnerabilities.
+- Added bounded read-only calibration batch concurrency.
+  `source-navigation-calibrate-batch` and `source-coverage-calibrate` now accept
+  `--calibration-concurrency <1-5>`, run reviewed calibration attempts in
+  bounded concurrent batches, record the effective concurrency in manifests and
+  coverage loop reports, and keep `persistent-profile` calibration sequential
+  to avoid parallel use of the same browser user-data directory.
+- Verification for calibration batch concurrency:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-calibration-batch.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 2 files / 13 tests, CLI smoke confirmed a plan-only
+  `source-coverage-calibrate --include-search-variants --calibration-concurrency 2`
+  handoff carries the generated batch flag, a live two-target
+  `source-navigation-calibrate-batch --calibration-concurrency 2` run against
+  `example.com` and `example.org` wrote a manifest with `concurrency: 2` and
+  two succeeded attempts, and final `npm run verify` passed with build, 32 test
+  files / 294 tests, local smoke, public web smoke, media smoke, proxy smoke,
+  and 0 npm audit vulnerabilities.
+- Added supported search-platform variant target expansion beyond Google/Naver.
+  `--include-search-variants` now also generates reviewed Daum/Kakao, Bing,
+  Yahoo Search, and Yahoo Japan Search vertical seeds where each provider has a
+  stable search URL. The supported variants include news, image, video,
+  local/place/map, shopping, blog/cafe, and Q&A surfaces depending on provider.
+  These remain read-only calibration seeds and must be promoted separately from
+  broad search-page readiness.
+- Verification for supported search-platform variant expansion:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-calibration-targets.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 2 files / 19 tests, CLI smoke confirmed ko-KR/global/ja-JP
+  variant target output, and plan-only
+  `source-coverage-calibrate --include-search-variants --calibration-concurrency 2`
+  generated 20 Korean top-slot search targets: 7 Naver, 5 Google, and 8
+  Daum/Kakao targets. Final `npm run verify` passed with build, 32 test files /
+  294 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm
+  audit vulnerabilities.
+- Added calibration target detection diagnostics for provider breadth QA.
+  Registry-backed target plans and coverage calibration loop plans now annotate
+  each target with detected platform/source family, parent platform, parent
+  source families, and variant ID. Reports summarize detected platform/family
+  counts and cross-platform variant targets, so search-origin verticals such as
+  `naver_search-news` and `daum_search-news` visibly promote under
+  `naver_news` / `daum_news` portal groups instead of silently looking like
+  generic search readiness.
+- Verification for target detection diagnostics:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-calibration-targets.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 2 files / 19 tests, and plan-only
+  `source-coverage-calibrate --include-search-variants --calibration-concurrency 2`
+  wrote a report with detected platform counts
+  `naver_search=6, naver_news=1, google_search=5, daum_search=7,
+  daum_news=1` plus cross-platform variant targets
+  `naver_search-news` and `daum_search-news`. Final `npm run verify` passed
+  with build, 32 test files / 294 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Corrected Yahoo Search vertical calibration targets and provider-shell
+  destination hardening. Yahoo Search now generates Images, News, and Video
+  target URLs through the provider's current vertical hosts
+  `images.search.yahoo.com`, `news.search.yahoo.com`, and
+  `video.search.yahoo.com`. Recipe candidates keep those URLs available as
+  result/vertical capture scopes, while destination triage classifies provider
+  vertical search links as low-value navigation surfaces so they cannot be
+  promoted as maintained destination follow-up evidence by themselves.
+- Verification for Yahoo Search vertical hardening:
+  `npm run build` passed,
+  `npm test -- --run tests/destination-triage.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration-targets.test.ts tests/source-strategy.test.ts`
+  passed with 4 files / 53 tests, CLI target smoke printed the corrected Yahoo
+  vertical hosts, and a live read-only Yahoo Images/News/Videos calibration
+  batch with `--calibration-concurrency 2` succeeded for all 3 targets.
+  Promotion produced one ready `result-selection` capture action and
+  `destinationExtraction.readyActionCount: 0`, proving provider vertical search
+  links were not promoted as child destinations. Final `npm run verify` passed
+  with build, 32 test files / 296 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Hardened Yahoo Japan vertical destination promotion. Destination triage now
+  classifies Yahoo Japan News, Maps, Shopping, and Chiebukuro/Q&A vertical
+  search URLs as low-value navigation surfaces while leaving article/question/
+  product/place-style result URLs promotable. Recipe catalog promotion now also
+  blocks broad page-shell extraction containers such as `#contents` from
+  maintained `extract_destinations` export, forcing promotion to use narrower
+  repeated result-card/module selectors.
+- Verification for Yahoo Japan vertical hardening:
+  `npm run build` passed,
+  `npm test -- --run tests/destination-triage.test.ts tests/source-navigation-recipe-catalog.test.ts`
+  passed with 2 files / 43 tests, CLI target smoke printed 7 Yahoo Japan
+  search/Images/Videos/News/Map/Shopping/Q&A targets, and a live read-only
+  Yahoo Japan calibration batch with `--calibration-concurrency 2` succeeded
+  for all 7 targets. Re-promotion after the broad-container guard exported
+  `.sw-Card` rather than broad `#contents` for destination extraction. An
+  explicit evidence-run using that action file passed final claim gate; the
+  selected Yahoo Travel redirect child page was downgraded as off-topic/
+  access-denied evidence with fallback retry diagnostics, which is the expected
+  QA signal rather than a useful-child claim. Final `npm run verify` passed
+  with build, 32 test files / 298 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Hardened live Bing search calibration and destination handling. A five-target
+  Bing vertical smoke (`search`, Images, Videos, News, Maps) succeeded at
+  `--calibration-concurrency 2`, but the 1s wait was too short for maintained
+  search-result promotion. Repeated base Bing calibration became stable with a
+  5s wait and promoted `result-selection` capture plus `destination-followup`
+  extraction. Promotion now blocks broad `#b_results` extraction and exports
+  the narrower `#b_results .b_algo` selector instead.
+- Added Bing/Microsoft solve-the-task challenge phrases to browser obstruction
+  and source-navigation blocked-signal classification, including English and
+  Korean challenge variants. A live explicit Bing evidence-run hit that
+  challenge surface, recorded `bot_block:high`, and still passed the final
+  claim gate with 5 claims / 117 artifacts while correctly producing no child
+  destination candidates.
+- Added search redirect destination normalization. Destination triage now
+  resolves Bing `ck/a?u=...`, Google `/url?q=...` and `/aclk?adurl=...`, Naver
+  desktop/mobile redirect params, and Yahoo/Yahoo Japan `/RU=...` paths before
+  scoring, de-duplication, per-domain budgeting, and selected child evidence
+  execution. Raw browser-visible redirect hrefs remain preserved in
+  source-navigation extraction action metadata.
+- Verification for Bing search wait/narrow-extraction/redirect hardening:
+  `npm run build` passed, and
+  `npm test -- --run tests/destination-triage.test.ts tests/source-navigation-recipe-catalog.test.ts tests/browser-obstructions.test.ts tests/source-navigation-recipes.test.ts`
+  passed with 4 files / 70 tests. Final `npm run verify` passed with build, 32
+  test files / 301 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for expanded search redirect normalization:
+  `npm run build` passed, and
+  `npm test -- --run tests/destination-url.test.ts tests/destination-triage.test.ts`
+  passed with 2 files / 29 tests. Final `npm run verify` passed with build, 33
+  test files / 306 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added fixture-backed executor coverage for knowledge/database sources.
+  Wikipedia, Namuwiki, PubMed, data.go.kr, KOSIS, RISS, and KIPRIS now run
+  explicit `page-capture`, bounded scroll, and `extract_destinations` actions
+  against local browser fixtures. The fixture preserves article bodies,
+  references/citations, abstracts, dataset metadata, statistic tables, academic
+  metadata, and patent-detail fields, and verifies citation/source/dataset/
+  record destination extraction without clicking login, edit, restricted
+  download, paid full-text, or institutional-access controls. The generic
+  knowledge/database recipe candidates are now `fixture_verified`.
+- Verification for knowledge/database executor fixtures:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-executor.test.ts --testNamePattern "knowledge database"`
+  passed with 1 test and 33 skipped in that file, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts --testNamePattern "knowledge database"`
+  passed with 1 test and 12 skipped in that file.
+  `npm test -- --run tests/source-navigation-executor.test.ts tests/source-navigation-recipes.test.ts`
+  passed with 2 files / 47 tests. Final `npm run verify` passed with build,
+  33 test files / 307 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added Google Scholar portal fixture coverage for the global knowledge DB
+  top-three gap. The local fixture now verifies Scholar query-state capture,
+  section/filter state, result-card metadata, author/publication metadata,
+  abstract snippets, citation/version links, DOI/full-text links, and
+  obstruction-state capture. Google Scholar portal recipes are now
+  `fixture_verified` while still treating publisher/full-text evidence as
+  bounded destination evidence rather than portal-snippet truth.
+- Verification for Google Scholar fixture coverage:
+  `npm test -- --run tests/source-navigation-executor.test.ts tests/source-navigation-recipes.test.ts --testNamePattern "Google Scholar|knowledge database"`
+  passed with 2 files / 3 tests, and
+  `npm test -- --run tests/source-navigation-executor.test.ts tests/source-navigation-recipes.test.ts`
+  passed with 2 files / 48 tests. Final `npm run verify` passed with build,
+  33 test files / 308 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added Yahoo News portal fixture coverage for the `news_media.global`
+  top-three gap. Yahoo News recipes now include provider-specific query,
+  category/topic navigation, recency/filter, stream item, main stream, article
+  link, and obstruction-state selector candidates. Local safe-executor coverage
+  verifies query capture, section/filter state, bounded more-results capture,
+  headline card and publisher metadata capture, publisher follow-up, and
+  obstruction capture without paywall/login bypass, comment writes, or
+  unbounded feed crawling. Yahoo News portal recipes are now
+  `fixture_verified`.
+- Verification for Yahoo News portal fixture coverage:
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts --testNamePattern "news portal|Korean and global news"`
+  passed with 2 files / 2 tests, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 2 files / 48 tests. Final `npm run verify` passed with build,
+  33 test files / 308 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added Reuters portal/publisher fixture coverage for the third
+  `news_media.global` top slot. Reuters recipes now include provider-specific
+  query/search, World/Business/Technology section, latest/filter, app shell,
+  story-card, article body, related article-link, and obstruction-state
+  selector candidates. Local safe-executor coverage verifies query capture,
+  section/filter state, bounded more-results capture, publisher metadata,
+  headline/body capture, article follow-up, and obstruction capture without
+  paywall bypass, comment writes, or unbounded feed crawling. Reuters portal
+  recipes are now `fixture_verified`.
+- Verification for Reuters portal fixture coverage:
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts --testNamePattern "news portal|Korean and global news"`
+  passed with 2 files / 2 tests, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 2 files / 48 tests. Final `npm run verify` passed with build,
+  33 test files / 308 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Ran first repeated read-only real-site calibration for `news_media.global`
+  top-three sources with `AI policy`: Google News, Yahoo News, and Reuters.
+  The batch used repeat 2 and calibration concurrency 2; all 6 attempts
+  succeeded. Promotion exported maintained read-only action files for all three
+  portals after fixing the registry/source-family mismatch for publisher news
+  sources.
+- Fixed publisher news registry source-family metadata. Reuters, Bloomberg,
+  BBC, and Yonhap are now registered with `portal` plus `generic_web`, matching
+  current `describeSourceStrategy` behavior. This lets readiness audits match
+  `reuters` promotion groups detected as `portal` instead of incorrectly
+  reporting them as not promoted.
+- The resulting `news_media.global` readiness audit is now `ok: true` with
+  readyCount 3/3. Destination extraction remains separate: Yahoo News has a
+  maintained `destination-followup` extraction action; Google News and Reuters
+  are capture-ready but still need repeated destination-selector calibration
+  before natural child article extraction is trusted.
+- Verification for global news real-site calibration and registry alignment:
+  `npm run build` passed,
+  `source-coverage-readiness --category news_media --locale global --top-rank 3 --query "AI policy" --promotion-summary <promotion-summary>`
+  returned `ok: true`, readyCount 3, destinationExtractionReadyCount 1, and
+  `npm test -- --run tests/source-registry.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 4 files / 65 tests. Final `npm run verify` passed with build,
+  33 test files / 309 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added Google News article-read destination extraction. Google News portal
+  recipes now include provider-specific search input, section/filter, main
+  result, article-card, and `./read/` destination selectors. Destination triage
+  now classifies Google News shell links such as Home, For you, Following,
+  Google apps, account, support, policy, and Google utility links as
+  low-value provider navigation while preserving `/read/` and `/articles/`
+  links as promotable news destinations.
+- Re-ran live Google News calibration for `AI policy`. A single read-only
+  run matched `main a[href^="./read/"]` and `a[href^="./read/"]` with 200
+  matches, 10 visible links, and 10 promotable extracted destinations. Global
+  discovery changed from shell-heavy false-positive pressure to 10 promotable
+  article-read links and 15 non-promotable provider/navigation links.
+- Re-ran repeated `source-coverage-calibrate --platform google_news --query
+  "AI policy" --repeat 2 --calibration-concurrency 2`. Both attempts
+  succeeded, promotion exported a ready `google_news-portal/actions.json`, and
+  final readiness returned `ok: true`, readyCount 1, and
+  destinationExtractionReadyCount 1. The promoted actions are
+  `article-capture`, `destination-followup` with `a[href^="./read/"]`, and
+  `obstruction-check`.
+- Ran an explicit Google News `evidence-run` with the promoted actions,
+  bounded to one follow-up. It extracted 10 read-link destinations, attempted
+  1 child article run, completed it, preserved fallback retry diagnostics for
+  the other 9 budget-limited article candidates, and passed final claim gate
+  with 287 artifacts / 4 claims / 4 citations. The selected child page was
+  browser-visible and query-overlapping, but currently classified as blocked
+  because two obstruction artifacts were detected on the publisher page; this
+  is a QA signal, not a selector failure.
+- Verification for Google News read-link destination extraction:
+  `npm run build` passed,
+  `npm test -- --run tests/destination-triage.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts`
+  passed with 3 files / 55 tests. Final `npm run verify` passed with build,
+  33 test files / 311 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Hardened Reuters destination extraction planning. Reuters portal recipes now
+  include narrower dated article selectors such as
+  `[data-testid*="MediaStoryCard"] a[href*="-20"]`,
+  `[data-testid*="SearchResult"] a[href*="-20"]`, and
+  `main a[href*="/world/"][href*="-20"]` before broad Reuters link
+  fallbacks. Destination triage classifies Reuters section, search, privacy,
+  Thomson Reuters, and provider utility links as low-value provider surfaces
+  while preserving dated Reuters article paths as promotable news
+  destinations.
+- Hardened recipe promotion for Reuters. Broad selectors such as
+  `main a[href*="reuters.com"]` and `article a[href*="reuters.com"]` are now
+  blocked from maintained `extract_destinations` export when narrower dated
+  selectors exist. Selector-hint scoping now includes Reuters containers
+  `#fusion-app`, `main`, and `article`.
+- Added DataDome/captcha-delivery challenge detection. Calibration now combines
+  visible `innerText` with a bounded `body.textContent` DOM snapshot so
+  script-only challenge shells such as Reuters `var dd={...}` with
+  `geo.captcha-delivery.com` are detected as blocked browser evidence.
+- Re-ran live Reuters calibration for `https://www.reuters.com/site-search/?query=AI%20policy`.
+  The current unattended browser reached a DataDome/captcha-delivery challenge,
+  and the updated calibration classified it correctly with blockedSignalHits
+  28 and blockedActionCount 7. Reuters remains capture/planning-ready but not
+  child-article-extraction-ready on this network until profile/headed or other
+  compliant access calibration succeeds.
+- Verification for Reuters dated-link and DataDome hardening:
+  `npm run build` passed,
+  `npm test -- --run tests/browser-obstructions.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipes.test.ts tests/destination-triage.test.ts tests/source-navigation-recipe-catalog.test.ts`
+  passed with 5 files / 93 tests. Final `npm run verify` passed with build,
+  33 test files / 316 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added blocked-signal propagation for profile/headed retry QA handoffs.
+  Promotion summaries now aggregate browser-visible blocked signals from
+  catalog entries into `blockedSignalCounts`, promotion review reasons include
+  signal pressure such as `captcha-delivery.com` or `var dd=`, source coverage
+  readiness items carry those counts, and `source-coverage-readiness --format
+  retry-plan` prints them beside setup/retry commands. This makes blocked
+  Reuters, TikTok, global community/forum, commerce, Expedia, and Google
+  Search retries explain why they are blocked without opening raw calibration
+  artifacts first.
+- Threaded the same blocked-signal pressure into coverage calibration loop
+  Markdown reports. `source-coverage-calibrate` readiness lines now print
+  matched `blockedSignalCounts` beside the per-source destination-extraction
+  status, so plan-only and executed batch reports show why a platform needs a
+  profile/headed retry without opening catalog or readiness JSON.
+- Added profile/headed retry command handoffs directly to coverage calibration
+  loop reports. The generated Markdown now includes a `Profile/Headed Retries`
+  section that prints the blocked slot priority, top-slot rank, profile name,
+  selector-hint files, blocked-signal pressure, `auth-login` setup command, and
+  headed/profile `source-coverage-calibrate` retry command.
+- Added a standalone profile/headed retry handoff artifact to
+  `source-coverage-calibrate`. Plan-only and executed runs now write
+  `profile-headed-retry-plan.md` beside `coverage-calibration-report.md`, and
+  the report Files section points to it. The file is generated from the same
+  retry-plan builder as `source-coverage-readiness --format retry-plan`.
+- Added a machine-readable companion artifact,
+  `profile-headed-retry-plan.json`, generated from
+  `buildSourceCoverageReadinessRetryPlan`. This lets future agents or QA
+  scripts inspect retry item counts, platforms, profiles, selector hints,
+  blocked-signal counts, and commands without parsing Markdown.
+- Added `source-coverage-retry-plan --retry-plan <path>`, a read-only CLI for
+  consuming `profile-headed-retry-plan.json`. It validates the schema and can
+  print JSON, Markdown, all commands, setup-only commands, or retry-only
+  commands. This turns the retry-plan JSON from a passive artifact into a
+  reusable QA automation input without opening browsers.
+- Added retry-plan consumer filters. `source-coverage-retry-plan` now accepts
+  `--platform <id>`, `--priority top_slot_blocked|blocked`, and `--limit <n>`,
+  then renumbers the filtered handoff. This lets QA run only one blocked
+  provider retry, such as Expedia or TikTok, instead of copying commands from a
+  broad category/locale retry plan.
+- Added `--output-file` to `source-coverage-retry-plan`. The command now writes
+  the rendered filtered JSON, Markdown, commands, setup-only commands, or
+  retry-only commands to disk instead of stdout, so a selected provider retry
+  can be handed to the next session without copying terminal output.
+- Added `--only-check-ok` to `source-coverage-retry-plan`. When rendering JSON,
+  Markdown, all commands, setup-only commands, or retry-only commands, the CLI
+  can now drop retry items that have check errors under the selected
+  `--check-files` / `--check-profiles` options. This lets QA print only the
+  blocked-provider retries whose selector-hint files and saved profiles are
+  ready.
+- Added retry-plan preflight checks. `source-coverage-retry-plan --format
+  check --fail-check` validates generated retry commands before execution,
+  checking for source-coverage-calibrate, platform, headed, browser-channel,
+  profile, persistent-profile, selector-hint file handoffs, and auth-login
+  setup command shape. The check is read-only and does not open browsers.
+- Added optional selector-hint file existence validation to retry-plan
+  preflight checks. `source-coverage-retry-plan --format check --check-files`
+  now reports `selector_hint_file_missing` when a referenced
+  `selector-hints.tsv` handoff path no longer exists, and `--fail-check`
+  exits non-zero for that stale handoff.
+- Added optional saved-profile existence validation to retry-plan preflight
+  checks. `source-coverage-retry-plan --format check --check-profiles` now
+  reports `profile_missing` when the generated profile/headed retry references
+  a browser profile that has not been created locally yet, and `--fail-check`
+  exits non-zero so QA runs the setup command first.
+- Added retry-plan check artifacts to `source-coverage-calibrate`. Plan-only
+  and executed bundles now write `profile-headed-retry-plan-check.json` beside
+  the Markdown/JSON retry plans, include the path in CLI JSON output, and list
+  it in the report Files section.
+- Connected retry-plan disk-state checks to coverage calibration bundles.
+  Passing `--check-files` and/or `--check-profiles` to
+  `source-coverage-calibrate` now applies the same selector-hint file and
+  saved-profile existence checks to the generated
+  `profile-headed-retry-plan-check.json` and Markdown report.
+- Added retry-plan check summary reporting. The coverage calibration Markdown
+  Summary now includes `Profile/headed retry check: ok|failed` with error and
+  warning counts, so QA can see whether the handoff is command-shape clean
+  before opening the check JSON.
+- Added a `Profile/Headed Retry Check` report section. The coverage calibration
+  Markdown now lists retry-plan check issue codes, severity, item order,
+  platform, and message, or states that no retry-plan check issues were found.
+- Verification for blocked-signal retry handoff:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 2 files / 12 tests, and
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 19 tests. Final `npm run verify` passed with build,
+  33 test files / 317 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for coverage-loop blocked-signal reporting:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 20 tests. Final `npm run verify` passed with build,
+  33 test files / 318 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for coverage-loop profile/headed retry reporting:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 20 tests. Final `npm run verify` passed with build,
+  33 test files / 318 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for standalone coverage retry-plan artifact:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 20 tests, and a plan-only
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"`
+  CLI smoke wrote `profile-headed-retry-plan.md` and referenced it from the
+  report. Final `npm run verify` passed with build, 33 test files / 318 tests,
+  local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for machine-readable coverage retry-plan JSON:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 20 tests, and a plan-only
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"`
+  CLI smoke wrote both retry-plan artifacts, parsed
+  `profile-headed-retry-plan.json`, and confirmed the report points at the JSON
+  file. Final `npm run verify` passed with build, 33 test files / 318 tests,
+  local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for retry-plan consumer CLI:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 21 tests, and a CLI smoke confirmed
+  `source-coverage-retry-plan --format commands|markdown|json` can read a
+  generated-style retry-plan JSON and print setup/retry commands. Final
+  `npm run verify` passed with build, 33 test files / 319 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for retry-plan consumer filters:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 22 tests, and a CLI smoke confirmed
+  `--platform expedia` emits only Expedia retry commands while
+  `--priority top_slot_blocked --limit 1 --format json` returns one renumbered
+  top-slot retry item. Final `npm run verify` passed with build, 33 test files
+  / 320 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0
+  npm audit vulnerabilities.
+- Verification for retry-plan output-file handoffs:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 22 tests, and a CLI smoke confirmed
+  `source-coverage-retry-plan --format retry-commands --output-file <path>`
+  writes only the filtered retry command to disk and leaves stdout empty. Final
+  `npm run verify` passed with build, 33 test files / 320 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for retry-plan preflight checks:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 23 tests, and CLI smoke confirmed a valid retry-plan
+  returns `ok: true` while a broken retry command exits 1 with missing
+  headed/browser-channel/profile/persistent-profile/selector-hint issue codes.
+  Final `npm run verify` passed with build, 33 test files / 321 tests, local
+  smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for retry-plan check artifacts:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 23 tests, and a plan-only
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"`
+  CLI smoke wrote `profile-headed-retry-plan-check.json`, returned the path in
+  command JSON output, and referenced it from the Markdown report. Final
+  `npm run verify` passed with build, 33 test files / 321 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for retry-plan check summary reporting:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 23 tests, and a plan-only
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"`
+  CLI smoke confirmed the report Summary includes the retry-plan check
+  ok/error/warning line. Final `npm run verify` passed with build, 33 test
+  files / 321 tests, local smoke, public web smoke, media smoke, proxy smoke,
+  and 0 npm audit vulnerabilities.
+- Verification for retry-plan check report issue lines:
+  `npm run build` passed,
+  `npm test -- --run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 23 tests, and a plan-only
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"`
+  CLI smoke confirmed the report includes a `Profile/Headed Retry Check`
+  section and the `empty_retry_plan` warning line. Final `npm run verify`
+  passed with build, 33 test files / 321 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for retry-plan selector-hint file checks:
+  `npm run build` passed,
+  `npm test -- source-coverage-readiness` passed with 1 file / 9 tests, CLI
+  smoke confirmed `source-coverage-retry-plan --format check --check-files`
+  reports `selector_hint_file_missing` for a stale handoff, passes after the
+  file exists, and exits 1 with `--fail-check` for the missing-file case.
+  Final `npm run verify` passed with build, 33 test files / 321 tests, local
+  smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for retry-plan saved-profile checks:
+  `npm run build` passed,
+  `npm test -- source-coverage-readiness` passed with 1 file / 9 tests, and
+  CLI smoke confirmed `source-coverage-retry-plan --format check
+  --check-profiles` reports `profile_missing` for a plan referencing a missing
+  local browser profile while the default command-shape check still passes.
+  `--fail-check` exits 1 for the missing-profile case. Final `npm run verify`
+  passed with build, 33 test files / 321 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for coverage-calibrate retry-plan disk-state checks:
+  `npm run build` passed,
+  `npm test -- source-coverage-calibration-loop source-coverage-readiness`
+  passed with 2 files / 18 tests, and CLI smoke confirmed
+  `source-coverage-calibrate --plan-only --check-profiles` writes
+  `profile_missing` into `profile-headed-retry-plan-check.json` and the
+  Markdown report when a blocked retry plan references a missing saved browser
+  profile. Final `npm run verify` passed with build, 33 test files / 322
+  tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm
+  audit vulnerabilities.
+- Verification for check-passing retry-plan filtering:
+  `npm run build` passed,
+  `npm test -- source-coverage-readiness` passed with 1 file / 10 tests, and
+  CLI smoke confirmed `source-coverage-retry-plan --format retry-commands
+  --check-profiles --only-check-ok` keeps a retry command whose saved profile
+  exists while dropping a second retry command whose profile is missing. Final
+  `npm run verify` passed with build, 33 test files / 323 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for selector-hint calibration input:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 4 files / 32 tests. Final `npm run verify` passed with build,
+  32 test files / 260 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for selector-hint input provenance:
+  `npm run build` passed, and
+  `npx vitest run tests/source-coverage-calibration-loop.test.ts tests/source-navigation-calibration-batch.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 12 tests. A plan-only CLI smoke for
+  `source-coverage-calibrate --selector-hints-file` wrote
+  `selectorHintFiles`, generated a calibrate-batch command containing
+  `--selector-hints-file`, and included the TSV path in the Markdown report.
+  Final `npm run verify` passed with build, 32 test files / 260 tests, local
+  smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for the destination-discovery catalog/readiness handoff:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 27 tests. After adding backward-compatible handling for
+  older promotion summaries without discovery fields,
+  `npx vitest run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 12 tests. Final `npm run verify` passed with build,
+  32 test files / 258 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for discovery selector hints:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 4 files / 30 tests. Final `npm run verify` passed with build,
+  32 test files / 258 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for selector-hint line output:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 27 tests. Final `npm run verify` passed with build,
+  32 test files / 258 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for promotion-group selector-hint files:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-promotion.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 28 tests. Final `npm run verify` passed with build,
+  32 test files / 259 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for selector-hint readiness/report propagation:
+  `npm run build` passed, and
+  `npx vitest run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 13 tests. Final `npm run verify` passed with build,
+  32 test files / 259 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for blocked retry-plan output:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 14 tests. Final `npm run verify` passed with build,
+  32 test files / 280 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for scoped selector hint suggestions:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 4 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 259 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for the non-anchor destination candidate work:
+  `npx vitest run tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 5 files / 39 tests, and final `npm run verify` passed with build,
+  32 test files / 243 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for the broad SPA attribute promotion gate:
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts`
+  passed with 4 files / 37 tests, and final `npm run verify` passed with build,
+  32 test files / 245 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination-probe calibration:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 30 tests. Final `npm run verify` passed with build,
+  32 test files / 248 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for sampled-link destination probe classification:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/destination-triage.test.ts`
+  passed with 3 files / 44 tests. Final `npm run verify` passed with build,
+  32 test files / 250 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for frame-aware calibration:
+  `npm run build` passed,
+  `npx vitest run tests/source-navigation-calibration.test.ts --testNamePattern "iframes"`
+  passed with 1 test, `npx vitest run tests/source-navigation-calibration.test.ts`
+  passed with 14 tests, `npx vitest run tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts`
+  passed with 2 files / 30 tests, and `npx vitest run tests/source-navigation-executor.test.ts`
+  passed with 1 file / 27 tests. Final `npm run verify` passed with build,
+  32 test files / 251 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Extended the v0.3 evidence-run workflow across MCP, CLI, and HTTP queue paths.
+- Added typed claim schema fields and strengthened final claim-gate semantics.
+- Required timestamped frame screenshot artifacts for visual claims in final mode.
+- Added transcript/audio/OCR/official API evidence kinds and ledger validation.
+- Added optional OCR, transcript-hit dense sampling, OCR-hit dense sampling, and
+  scene-change dense sampling.
+- Added `evidence-run --profile`, `evidence-run --headed`, local HTTP queue,
+  npm pack metadata, and GitHub Actions verification workflow.
+- Added HTTP queue status, cancel, delete, prune, retention, concurrency, and
+  scheduler timing diagnostics.
+- Added cooperative running-job cancellation and BrowserPool abort propagation.
+- Added evidence-run stage timings to results, CLI/MCP summaries, scheduler
+  summaries, assessment artifacts, and final reports.
+- Added OCR language/min-confidence options, timestamp/confidence/word-box
+  metadata, empty-text and low-confidence partial artifacts, and injected worker
+  tests.
+- Added explicit-credential official API metadata clients, API cache artifacts,
+  setup docs, opt-in live integration tests, and recursive token redaction.
+- Added browser-visible scene-change fingerprints and dense sampling around
+  scene-change hits.
+- Added browser-visible obstruction classification for login walls, app-open
+  interstitials, bot blocks, region gates, age gates, and unavailable media
+  pages.
+- Obstruction detections now write `browser_obstruction` artifacts, appear in
+  assessment/final reports, and produce typed claims when detected.
+- Added cautious browser overlay dismissal before capture. It can dismiss
+  ordinary close/not-now/reject/necessary-only overlays, records
+  `browser_overlay_dismissal` artifacts when actions occur, and skips login,
+  CAPTCHA, age-gate, payment, accept-all, and app-open actions.
+- Added shared overlay dismissal controls for CLI/MCP/HTTP input:
+  `overlayDismissal.enabled`, `overlayDismissal.maxActions`,
+  `--no-overlay-dismissal`, and `--overlay-dismissal-max-actions`.
+- Added source strategy classification and artifacts for search, map, blog,
+  portal/news, travel booking, video/social, and generic web sources.
+- Added a generic source plan document covering Naver Map, Naver Blog, Google
+  Search/Maps, Agoda, Trip.com, Booking.com, Expedia, and similar sources.
+- Promoted OCR engine setup to an optional peer dependency model:
+  `tesseract.js` remains optional, `npm run test:ocr-integration` is opt-in, and
+  `docs/OCR.md` documents setup and evidence semantics.
+- Re-ran `register-all` from this independent repo so Codex/Claude MCP config
+  points at the current package path.
+- Added typed dense sampling event diagnostics to frame sampling assessment
+  output. Each event now records whether transcript cues, OCR text, or
+  scene-change detection triggered the pass, plus hit timestamps, planned
+  timestamps, captured timestamps, caps, and scene-change distances.
+- Added deterministic OCR text-profile metadata and fixtures. OCR artifacts now
+  preserve line count, script families, digit/currency presence, and
+  price-like text detection for map and travel-card style screenshots, with
+  Korean/Japanese/unit fixture coverage and an opt-in non-English live OCR
+  integration flag.
+- Extended deterministic OCR text-profile diagnostics for real screenshot QA.
+  OCR artifacts now also record price-like token count, percent/discount-like
+  badges, map-like labels, and travel/commerce-like context so map labels,
+  travel cards, commerce cards, coupons, and non-price numeric overlays can be
+  separated during claim review.
+- Expanded the opt-in OCR integration harness. When `FARM_OCR_INTEGRATION=1`
+  and optional `tesseract.js` are available, it now renders real local
+  screenshots for English OCR text, map labels, travel price cards, and
+  coupon/discount badges, then validates the resulting OCR text-profile
+  metadata. The Korean/Japanese map fixture remains opt-in through
+  `FARM_OCR_NON_ENGLISH=1`.
+- Added the portal-native evidence navigation product plan from the latest
+  office-hours and plan-eng-review pass.
+- Split the product plan into top/middle/lower docs:
+  `docs/PRODUCT_DEVELOPMENT_PLAN.md`,
+  `docs/PORTAL_NAVIGATION_ARCHITECTURE.md`, and
+  `docs/PORTAL_NAVIGATION_IMPLEMENTATION_GUIDE.md`.
+- Updated source strategy docs so the layer split is explicit:
+  `source_registry` maps category/locale/platform coverage, `source_strategy`
+  classifies the source, and `source_navigation_plan` describes tabs, filters,
+  sort menus, map viewports, detail pages, media galleries, OCR targets, and
+  follow-up runs.
+- Implemented Phase 1 portal-native navigation planning:
+  `src/source-navigation.ts` now produces typed `SourceNavigationPlan`
+  artifacts for search, map, blog/forum, portal/news, travel/commerce,
+  video/social, and generic web sources.
+- Added `source_navigation_plan` as a typed evidence kind and threaded the plan
+  through evidence-run artifacts, assessment summaries, CLI/MCP/HTTP summaries,
+  final reports, and focused workflow tests.
+- Added `tests/source-navigation.test.ts` covering Naver-like search/map/blog,
+  Naver/Daum news, Google search/maps, travel/commerce, video/social, and
+  generic web fallback plans.
+- Added the first Phase 2 executor foundation:
+  `src/source-navigation-execution.ts` builds bounded execution plans with
+  action caps, per-action timeouts, before/after capture flags, omitted-action
+  counts, and unsupported non-executable steps.
+- Added `tests/source-navigation-execution.test.ts` for action caps,
+  unsupported actions, and execution-limit validation.
+- Added the first browser-backed Phase 2 safe executor:
+  `src/source-navigation-executor.ts` executes only explicit action-key recipes,
+  records `source_navigation_action` artifacts, captures before/after page
+  state, preserves skipped/unsupported action records, and keeps platform logic
+  outside `BrowserPool`.
+- Extended `BrowserPool` write actions with optional timeout and abort-signal
+  controls for executor use.
+- Added `source_navigation_execution_plan` artifacts to every evidence-run, plus
+  assessment, CLI/MCP/HTTP summary, and final-report coverage.
+- Added `tests/source-navigation-executor.test.ts` with local browser fixtures
+  for search-like fill/filter/sort/detail actions, generic capture/scroll
+  actions, skipped unconfigured actions, unsupported action records, and
+  duplicate recipe validation.
+- Added typed source navigation recipe input for evidence-run:
+  `sourceNavigation.enabled`, `sourceNavigation.actions`,
+  `sourceNavigation.maxActions`, `sourceNavigation.perActionTimeoutMs`,
+  `sourceNavigation.captureBeforeAfter`, and
+  `sourceNavigation.stopOnUnsupported`, plus follow-up budgets
+  `sourceNavigation.maxFollowUps` and
+  `sourceNavigation.maxFollowUpsPerDomain`.
+- Wired explicit source navigation recipes into `runEvidenceWorkflow`. When
+  enabled, evidence-run opens a read-write lease, executes only the supplied
+  action-key recipes before final page capture, records action artifacts, and
+  summarizes execution in assessment/final reports.
+- Added CLI support for explicit recipes:
+  `--source-navigation`, `--source-navigation-actions-json`,
+  `--source-navigation-actions-file`, `--source-navigation-max-actions`,
+  `--source-navigation-timeout-ms`, `--no-source-navigation-captures`, and
+  `--source-navigation-continue-unsupported`.
+- Added MCP/HTTP coverage for source navigation recipe payloads and workflow
+  coverage for recipe-driven evidence-run execution.
+- Added source navigation recipe `expectedStates` and `captureScopes`.
+  Executor actions can now verify visible selector/text postconditions and
+  capture scoped page regions such as map viewports, place panels, offer cards,
+  rate policy panels, and media/gallery regions.
+- Added BrowserPool scoped locator capture and visible text helpers for safe
+  executor assertions.
+- Expanded local executor fixtures for map/place panels and travel offer/rate
+  cards, including visible-state success and explicit failure cases.
+- Added `paginate` planned actions for search and travel/commerce source
+  navigation plans.
+- Expanded executor fixtures for Naver-like search vertical tabs, visible
+  filters/sort, bounded pagination, blog media galleries, and video/social
+  obstruction capture. These run locally and do not automate live portals.
+- Added explicit `follow_up` source navigation recipes. The executor resolves a
+  destination from a selector or literal URL without clicking through in the
+  parent page, records the resolved request on the action artifact, and returns
+  typed follow-up requests.
+- Wired one-depth destination follow-up orchestration into evidence-run. Parent
+  runs now create `source_navigation_followup` summary artifacts and child
+  evidence runs under `runDir/followups`, bounded by `sourceNavigation.maxFollowUps`
+  and `--source-navigation-max-followups`.
+- Added per-domain destination follow-up budgets through
+  `sourceNavigation.maxFollowUpsPerDomain` and
+  `--source-navigation-max-followups-per-domain`.
+- Added bounded destination follow-up concurrency through
+  `sourceNavigation.followUpConcurrency` and
+  `--source-navigation-followup-concurrency`. The default remains `1`; when
+  explicitly raised, selected one-depth child evidence runs execute in bounded
+  batches while parent follow-up artifacts are still written in deterministic
+  order.
+- Added local executor and workflow tests for destination follow-up extraction,
+  parent-page non-navigation, parent follow-up artifacts, child evidence
+  reports, and final-report assessment lines.
+- Ran a second plan-eng-review pass for the broader information-service
+  taxonomy: search, AI search, social, community, content, news, reviews, maps,
+  marketplaces, knowledge DBs, messengers/private networks, recommendation, and
+  AI-agent sources.
+- Added `docs/INFORMATION_SOURCE_TAXONOMY.md` as the source coverage registry
+  plan. It defines `InformationCategory`, `LocaleSegment`,
+  `SourceRegistryEntry`, support tiers, top-three category/locale coverage
+  rules, and initial mandatory platform slots.
+- Updated the top/middle/lower development docs so the next sequence is:
+  existing evidence core -> `SourceNavigationPlan` -> safe explicit executor ->
+  Phase 2.5 source coverage registry -> richer platform recipes -> real-site
+  calibration.
+- Implemented Phase 2.5 information source coverage registry:
+  `src/source-registry.ts` now defines information categories, locale segments,
+  support tiers, evidence roles, top-slot metadata, mandatory coverage
+  requirements, URL/intent selection helpers, summaries, and coverage
+  assertions.
+- Added `source_registry` as a typed evidence kind and artifact. Evidence-run
+  now writes source registry artifacts, includes registry summaries in
+  assessment/final reports, and exposes registry summary/artifact counts in
+  CLI/MCP/HTTP service output.
+- Added `source-registry` CLI inspection for category/locale/platform/family/URL
+  registry queries.
+- Added `tests/source-registry.test.ts` covering mandatory top-slot coverage,
+  Korean search top slots, URL matching, generic fallback, AI derivative
+  evidence, messenger private capture policy, and ranking metadata.
+- Expanded executor fixture coverage with a Google-like SERP fixture covering
+  query state, vertical tabs, visible tools/filter panel, sort state, bounded
+  more-results expansion, result-card scoped capture, gallery scoped capture,
+  and explicit follow-up target extraction without parent-page navigation.
+- Expanded the next registry-prioritized executor fixture batch with local
+  Google map/news/ad module scopes, Naver Cafe public content plus member-wall
+  obstruction capture, KakaoMap viewport/list/place panels, and richer travel
+  room/rate-card variants. These remain local fixtures; real-site selector
+  calibration is still pending.
+- Added commerce-specific source navigation coverage. Commerce platforms now
+  get typed query/filter/sort/scroll/pagination/product-card/seller-terms/
+  price-OCR navigation plans, manual-only recipe candidates, transaction
+  unsupported actions, and a local marketplace fixture for product card,
+  seller/return, shipping, and price-badge scoped captures without cart or
+  checkout actions.
+- Added non-login-visible video/social fixture coverage. Instagram/TikTok-like
+  public post states now have fixture-backed recipe candidates and executor
+  coverage for obstruction-state capture, visible metadata/caption/profile
+  capture, browser-visible frame scope capture, and overlay-text OCR scope
+  capture while raw stream download, gate bypass, and social writes remain
+  unsupported.
+- Added Google Maps selected-place fixture coverage. Google Maps-like map flows
+  now have fixture-backed recipe candidates and executor coverage for map
+  query state, open-now filter state, viewport/list scoped captures, selected
+  place sheet, visible review snippets, photo strip, and map-label OCR scope
+  capture without route, call, reservation, or booking actions.
+- Added Naver/Daum news portal fixture coverage. Portal/news sources now have
+  typed query/topic, section, recency filter, bounded pagination, headline
+  module, publisher metadata, destination follow-up, and obstruction-state
+  navigation plans plus fixture-backed manual-only recipe candidates for
+  Naver News and Daum News.
+- Tuned deterministic OCR text-profile price detection so currency and amount
+  must appear as a price-like token instead of anywhere on the page. Added
+  Korean/Japanese unit-price fixture assertions and an `empty_text` OCR
+  failure-mode test with empty profile metadata.
+- Added scene-change threshold diagnostics. `analyzeSceneChanges` now reports
+  comparable/ignored frame counts, observed fingerprint distance min/max/avg,
+  candidate/selected/omitted hit counts, and the nearest below-threshold pair;
+  evidence-run assessment/final reports now surface the latest diagnostics.
+- Added scene-change threshold recommendation diagnostics. The sampler now
+  records selected distance min/max, `thresholdRecommendation`,
+  `recommendedThreshold`, and a reason so real media calibration can decide
+  whether to keep, lower, raise, or manually review the dense-sampling
+  threshold.
+- Added typed official API failure classification for provider errors. API
+  error artifacts and cache entries can now distinguish permission denied,
+  ownership required, quota exceeded, rate limited, not found, and unknown
+  failures while still redacting raw credential values.
+- Added official API credential readiness diagnostics. `official-api-readiness
+  --url <url>` reports supported provider lookups, supplied credential env var
+  references, missing env vars, supported-platform `missing_media_id` cases,
+  ready lookup counts, and non-applicable platforms without making provider API
+  calls or printing raw token values.
+- Extended official API missing-media-ID handling so readiness separates lookup
+  status from credential readiness, reports `nextAction`, counts ready
+  credentials that are blocked only by a missing stable media ID, and writes
+  partial `official_api_metadata` plus API cache artifacts for supported
+  listing/search URLs without calling provider APIs.
+- Added login runtime hardening for blocked platform calibration. CLI
+  `auth-login`, `evidence-run`, `source-navigation-calibrate`, and
+  `source-coverage-calibrate` now accept `--browser-channel <channel>` and
+  `--chrome`, promotion/retry commands preserve the chosen channel, and
+  `auth-cdp-launch` / `auth-cdp-import` can save cookies/storage state from a
+  user-controlled Chrome DevTools session without reading passwords. CDP import
+  also supports `--save-now` and `--cookie-domains <a,b>` for immediate,
+  domain-filtered profile capture.
+- Validated the Google login recovery path. Direct Playwright Chromium login
+  and Playwright Chrome-channel login were rejected by Google as unsafe/
+  unsupported browser flows, but a user-controlled Chrome CDP session allowed
+  login, `auth-cdp-import --save-now --cookie-domains google.com,youtube.com`
+  saved 29 Google/YouTube cookies into `google-search-cdp`, and subsequent
+  headed Chrome evidence runs using that profile reached Google Search with no
+  browser obstruction artifacts.
+- Re-ran Google Search source coverage calibration with the imported profile:
+  `source-coverage-calibrate --platform google_search --query "seoul hotel"
+  --repeat 2 --headed --chrome --profile google-search-cdp` completed two
+  successful read-only calibration attempts, promoted two maintained read-only
+  action recipes, and marked Google Search readiness `ready`.
+- Verified the promoted Google Search action file through `evidence-run
+  --source-navigation`: final claim gate passed with 103 artifacts, 4 claims,
+  4 citations, 67 source-navigation action artifacts, and 0 obstruction
+  artifacts. The first run exposed a hash-only Google self-link follow-up, so
+  follow-up selection was tightened to skip same-page hash targets and prefer
+  Google result anchors containing result headings.
+- Re-ran Google Search calibration and promoted action verification after the
+  follow-up fix. `source-coverage-calibrate --platform google_search --query
+  "seoul hotel" --repeat 2 --headed --chrome --profile google-search-cdp`
+  again reached readiness `ready`, exported `#search a[href]:has(h3)` as the
+  follow-up selector, and the promoted `evidence-run --source-navigation`
+  resolved a real destination URL (`https://www.booking.com/city/kr/seoul.html`)
+  instead of a hash-only Google Search URL.
+- Expanded Google Search result/module scope candidates. Promotion now prefers
+  narrower real-site scopes such as `#rso`, `#rso a[href]:has(h3)`, visible
+  result heading links, `#tads`, `#bottomads`, `#rhs`, section modules, and
+  knowledge/local attribute rows before falling back to the full `#search`
+  container.
+- Re-ran authenticated-profile Google Search calibration after the scope
+  expansion. The two repeated attempts succeeded with 23 selector candidates,
+  22 capture-scope candidates, 10 matched selectors, 7 matched scopes, and 0
+  blocked-signal hits. The promoted action file captured `#rso`, first result
+  heading links, top ads when visible, and fallback `#search`, then passed
+  `evidence-run --source-navigation` with 195 artifacts, 4 claims, 4 citations,
+  133 source-navigation action artifacts, and a Booking.com destination
+  follow-up.
+- Added manual-only source navigation recipe candidate plans:
+  `src/source-navigation-recipes.ts` now proposes selector/action/capture-scope
+  candidates for search, map, blog/forum, portal/news, travel/commerce,
+  video/social, and generic web families without executing them by default.
+  Evidence-run writes `source_navigation_recipe_plan` artifacts, CLI/MCP/HTTP
+  summaries expose the plan, and `source-navigation-recipes --url <url>` prints
+  calibration candidates.
+- Added read-only source navigation selector calibration:
+  `src/source-navigation-calibration.ts` probes manual-only recipe selector and
+  capture-scope candidates against the currently visible browser page without
+  clicking or filling. The `source-navigation-calibrate --url <url>` CLI writes
+  a page capture plus `source_navigation_calibration` artifacts with matched,
+  hidden, missing, error, expected-signal, and blocked-signal diagnostics.
+- Wired read-only calibration into evidence-run:
+  `sourceNavigation.calibrate`, `sourceNavigation.calibrationSelectorTimeoutMs`,
+  `--source-navigation-calibrate`, and
+  `--source-navigation-calibration-timeout-ms` now record calibration artifacts
+  and summaries inside CLI/MCP/HTTP workflow output without enabling live
+  navigation execution.
+- Added the first provider recipe catalog proposal layer:
+  `src/source-navigation-recipe-catalog.ts` converts manual-only recipe
+  candidates plus optional read-only calibration output into explicit-opt-in
+  catalog entries. It classifies actions as `calibration_required`,
+  `single_run_ready`, `manual_review_required`, `manual_value_required`,
+  `blocked_signal_detected`, or `not_supported`, while keeping maintained
+  default readiness at zero until repeated calibration and fixture coverage
+  exist. The `source-navigation-catalog --url <url> [--calibration-file <path>]`
+  CLI prints the catalog proposal.
+- Added repeated-calibration promotion gates for catalog proposals:
+  `source-navigation-catalog` now accepts `--calibration-files <a,b>` and the
+  catalog can mark read-only capture/follow-up/extract-destinations/wait actions as
+  `maintained_recipe_ready` only when the same selector or capture scope appears
+  across the minimum repeated calibration runs and the candidate has local
+  fixture coverage. Click actions remain manual-review and fill/select/press
+  remain manual-value even when repeated selectors match.
+- Added maintained recipe export:
+  `exportMaintainedSourceNavigationRecipes` and
+  `source-navigation-export-recipes --url <url> [--calibration-file <path> |
+  --calibration-files <a,b>]` now export only `maintained_recipe_ready`
+  read-only actions as explicit `sourceNavigation.actions` JSON. Non-ready
+  entries are omitted with readiness/reason diagnostics, and click/fill/select/
+  press/login/payment/booking/gate-bypass/account-changing actions are
+  intentionally excluded.
+- Added calibration report loading from evidence run directories:
+  `source-navigation-catalog` and `source-navigation-export-recipes` now accept
+  `--calibration-run-dir <path>` and `--calibration-run-dirs <a,b>`. The loader
+  reads `artifacts.jsonl` for `source_navigation_calibration` records first and
+  falls back to `raw/` or `structured/` artifact discovery, so calibration,
+  catalog, and export can be chained from run directories without manually
+  copying raw report paths.
+- Added catalog compatibility filtering:
+  calibration reports whose `platform` or `sourceFamily` differs from the
+  current recipe plan are skipped with warnings and do not count toward
+  repeated promotion. This prevents run directories from Naver, Google, travel,
+  SNS, or generic pages from accidentally promoting each other's selectors.
+- Added read-only calibration batch workflow:
+  `source-navigation-calibrate-batch --urls-file <path> [--run-root <path>]
+  [--repeat <n>]` runs source-navigation calibration over many targets, writes
+  one run directory per attempt, records succeeded/failed attempts, and writes
+  `calibration-batch-manifest.json` with grouped
+  `source-navigation-catalog --calibration-run-dirs` and
+  `source-navigation-export-recipes --calibration-run-dirs` command hints.
+- Added registry-backed calibration target generation:
+  `source-navigation-calibration-targets` converts source registry filters into
+  reviewed JSON or batch-compatible `id url` target files. Targets are ordered
+  by local top-slot rank when category/locale are supplied, and private
+  messenger/user-controlled plus derivative AI-answer entries are skipped from
+  unattended calibration batches.
+- Added calibration batch manifest loading:
+  `source-navigation-catalog` and `source-navigation-export-recipes` now accept
+  `--calibration-batch-manifest <path>` and
+  `--calibration-batch-manifests <a,b>`, loading succeeded run directories from
+  `source-navigation-calibrate-batch` manifests while preserving failed attempts
+  as warnings.
+- Added maintained recipe export file output:
+  `source-navigation-export-recipes --actions-output-file <path>` writes the
+  exact action array accepted by
+  `evidence-run --source-navigation-actions-file`; `--export-output-file`
+  writes the full export bundle, and `--fail-empty-export` exits non-zero when
+  no maintained actions are ready.
+- Added batch promotion workflow:
+  `source-navigation-promote-batch --calibration-batch-manifest <path>
+  [--output-dir <path>]` processes every platform/source-family group in a
+  calibration batch manifest and writes grouped `catalog.json`, `export.json`,
+  `actions.json`, and `promotion-summary.json` files. The generated
+  `actions.json` files are ready for
+  `evidence-run --source-navigation-actions-file`.
+- Added promotion review workflow:
+  `source-navigation-promotion-review --promotion-summary <path>` or
+  `--promotion-dir <path>` classifies promoted groups as ready, blocked,
+  needing repeated calibration, manual-review-required, or empty, and emits
+  exact `evidence-run --source-navigation-actions-file` argv/PowerShell
+  commands for ready `actions.json` files.
+- Added profile/headed calibration runtime handoff. Coverage calibration plans
+  and batch manifests now record headless/headed mode plus storage-state or
+  persistent-profile usage, `source-coverage-calibrate --plan-only` includes
+  those flags in the generated batch command, and promotion review carries the
+  runtime into ready evidence-run argv/PowerShell commands.
+- Added blocked-slot profile/headed retry command handoff.
+  `source-coverage-readiness --format retry-commands` now emits exact
+  `auth-login --profile <platform-profile> --url <target>` setup commands plus
+  `source-coverage-calibrate --headed --profile <platform-profile>
+  --persistent-profile` retry commands for blocked promotion groups so Google
+  Search, Instagram/TikTok/X, Korean commerce, Expedia, and similar gated
+  surfaces can be retried from the QA/QC readiness audit without manually
+  reconstructing the loop.
+- Added source coverage readiness audit:
+  `source-coverage-readiness --category <name> --locale <segment>` connects
+  registry top slots with promotion summaries, classifies each slot as ready,
+  blocked, needing repeated calibration, manual-review-required, promoted-empty,
+  not-promoted, derivative-skip, private-skip, or planning-only, and can emit
+  calibration target lines for actionable not-ready slots.
+- Added readiness-guided coverage calibration loop:
+  `source-coverage-calibrate --category <name> --locale <segment>` writes
+  readiness, target, loop-plan, and Markdown report files, and without
+  `--plan-only` runs read-only batch calibration, batch promotion, promotion
+  review, and final coverage readiness re-audit for actionable not-ready source
+  slots.
+- Ran the first real `news_media` / `ko-KR` coverage calibration loop for the
+  top two planning slots. Naver News now targets
+  `https://search.naver.com/search.naver?where=news&query=...`, Daum News now
+  targets `https://search.daum.net/search?w=news&q=...`, and the deprecated
+  `news.naver.com/main/search/search.naver` plus `news.daum.net/search` seeds
+  were removed after live 404 checks.
+- Tuned portal/news real-site recipes from that calibration pass: generic
+  login/subscribe text no longer counts as a blocked signal by itself, Daum
+  publisher follow-up is constrained to `v.daum.net` article links, and
+  Naver/Daum article capture scopes promote only repeated read-only selectors.
+- Fixed long source-navigation scoped capture IDs so real platform capture
+  names remain unique after the 96-character artifact filename limit. Short
+  fixture filenames remain stable, while long real-site names get compact
+  segments plus a deterministic hash suffix.
+- Ran the first real `search` / `ko-KR` coverage calibration loop for the top
+  three planning slots. Naver Search and Daum Search now have repeated
+  read-only result-scope capture baselines that pass explicit evidence-run
+  claim gates; Google Search was initially blocked on the unattended browser by
+  Google's unusual-traffic / not-a-robot page, then recovered through a
+  user-controlled Chrome CDP import profile and now has authenticated-profile
+  read-only capture plus destination follow-up verification.
+- Re-ran authenticated-profile Google Search calibration for a local-intent
+  query, `coffee near Seoul Station`, after adding real local-pack candidates.
+  Three headed Chrome attempts through `google-search-cdp` succeeded with 0
+  blocked-signal hits and promoted repeated `#Odp5De` local-pack scopes for
+  the places container, place cards, place detail text, map canvas, local
+  thumbnails, and fallback search result capture.
+- Verified the promoted Google Search local-pack action file through
+  `evidence-run --source-navigation`. The final claim gate passed with 194
+  artifacts, 4 claims, 4 citations, 145 source-navigation action artifacts,
+  zero browser obstruction artifacts, and one destination follow-up.
+- Ran an office-hours product pass for search-result deepening. The current
+  system supports explicit one-depth destination follow-up, but it does not yet
+  rank many destination candidates, reject low-value pages, or decide whether a
+  news/blog/official-site child page is useful for the user's question. The
+  product, architecture, and implementation docs now include bounded
+  destination triage as the next scope: candidate extraction, usefulness
+  scoring, child evidence runs, and provenance from portal result to
+  destination citation.
+- Ran a follow-up office-hours pass on natural search deepening. The docs now
+  frame Google/Naver/portal results as parent evidence surfaces and news/blog/
+  official/review/place/product pages as child evidence surfaces. The planned
+  loop is parent capture -> visible destination extraction -> candidate triage
+  -> bounded child evidence run -> child usefulness verdict -> optional
+  proposal-only deeper hop.
+- Clarified the current Google/Naver deepening capability in the top/middle/
+  lower development docs. The current answer is partially yes: explicit
+  maintained recipes can follow selected destinations and judge child pages,
+  but arbitrary natural traversal across every live search result is not a
+  default behavior yet. The next scope is provider-calibrated destination
+  extraction plus deterministic useful-child reason codes.
+- Ran an additional office-hours framing pass for natural Google/Naver
+  deepening. The docs now define usefulness by destination type: news, blog,
+  community, official site, map/place, review, media, commerce, and travel
+  pages must be judged after child capture, while duplicate URLs, portal shells,
+  thin SEO pages, blocked/private/paywalled pages, and unsupported actions are
+  rejected or downgraded with reason codes.
+- Implemented deterministic destination decision reason codes. Destination
+  candidate and triage artifacts now preserve `reasonCodes.positive` and
+  `reasonCodes.negative` arrays for query overlap, official-domain match,
+  fresh publisher articles, local place matches, visible price/offer evidence,
+  transcript/OCR evidence, duplicates, portal shells, thin content, blocked
+  surfaces, private/login surfaces, paywalls, unsupported destinations, top-K
+  budgets, per-domain budgets, off-topic child evidence, and stale/mismatched
+  sources.
+- Added destination reason-code aggregation. `DestinationTriageSummary` now
+  includes positive and negative reason-code counts, and final reports print a
+  compact reason summary line so repeated real-site calibration can compare why
+  destination candidates were selected, rejected, or downgraded.
+- Implemented the first bounded destination triage foundation for explicit
+  follow-up requests. Evidence-run now writes `destination_candidate` and
+  `destination_triage` artifacts, scores resolved destinations using
+  deterministic URL/link-text/query signals, rejects obvious low-value,
+  duplicate, private/login, and unsupported destinations before child runs,
+  applies max-follow-up and per-domain budgets through triage selection, and
+  summarizes destination usefulness in CLI/MCP/HTTP assessment output and final
+  reports.
+- Added child-page evidence-density feedback for selected destination
+  follow-ups. Evidence-run now summarizes selected child artifact count, claim
+  count, browser capture count, obstruction count, page text length, title/final
+  URL, query-overlap tokens, and evidence warnings, records them in destination
+  triage, and downgrades selected child pages to low-value, off-topic, or
+  blocked when browser-visible child evidence does not support the query.
+- Added deterministic destination score breakdowns for rank, kind, query
+  overlap, authority, freshness, source-family fit, external destination, and
+  warning penalties. Candidate artifacts now preserve official/publisher/
+  institutional/local authority hints, recent/stale year hints, and source-
+  family fit or mismatch signals before child follow-up execution.
+- Added source-family destination scoring profiles. Candidate score breakdowns
+  now record the active profile and profile adjustment, and search, map/local,
+  blog/content, portal/news, travel booking, commerce, video/social, and
+  generic web contexts weight rank, query, authority, freshness, source-family
+  fit, and candidate kind differently.
+- Added proposal-only destination deepening. Browser page capture metadata now
+  preserves bounded visible links, useful selected child destinations summarize
+  visible depth-2 candidates, and parent runs write
+  `destination_deepening_proposal` artifacts without executing recursive
+  traversal.
+- Added explicit opt-in depth-2 destination deepening. `sourceNavigation.maxDepth`
+  and `--source-navigation-max-depth` now default to `1`; setting them to `2`
+  executes proposed deeper candidates under bounded count/domain controls,
+  records `destination_deepening_run` artifacts, and keeps source navigation
+  disabled inside deeper child runs to prevent recursion.
+- Added final destination claim provenance validation. In final mode,
+  claim-gate now requires destination evidence claims to cite the parent
+  source-navigation action, destination candidate, child follow-up, and deeper
+  proposal artifacts required for the destination evidence kind.
+- Added separate depth-2 destination execution budgets. Explicit
+  `maxDepth: 2` runs now have their own max run count, per-domain count,
+  whole-run timeout, and artifact-count budget through
+  `sourceNavigation.maxDeepeningRuns`,
+  `sourceNavigation.maxDeepeningRunsPerDomain`,
+  `sourceNavigation.deepeningTimeoutMs`, and
+  `sourceNavigation.maxDeepeningArtifacts`, plus matching CLI flags and
+  MCP/HTTP schema coverage. Depth-2 summaries now report max runs,
+  max per-domain, timeout, max artifacts, budget-limited count, and timeout
+  count.
+- Added narrower Naver Search module/destination selector candidates for
+  calibration. Search recipes now include Naver integrated-result,
+  vertical-module, organic card, Blog/Cafe, news, place/local, and visible
+  title-link candidates before falling back to broad `#main_pack`/`#search`
+  extraction.
+- Added broader Google Search news/image/video and locale selector candidates
+  for calibration. Search recipes now include English/Korean/Japanese vertical
+  tab labels, modern and legacy image/news/video URL parameters, news module
+  links, YouTube/Shorts/shortened video links, Vimeo links, image anchors, and
+  accessible-label module scopes before broad `#search` fallback extraction.
+- Added explicit multi-link destination extraction. `BrowserPool.readLinkTargets`
+  reads visible usable HTTP(S) links from a selector without clicking, and
+  source-navigation recipes can use `operation: "extract_destinations"` with
+  `maxLinks` and optional capture-id prefix. Extracted links become normal
+  destination candidates, are ranked/rejected by bounded triage, and only the
+  selected top-K requests create one-depth child evidence runs.
+- Promoted multi-link extraction into the recipe catalog path. Search,
+  map/local, commerce, portal/news/community, and generic
+  `destination-followup` recipe candidates now propose `extract_destinations`
+  selectors, and
+  `source-navigation-catalog` / `source-navigation-export-recipes` can turn
+  repeated stable calibration into maintained explicit `extract_destinations`
+  actions.
+- Added Daum Search fixture coverage and real-site candidates for `#mArticle`,
+  `#cMain`, and `#daumContent` search result scopes. Search recipe candidates
+  now include bot-check blocked signals, and the catalog no longer proposes a
+  scoped capture action when calibration found no visible capture scope.
+- Ran the first real `map_local` / `ko-KR` coverage calibration loop for the
+  top three planning slots. Naver Map, KakaoMap, and Google Maps now have
+  repeated read-only viewport/OCR-scope capture baselines that pass explicit
+  evidence-run claim gates.
+- Added real-site map shell candidates for Naver Map `#root`, KakaoMap
+  `#view\\.mapContainer` / `#view\\.map` / `#view`, and Google Maps `.lbMcOd`
+  / `.UL7Qtf`, plus focused read-only map calibration coverage.
+- Added map/local destination extraction candidates. Map source navigation
+  plans now include conditional `destination-followup` work, and Naver Map,
+  KakaoMap, and Google Maps recipes propose `extract_destinations` selectors
+  for visible place-detail, website, menu, review, booking/place, and external
+  website links without clicking route, call, reservation, booking, login, or
+  account-changing controls.
+- Added commerce destination extraction candidates. Commerce source navigation
+  plans now include conditional `destination-followup` work, and Amazon,
+  Coupang, Naver Shopping, Gmarket, and 11st recipes propose
+  `extract_destinations` selectors for visible product-detail, review, seller,
+  brand/store, and marketplace item links without clicking cart, wishlist,
+  purchase, checkout, subscribe, membership, login, or account-changing
+  controls.
+- Added blog/cafe and video/social destination extraction candidates. Naver
+  Blog/Cafe plans now include conditional `destination-followup` work with
+  manual-only `extract_destinations` selectors for visible source,
+  related-post, profile, official, and external links. YouTube, Instagram,
+  TikTok, and X/Twitter plans now include visible profile/channel, canonical
+  media, external bio/source, and related-media extraction candidates without
+  login, join, follow, like, comment, share, message, subscribe, raw-stream, or
+  gate-bypass actions.
+- Added destination-extraction readiness tracking to promotion and coverage
+  QA. Promotion summaries now preserve `extract_destinations` candidate counts,
+  ready action counts, ready action keys, and blocking/repeated-calibration
+  counts. Source coverage readiness now reports destination-extraction status
+  separately from overall source readiness, so a source can be capture-ready
+  while still needing destination-selector calibration before natural deepening.
+- Extended the source coverage calibration Markdown report with destination-
+  extraction QA lines: ready/not-ready counts, status counts, per-source
+  extraction status, and promotion-level ready `extract_destinations` totals.
+- Hardened destination extraction promotion after a live Naver Map calibration
+  showed that broad page-shell selectors such as `#root a[href^="http"]` can
+  follow portal-home/navigation links instead of useful map/place destinations.
+  These broad fallback selectors are now excluded from maintained
+  `extract_destinations` export and remain calibration-required until narrower
+  destination selectors are observed.
+- Added `content_media` / `ko-KR` registry coverage for Naver Blog, YouTube,
+  and Instagram. Naver Blog is now the rank-1 Korean content/media planning
+  slot, while YouTube and Instagram fill the next top-three slots.
+- Fixed the Naver Blog calibration seed to the current section search URL,
+  `https://section.blog.naver.com/Search/Post.naver?keyword=...`, and source
+  strategy detection now recognizes `section.blog.naver.com` as `naver_blog`.
+- Tightened blog/forum obstruction signals so ordinary visible Naver header
+  links such as login/join do not falsely classify a public Blog search page
+  as blocked. Specific private/member/access-right phrases still mark Cafe or
+  Blog member walls as blocked.
+- Ran the first real `content_media` / `ko-KR` rank-1 coverage calibration loop
+  for Naver Blog. Repeated read-only calibration promoted content/page-shell
+  capture plus obstruction-check action files, and an explicit evidence-run
+  with those action files passed the final claim gate.
+- Fixed recipe catalog promotion so fixture-scoped selectors that happen to
+  match a real platform page cannot be exported as maintained real-site
+  actions. Stable selector grouping now keeps selector source in the key, and
+  only promotable real-site candidates flow into maintained exports.
+- Fixed promotion review so browser-visible blocked signals win over exported
+  read-only captures. A platform with a login wall or app gate is reported as
+  `blocked` even if a generic body capture would otherwise export.
+- Added YouTube search real-site candidates for visible metadata and thumbnail
+  overlay evidence (`ytd-video-renderer`, `ytd-rich-item-renderer`,
+  `#video-title`, `#contents`, `ytd-thumbnail`, and thumbnail overlay status).
+- Ran the first real `content_media` / `ko-KR` top-three coverage calibration
+  loop. Naver Blog and YouTube are ready; Instagram is blocked by a visible
+  login wall in the unauthenticated local browser.
+- An explicit YouTube evidence-run with the promoted action file passed the
+  final claim gate with 184 artifacts, 5 claims, and 5 citations.
+- Ran the first real `community_forum` / `ko-KR` top-three coverage calibration
+  loop. Naver Cafe was ready with promoted read-only page-shell/content-surface
+  capture and obstruction-check actions; DCInside and Naver Knowledge iN needed
+  provider-specific fixture-backed recipes before maintained export.
+- Tightened browser obstruction classification so a stray `robot` token in a
+  normal document shell no longer triggers a high-confidence bot-block
+  detection. Challenge phrases such as `not a robot`, `verify you are human`,
+  unusual traffic, CAPTCHA, and browser-check text still classify as bot-blocks.
+- An explicit Naver Cafe evidence-run with the promoted action file passed the
+  final claim gate with 127 artifacts, 4 claims, 4 citations, and no browser
+  obstruction artifacts after the classifier refinement.
+- Added fixture-backed community portal recipe candidates for DCInside and
+  Naver Knowledge iN. Their manual-only recipes now have local fixture coverage
+  for community query state, section/filter/pagination state, thread/question
+  module capture, destination follow-up, and obstruction-state capture.
+- Re-ran the `community_forum` / `ko-KR` top-three coverage calibration loop.
+  Naver Cafe, DCInside, and Naver Knowledge iN are now all ready with maintained
+  explicit read-only action files.
+- Explicit DCInside and Naver Knowledge iN evidence-runs with promoted action
+  files both passed final claim gates and completed one-depth follow-up runs to
+  browser-visible destination pages.
+- Added Korean commerce access/bot-block signals to browser obstruction
+  classification and commerce recipe calibration. Naver Shopping and Gmarket
+  style Korean block pages now classify as `bot_block`, while ordinary stray
+  `robot` document-shell tokens still do not.
+- Added provider-specific commerce product-list and price capture candidates
+  for Coupang, Naver Shopping, and Gmarket, including Coupang `#product-list` /
+  `.search-product`, Naver Shopping `#content` / `#container` /
+  `basicList` / product item scopes, and Gmarket section/item/price scopes.
+- Re-ran the `marketplace_transaction` / `ko-KR` top-three coverage calibration
+  loop. Coupang, Naver Shopping, and Gmarket are currently all classified as
+  browser-visible blocked on this network instead of needing repeated selector
+  calibration.
+- Explicit Naver Shopping and Gmarket evidence-runs on the blocked pages both
+  preserved `browser_obstruction` artifacts and passed final claim gates.
+- Added fixture-backed X/Twitter video/social recipe candidates and executor
+  coverage for public post metadata, author/handle/timestamp, visible thread
+  context, media frame scope, overlay-text scope, and obstruction state. Raw
+  stream download, gate bypass, private message access, and social write
+  actions remain unsupported.
+- Added fixture-backed global community/forum recipe candidates and executor
+  coverage for Reddit, Quora, and Stack Overflow. Their manual-only portal
+  recipes now cover visible query state, community/thread section state,
+  recency/sort state, bounded pagination, article/thread card capture,
+  destination follow-up, and obstruction-state capture while login/private
+  community bypass, deleted-content bypass, comment writes, and unbounded feed
+  crawling remain unsupported.
+- Deduplicated recipe expected-text, blocked-signal, and risk-note strings so
+  merged provider-specific and generic candidates keep stable CLI/catalog
+  output.
+- Aligned Quora and Stack Overflow registry source-family metadata with the
+  detected `portal` source strategy so future promotion/readiness groups can
+  match their maintained community recipes instead of falling through to a
+  generic-web mismatch.
+- Added global community security-challenge blocked signals across browser
+  obstruction classification and portal recipe calibration. Cloudflare-style
+  "performing security verification" / "malicious bots" / "verifies you are
+  not a bot" pages and Reddit-style "blocked by network security" pages now
+  classify as bot-blocked evidence instead of promotable content.
+- Ran the first repeated real `community_forum` / `global` top-three coverage
+  calibration for Reddit, Quora, and Stack Overflow. All six calibration
+  attempts succeeded as read-only browser runs, but the current unattended
+  local browser saw browser-visible security verification or network-security
+  block pages on all three platforms. Promotion now reports zero ready action
+  files, final readiness marks all three as blocked, and
+  `source-coverage-readiness --format retry-commands` prints exact
+  profile/headed retry commands for each platform.
+- Direct evidence-runs against the current Reddit, Quora, and Stack Overflow
+  blocked pages preserve `browser_obstruction` artifacts and pass final claim
+  gates, proving the blocked state is cited evidence rather than a silent
+  selector failure.
+- Added provider-specific global travel booking recipe candidates for
+  Booking.com, Agoda, Trip.com, and Expedia. Travel recipes now cover
+  query-state, visible filters, visible sort, bounded result-scroll,
+  bounded result-pagination, offer-detail, and price/OCR candidate scopes.
+- Added global travel access/security challenge signals to browser obstruction
+  classification and read-only recipe calibration. Access-denied,
+  security-check, cookie-required, interruption, CAPTCHA, and login-required
+  travel pages now classify as blocked evidence instead of missing selectors.
+- Deduplicated repeated selector/capture-scope candidates in recipe plans so
+  CLI/catalog output stays stable after provider-specific candidates are merged
+  with generic family fallbacks.
+- Updated travel calibration target generation so Booking.com, Agoda,
+  Trip.com, and Expedia URLs include a future one-night stay window, adults,
+  rooms, and currency where the platform accepts those parameters. Tokyo travel
+  seeds now use Booking.com destination identifiers and Agoda's Tokyo city page
+  because the generic search URLs can land on browser-visible shells without
+  stable offer cards.
+- Re-ran `marketplace_transaction` / `global` top-four calibration for Amazon,
+  Booking.com, Agoda, and Trip.com. Amazon, Booking.com, Agoda, and Trip.com
+  now have maintained read-only action files and explicit evidence-runs with
+  those actions passed final claim gates. Booking.com and Agoda currently
+  export offer-card capture actions, while Trip.com exports offer-card and
+  price/OCR capture actions.
+- Added a travel `offer-card` read-only capture action so stable list/card
+  scopes can be promoted independently from price/OCR scopes. Travel
+  `price-ocr` promotion is now constrained to price-specific scopes instead of
+  generic list cards, preventing price evidence from being inferred from hotel
+  cards that do not visibly contain prices.
+- Narrowed browser obstruction classification so generic/travel pages are not
+  falsely marked blocked by hidden HTML strings such as "sign in to continue",
+  footer app prompts such as "get the app", or weak generic "could not load"
+  text. Social app/login walls and explicit bot/security blocks remain
+  classified.
+- Re-ran Expedia repeated real-site calibration as a platform-specific travel
+  target. The current unattended browser lands on Expedia's visible "Bot or
+  Not?" / "Show us your human side" challenge, so travel recipe calibration and
+  browser obstruction classification now mark it as blocked instead of treating
+  it as missing selectors. A direct Expedia evidence-run preserves
+  `browser_obstruction` artifacts and passes the final claim gate.
+- Refined video/social blocked-signal handling so ordinary visible login
+  chrome such as Instagram's "Log In" / "Sign Up" links does not block
+  calibration when public content is browser-visible. Stronger login-wall,
+  app-open, CAPTCHA/security, unavailable, and server-error phrases still block
+  promotion.
+- Ran the first repeated real `social_feed` / `global` top-three coverage
+  calibration for Instagram, TikTok, and X/Twitter. Instagram hashtag search
+  and X/Twitter search now export maintained read-only action files and pass
+  explicit evidence-run claim gates. TikTok search currently shows a
+  browser-visible "Something went wrong" / server-error surface in the
+  unattended browser, so readiness marks TikTok as blocked and emits a
+  profile/headed retry command.
+- Browser obstruction classification now treats TikTok-style "Something went
+  wrong" / "something wrong with the server" pages as unavailable-media
+  evidence. A direct TikTok evidence-run preserves `browser_obstruction`
+  artifacts and passes the final claim gate instead of silently reporting a
+  clear page.
+- Expanded deterministic OCR text-profile fixtures for Korean place cards and
+  Japanese travel price cards. Map-like context now recognizes Korean/Japanese
+  business-hours, review, phone, and parking terms without treating ratings as
+  prices; travel/commerce context now recognizes Korean lowest-price/rate
+  terms and Japanese tax-included, fee, cheapest, and free-cancellation terms.
+- Expanded scene-change threshold diagnostics for real media tuning. Frame
+  sampling assessment now records unique visual fingerprint count, zero-distance
+  adjacent pair count, and observed distance p50/p90/p95 so threshold changes
+  can be based on the actual distance distribution instead of only max distance.
+- Added richer community/forum destination fixture coverage. Portal recipes now
+  include fixture-backed destination scopes for community destination shells,
+  destination metadata, question bodies, thread bodies, answer bodies,
+  accepted/top-answer markers, comment lists, and destination obstruction
+  state. Local executor coverage now verifies DCInside, Naver Knowledge iN,
+  Reddit, Quora, and Stack Overflow destination pages without posting, joining,
+  or bypassing access controls.
+- Expanded video/social public post fixture scopes. Instagram/TikTok-like and
+  X/Twitter recipes now separate public profile cards, caption/body text,
+  engagement state, public comment/reply previews, thread context, frame
+  regions, overlay text, and obstruction state while raw stream download,
+  gate bypass, private-message access, and social writes remain unsupported.
+- Expanded deterministic OCR text-profile map/local context. OCR artifacts now
+  distinguish rating-like text, distance/duration text, business-hours text,
+  and contact/address text from price-like text, so place-card OCR can preserve
+  ratings, walking times, hours, phone, and address context without turning
+  those visible numbers into price evidence.
+- Expanded scene-change diagnostics for sparse real-media tuning. Frame
+  sampling assessment now records adjacent pair gap min/max/average seconds,
+  near-threshold below/above counts, and selected-hit spacing min/max seconds
+  so reviewers can tell whether a threshold problem is caused by sparse
+  sampling, brittle near-threshold distances, or clustered selected hits.
+- Re-ran the office-hours product clarification for natural Google/Naver
+  deepening. The current answer is now explicit in the development docs:
+  recipe-gated destination extraction, child evidence runs, usefulness
+  verdicts, and explicit depth-2 deepening exist, but default-autonomous
+  search-to-source traversal still depends on provider-maintained selectors,
+  repeated calibration, and QA. A new design note was saved at
+  `C:\Users\이지범\.gstack\projects\browser-agent-mcp-farm\codex-main-design-20260527-133637.md`.
+- Extended the top/middle/lower development docs with the natural deepening
+  product requirement: Google/Naver-style portal surfaces are parent evidence,
+  news/blog/official/map/review/community/commerce/media links are candidate
+  child evidence, and every child page must receive a usefulness verdict before
+  final claims can rely on it.
+- Added destination triage fallback diagnostics for useful-child QA.
+  `DestinationTriageSummary` now reports `unattemptedFallbackCount` and
+  `retryRecommended` when a selected child destination is downgraded after
+  browser-visible evidence review while other candidates remain unattempted
+  behind the top-K budget. Final reports include the same fields, and unit
+  plus workflow coverage now verify "first selected child is low-value or
+  off-topic, lower-ranked candidate remains unattempted" cases.
+- Added query/evidence script-family diagnostics for destination child
+  evidence. Child summaries can now preserve `queryScriptFamilies`,
+  `evidenceScriptFamilies`, `queryEvidenceScriptMismatch`, and the
+  `query_script_mismatch_possible` reason/warning when direct query overlap is
+  absent because a Latin transliteration query appears to land on Hangul,
+  Japanese, Chinese, or other cross-script visible evidence. The destination is
+  still not upgraded to useful without actual query/supporting evidence; the
+  diagnostic exists for QA and calibration tuning.
+- Hardened real Google Maps destination triage from the promoted `map_local` /
+  `ko-KR` action file. Google Maps `/maps/search/<query>` and Naver Map
+  `/p/search/<query>` path queries now feed child evidence query diagnostics,
+  Google Maps place URLs with `authuser=0` no longer trigger login/private
+  hard rejection, and same-host map place URLs no longer create `portal_shell`
+  reason codes only because they stay on `google.com`.
+- Ran the promoted map/local action files against Google Maps, KakaoMap, and
+  Naver Map. Google Maps now executes one useful child place follow-up for
+  `seongsu cafe`; KakaoMap executes a child follow-up but correctly downgrades
+  it as off-topic for the English query with `query_script_mismatch_possible`
+  and retry/fallback diagnostics; Naver Map remains capture-only with no
+  extracted child candidates from the current maintained action file.
+- Hardened source-navigation destination extraction so duplicate hash variants
+  do not crowd out lower-ranked unique candidate destinations. `readLinkTargets`
+  now fills `maxLinks` with unique normalized destinations first and only keeps
+  duplicate variants when there are not enough unique visible links, preserving
+  duplicate evidence without hiding useful lower-ranked sources. Action
+  metadata now records raw, usable, unique, duplicate, and omitted duplicate
+  destination candidate counts.
+- Added map-provider boilerplate filtering for natural deepening. Naver
+  portal/help links, Kakao corporate/support links, and Google support/policy
+  links reached from map/place contexts are treated as low-value provider shell
+  evidence and are omitted from depth-2 proposals, while real place
+  destinations such as Naver Place, Kakao Place, and Google Maps place URLs
+  remain eligible.
+- Tightened destination-selector promotion for Naver Map. Scoped selectors such
+  as `#root a[href*="place.naver.com"]` and Naver `/p/entry/place` links can
+  now become maintained after repeated calibration, while generic
+  `#root a[href*="map.naver.com"]` remains blocked as a broad provider-shell
+  selector.
+- Added narrower Naver Map path-scoped destination recipe candidates and local
+  executor fixture coverage. Naver Map recipes now propose
+  `#root [data-place-url*="place.naver.com/restaurant"]`,
+  `#root [data-place-url*="place.naver.com/hospital"]`,
+  `#root [data-place-url*="place.naver.com/place"]`,
+  `#root [data-place-url*="place.naver.com/accommodation"]`, matching
+  `data-url` variants, and matching anchor variants before broad
+  `place.naver.com`/`map.naver.com` fallbacks. The fixture executor now proves
+  a scoped restaurant selector can produce a Naver Place child destination
+  without clicking route, call, reservation, or booking controls. Real-site
+  Naver Map still needs repeated calibration before this is promoted as a
+  maintained natural-deepening action.
+- Verification for Naver Map path-scoped destination candidates:
+  `npm run build` passed,
+  `npm test -- source-navigation-recipe-catalog source-navigation-recipes
+  source-navigation-executor` passed with 3 files / 70 tests, and CLI smoke
+  confirmed `source-navigation-recipes --url <naver-map-search-url>` emits the
+  new restaurant, hospital, and accommodation scoped selectors. Final
+  `npm run verify` passed with build, 33 test files / 323 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Added fallback candidate recommendations to destination triage. When selected
+  child evidence is downgraded and top-K-limited candidates remain unattempted,
+  `DestinationTriageSummary.fallbackCandidates` and the final report now
+  preserve the candidate ID, action key, URL, domain, candidate kind, and score
+  for the lower-ranked destination(s) QA should retry with a wider follow-up
+  budget.
+- Extended fallback candidate recommendations to include both top-K and
+  per-domain budget misses. Each fallback candidate now records
+  `budgetReason: "top_k_budget" | "domain_budget"` so QA can decide whether the
+  next pass should increase total follow-ups, increase per-domain follow-ups,
+  or narrow provider selectors.
+- Added destination triage retry advice. When fallback candidates remain,
+  `DestinationTriageSummary.retryAdvice` now recommends the next
+  `maxFollowUps` and `maxFollowUpsPerDomain` values and records whether the
+  retry should increase total follow-ups, increase per-domain follow-ups, or
+  narrow destination selectors. Final reports include the same advice line.
+- Added copyable retry CLI flags to destination triage advice. Final reports
+  now include the exact `--source-navigation-max-followups` and
+  `--source-navigation-max-followups-per-domain` values recommended for the
+  next bounded source-deepening pass, so QA can rerun a Google/Naver/news/blog/
+  official-site scenario without translating the advice by hand.
+- Added destination visible metadata profiling. Destination candidates now
+  preserve URL/link-text metadata for text snippets, visible years,
+  recent/stale year hints, price/offer-like text, rating/review-like text,
+  local/place-like text, and publisher/article-like text. These fields make
+  result-card QA less dependent on opening raw artifacts when tuning Google,
+  Naver, portal/news, map/local, commerce, travel, and media child selection.
+- Added visible metadata aggregation to destination triage summaries and final
+  reports. Reports now show candidate snippet coverage and recent/stale-year,
+  price/offer, rating/review, local/place, and publisher/article counts, so QA
+  can compare candidate pressure without opening every candidate JSON artifact.
+- Added candidate-kind aggregation to destination triage summaries and final
+  reports. Reports now show all, selected, useful, and rejected destination
+  kind counts across news, blog, official, map/place, review, community,
+  commerce, media, and generic candidates, so repeated calibration can compare
+  whether a source is exposing the right kind of child evidence.
+- Added deterministic query-intent scoring for destination candidates.
+  Candidate artifacts now preserve `queryIntent`, score breakdowns include a
+  `queryIntent` contribution, query-intent matches add positive reason codes,
+  and final reports aggregate query-intent counts. This lets the same result
+  set prefer a news child for latest/news questions, a blog/review/community
+  child for experience questions, a commerce child for price/booking questions,
+  a map/place child for local questions, a media child for media questions, or
+  an official child for official-fact questions.
+- Extended query-intent detection with Korean and Japanese triggers. Korean
+  `뉴스`, `후기`, `공식`, `지도`, `가격`, `예약`, `동영상` and Japanese
+  `ニュース`, `レビュー`, `公式`, `地図`, `価格`, `予約`, `動画` style
+  queries now feed the same deterministic intent scoring used by English
+  Google-style queries.
+- Extended destination candidate-kind and visible metadata detection with
+  Korean and Japanese visible link-text triggers. Generic URLs can now be
+  classified as news, blog, official, review, map/place, commerce, or media
+  candidates when Naver, Google, or Japanese portal result cards expose source
+  type through browser-visible title/snippet text rather than through the URL.
+- Added deterministic cross-script query aliases for common local/travel/
+  commerce/media terms. Destination candidate scoring and child-evidence
+  summaries can now treat queries such as `seongsu cafe` or
+  `tokyo hotel price` as overlapping browser-visible Korean/Japanese text such
+  as `성수 카페` or `東京 ホテル 価格`, reducing false off-topic downgrades while
+  keeping unmatched cross-script pages flagged as possible script mismatch.
+- Added OCR engine failure-mode artifacts. Per-frame OCR recognition errors
+  and timeouts now write partial `ocr_text` metadata artifacts with
+  `engine_error` or `timeout` status, source frame ID/path, timestamp when
+  available, empty text profile, and bounded reason text. The OCR pass
+  continues to later frames after a per-frame engine failure unless the run is
+  explicitly aborted.
+- Added scene-change sampling-density diagnostics. Scene-change diagnostics now
+  classify sampling density as `ok`, `sparse_pairs`, `sparse_selected_hits`, or
+  `insufficient_data`, include a human-readable reason, and preserve
+  `recommendedMaxPairGapSec` when applicable. Final reports now include
+  `sampling=<status>` in the scene-change diagnostics line so real-media QA can
+  distinguish threshold tuning from too-sparse base sampling.
+- Expanded Naver Search manual-only recipe candidates for broader vertical and
+  destination calibration. Naver Search now proposes news, image, video,
+  place/map, shopping, and view vertical-tab selectors; result-scope capture
+  candidates for news, video, image, shopping, SmartStore, Place, Map, and
+  YouTube-linked modules; and `extract_destinations` candidates for Naver
+  News, Blog, Cafe, Place/Map, Shopping, SmartStore, and video result links.
+  These are calibration inputs only and still require repeated browser-visible
+  promotion before maintained execution.
+- Expanded Daum Search manual-only recipe candidates for broader Korean portal
+  calibration. Daum Search now proposes news, blog, cafe, image, video,
+  place/map, and shopping vertical selectors; result-scope capture candidates
+  for Daum/Kakao result wrappers, news cards, thumbnails, blogs, cafes,
+  KakaoMap place links, Kakao Shopping, and video links; and
+  `extract_destinations` candidates for Daum News, Daum Blog, Tistory, Daum
+  Cafe, KakaoMap, Kakao Shopping, and video destinations.
+- Tightened price/offer visible metadata matching so the `fee` keyword is
+  matched as a word and no longer fires on words such as `coffee`.
+- Verification for fallback candidate recommendations:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 30 tests. Final `npm run verify` passed with build,
+  32 test files / 260 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for fallback budget-reason recommendations:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination retry advice:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for retry advice CLI flags:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination visible metadata profiling:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts` passed with 1 file /
+  17 tests. `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination visible metadata summary/reporting:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination candidate-kind summary/reporting:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 31 tests. Final `npm run verify` passed with build,
+  32 test files / 261 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for destination query-intent scoring:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 32 tests. Final `npm run verify` passed with build,
+  32 test files / 262 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for multilingual query-intent detection:
+  `npm run build` passed, and
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`
+  passed with 2 files / 33 tests. Final `npm run verify` passed with build,
+  32 test files / 263 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+
+- Verification for multilingual destination text classification:
+  `npm run build` passed, `npx vitest run tests/destination-triage.test.ts`
+  passed with 1 file / 20 tests, and the focused provider-shell regression
+  `npx vitest run tests/source-navigation-calibration.test.ts --testNamePattern "provider shell"`
+  passed. Final `npm run verify` passed with build, 32 test files / 264 tests,
+  local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.
+- Verification for expanded Naver Search recipe candidates:
+  `npm run build` passed,
+  `npx vitest run tests/source-navigation-recipes.test.ts --testNamePattern "Naver search"`
+  passed, `npx vitest run tests/source-navigation-recipes.test.ts` passed with
+  1 file / 10 tests, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 29 tests. Final `npm run verify` passed with build,
+  32 test files / 264 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for expanded Daum Search recipe candidates:
+  `npm run build` passed,
+  `npx vitest run tests/source-navigation-recipes.test.ts --testNamePattern "Daum search"`
+  passed, `npx vitest run tests/source-navigation-recipes.test.ts` passed with
+  1 file / 10 tests, and
+  `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts`
+  passed with 3 files / 29 tests. Final `npm run verify` passed with build,
+  32 test files / 264 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Verification for cross-script query aliases:
+  `npm run build` passed,
+  `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts --testNamePattern "transliterated|transliteration|query alias|Korean and Japanese visible"`
+  passed with 2 files / 3 focused tests,
+  `npx vitest run tests/destination-triage.test.ts` passed with 1 file /
+  21 tests, and `npx vitest run tests/evidence-runner.test.ts` passed with
+  1 file / 14 tests. Final `npm run verify` passed with build, 32 test files
+  / 265 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0
+  npm audit vulnerabilities.
+- Verification for OCR engine failure-mode artifacts:
+  `npm run build` passed, `npx vitest run tests/ocr.test.ts` passed with
+  1 file / 7 tests,
+  `npx vitest run tests/ocr.test.ts tests/ocr-text-profile.test.ts tests/evidence-runner.test.ts`
+  passed with 3 files / 28 tests, and `npm run test:ocr-integration` skipped
+  as expected with `FARM_OCR_INTEGRATION` unset. Final `npm run verify` passed
+  with build, 32 test files / 267 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- Verification for scene-change sampling-density diagnostics:
+  `npm run build` passed,
+  `npx vitest run tests/frame-sampler.test.ts tests/evidence-runner.test.ts --testNamePattern "scene-change|Scene-change|sampling density"`
+  passed with focused scene-change tests, `npx vitest run tests/frame-sampler.test.ts`
+  passed with 1 file / 11 tests, and `npx vitest run tests/evidence-runner.test.ts`
+  passed with 1 file / 14 tests. Final `npm run verify` passed with build,
+  32 test files / 268 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Expanded global/Japanese search top-slot recipe candidates. Bing, Yahoo
+  Search, and Yahoo Japan Search now have provider-specific manual-only
+  `query-state`, vertical-tab, filter, pagination, result-selection, and
+  `extract_destinations` selector candidates instead of relying only on the
+  generic search fallback. The candidates cover Bing `#b_results` /
+  `#b_context`, Yahoo `#web` / `#results` / `.dd.algo`, and Yahoo Japan
+  `#contents` / `#WS2m` / `.sw-Card` result surfaces plus news, image, video,
+  local/map, shopping, Q&A, redirect, and destination-link variants where
+  browser-visible calibration can prove them. Recipe-catalog selector hints now
+  also scope Bing/Yahoo/Yahoo Japan discovery targets to their provider
+  containers before repeated calibration.
+- Verification for expanded Bing/Yahoo/Yahoo Japan search recipe candidates:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipes.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-calibration-targets.test.ts tests/source-registry.test.ts`
+  passed with 7 files / 61 tests. Final `npm run verify` passed with build,
+  32 test files / 271 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Promoted Bing, Yahoo Search, and Yahoo Japan Search recipe plans to local
+  `fixture_verified` status by adding shared fixture selectors for query state,
+  news/image/video verticals, filters, bounded pagination, result cards,
+  context panels, and destination extraction. Added executor coverage that
+  fills each query, switches to a news vertical, applies a recent filter,
+  paginates once, captures the result card, and extracts visible destination
+  links without navigating the parent page.
+- Verification for fixture-backed Bing/Yahoo/Yahoo Japan search execution:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts tests/source-navigation-calibration-targets.test.ts`
+  passed with 3 files / 54 tests. Final `npm run verify` passed with build,
+  32 test files / 281 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added TikTok-specific public-visible post fixture coverage. TikTok recipe
+  candidates now include provider-specific fixture selectors for visible post
+  metadata, profile cards, caption bodies, engagement state, public comment
+  previews, video frame capture, overlay text, and destination extraction
+  alongside current real-site candidates such as `[data-e2e="browse-video"]`,
+  `[data-e2e="video-desc"]`, `[data-media-url]`, and `[data-profile-url]`.
+  The executor fixture verifies that a visible TikTok post can preserve
+  metadata, extract anchor and SPA-style destination attributes, capture a
+  frame region, capture overlay text, and keep raw-stream/social-write actions
+  unsupported.
+- Verification for TikTok public-visible fixture coverage:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 2 files / 44 tests. Final `npm run verify` passed with build,
+  32 test files / 282 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added provider-specific commerce fixture coverage for Amazon, Walmart, eBay,
+  Coupang, Naver Shopping, Gmarket, and 11st. Commerce recipe plans now include local fixture
+  selectors for provider-specific query, filter, sort, pagination,
+  product-list, product-card, seller/return, shipping, price-badge, and
+  destination scopes. Amazon also has `.a-price` / `.a-price-whole` /
+  `[data-a-color="price"]` and `s-search-result` candidates; 11st has
+  `search_content`, `c_prd`, `salePrice`, and `c_prd_price` candidates.
+  The executor fixture verifies all five marketplace shapes can capture
+  product, seller, shipping, and price evidence and extract product/review/
+  seller/brand destinations without cart, checkout, purchase, or account
+  mutation.
+- Verification for provider-specific commerce fixture coverage:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-recipes.test.ts` passed with
+  1 file / 13 tests, and
+  `npm test -- --run tests/source-navigation-executor.test.ts` passed with
+  1 file / 32 tests. Final `npm run verify` passed with build, 32 test files /
+  283 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm
+  audit vulnerabilities.
+- Added Naver integrated-search module fixture coverage. Naver Search recipe
+  candidates now include local fixture selectors for integrated-result shell,
+  View/Blog/Cafe, News, Place, Image, Video, Shopping modules, provider-specific
+  vertical tabs, and a mixed destination-link container with both anchors and
+  SPA-style attributes.
+- Added safe executor coverage for a Naver integrated-search page. The fixture
+  fills the query, switches a vertical tab, applies a visible recent filter,
+  selects a sort, paginates once, captures each vertical module separately, and
+  extracts Blog, Cafe, News, Place, Image, Video, and Shopping destinations
+  without navigating the parent search page.
+- Verification for Naver integrated-search module coverage:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 2 files / 46 tests, and final `npm run verify` passed with build,
+  32 test files / 284 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Expanded Google rich-search module fixture coverage. Google Search recipe
+  candidates now include local fixture selectors for a rich SERP shell, local/
+  map, news, image, video, mixed destination-link modules, and provider-specific
+  News/Images/Videos/Maps vertical tabs.
+- Extended the Google module executor fixture from map/news/ad-only capture to
+  local, map-pack, news, image, video, and sponsored module capture plus
+  `extract_destinations` over organic, news, local, image, and video
+  destinations without parent-page click-through.
+- Verification for Google rich-search module coverage:
+  `npm run build` passed,
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`
+  passed with 2 files / 46 tests, and final `npm run verify` passed with build,
+  32 test files / 284 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added bounded parallel follow-up execution. Evidence-run now accepts
+  `sourceNavigation.followUpConcurrency` / `--source-navigation-followup-concurrency`
+  and runs selected one-depth child evidence workflows in bounded concurrent
+  batches while preserving deterministic parent `source_navigation_followup`
+  artifact order.
+- Added workflow coverage with two delayed child pages proving selected
+  follow-ups can overlap when concurrency is `2`; the final report now includes
+  the effective follow-up concurrency.
+- Verification for bounded follow-up concurrency:
+  `npm test -- --run tests/evidence-runner.test.ts tests/mcp-server.test.ts`
+  passed with 2 files / 19 tests. Final `npm run verify` passed with build,
+  32 test files / 285 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added bounded depth-2 deepening concurrency. Evidence-run now accepts
+  `sourceNavigation.deepeningConcurrency` /
+  `--source-navigation-deepening-concurrency` for explicit `maxDepth: 2`
+  deeper child evidence runs. The default remains `1`; higher values execute
+  selected depth-2 candidates in bounded concurrent batches.
+- Added workflow coverage with one selected child page exposing two delayed
+  deeper source-document links, proving proposed depth-2 child runs can overlap
+  when `deepeningConcurrency: 2`. Destination deepening reports now include the
+  effective concurrency.
+- Verification for bounded depth-2 deepening concurrency:
+  `npm run build` passed,
+  `npm test -- --run tests/evidence-runner.test.ts tests/mcp-server.test.ts`
+  passed with 2 files / 20 tests, and final `npm run verify` passed with build,
+  32 test files / 286 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added provider-specific knowledge/database recipe candidates. Google
+  Scholar, Wikipedia, Namuwiki, PubMed, data.go.kr, KOSIS, RISS, and KIPRIS
+  now have manual-only read-only capture and destination-follow-up candidates
+  tied to their visible record/article/result surfaces instead of relying only
+  on broad `body`/`main` generic capture. The candidates preserve citation,
+  reference, DOI/full-text, dataset, record-detail, table/statistic, and patent
+  metadata surfaces while blocking edit, login, restricted-download, paid full
+  text, and institutional-access controls. Recipe-catalog selector hints now
+  scope discovery targets to provider containers such as `#mw-content-text`,
+  `.mw-parser-output`, `#gs_res_ccl_mid`, `.docsum-content`, data.go.kr
+  result lists, RISS result lists, and KIPRIS detail/result panels.
+- Verification for knowledge/database recipe candidates:
+  `npm run build` passed, and
+  `npx vitest run tests/source-navigation-recipes.test.ts tests/source-strategy.test.ts tests/source-navigation-calibration-targets.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-registry.test.ts`
+  passed with 8 files / 68 tests. Final `npm run verify` passed with build,
+  32 test files / 274 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added provider-specific review/local recipe candidates for Yelp and
+  TripAdvisor. Yelp now has manual-only query/location, category/filter,
+  pagination, business-card/rating/review capture, menu/review/business/detail,
+  and external website redirect destination candidates. TripAdvisor now has
+  manual-only search, restaurant/hotel/attraction/tourism vertical, sort/filter,
+  listing/rating/review capture, and restaurant/hotel/attraction/user-review
+  destination candidates. Both preserve review/rating surfaces as volatile
+  portal evidence until bounded destination child runs cite listing or external
+  pages separately, and both classify human-check, cookie, app-open, login, and
+  security-verification surfaces as visible obstructions instead of bypassing
+  them.
+- Verification for Yelp/TripAdvisor review/local recipe candidates:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-calibration-targets.test.ts`
+  passed with 2 files / 23 tests. Final `npm run verify` passed with build,
+  32 test files / 276 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added local safe-executor fixture coverage for Yelp/TripAdvisor-style
+  review portals. The review fixture now verifies query entry, category state,
+  rating filter state, bounded pagination, listing/rating/review capture,
+  multi-link destination extraction for listing/menu/external/review links, and
+  obstruction capture without login, app-open, human-check, or bypass actions.
+  Yelp and TripAdvisor portal recipe plans are now `fixture_verified` locally
+  while real-site maintained exports still require repeated browser-visible
+  calibration.
+- Verification for review portal fixture-backed executor coverage:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts tests/source-navigation-calibration-targets.test.ts`
+  passed with 3 files / 51 tests. Final `npm run verify` passed with build,
+  32 test files / 277 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added Apple Maps map/local recipe and fixture coverage for the global
+  map/local regional/safety slot. Apple Maps now has manual-only query,
+  filter, viewport, selected-place, OCR-label, website/menu/review destination
+  extraction, selector-hint scope, explicit calibration target, and safe
+  executor fixture coverage. This keeps Apple Maps available for global
+  map/local calibration without changing the current top-three audit ordering
+  of Google Maps, Yelp, and TripAdvisor.
+- Verification for Apple Maps map/local recipe and executor coverage:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts tests/source-navigation-calibration-targets.test.ts`
+  passed with 3 files / 53 tests. Final `npm run verify` passed with build,
+  32 test files / 279 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Extended blocked-slot profile/headed retry commands to preserve selector-hint
+  handoffs. When a blocked promotion group has a `selector-hints.tsv` file,
+  `source-coverage-readiness --format retry-commands` now adds
+  `--selector-hints-file <path>` to the generated
+  `source-coverage-calibrate --headed --browser-channel chrome --profile ...`
+  retry command, and the JSON audit exposes the same `selectorHintFiles` on
+  `profileHeadedRetry`. This lets TikTok, global community/forum, Korean
+  commerce, Expedia, Google Search, and other blocked profile/headed retries
+  resume from prior discovery hints instead of losing the selector handoff.
+- Verification for profile/headed retry selector-hint propagation:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`
+  passed with 3 files / 13 tests.
+- Added promotion-review evidence-run budget propagation. `source-navigation-
+  promotion-review` now accepts source-navigation follow-up/deepening execution
+  budget flags and copies them into ready `evidence-run` argv/PowerShell
+  commands. `source-coverage-calibrate` carries the same flags into generated
+  promotion-review commands and the executed promotion-review JSON, so QA can
+  reproduce bounded parallel follow-up/depth-2 runs from the calibration loop
+  handoff.
+- Verification for promotion-review budget propagation:
+  `npm run build` passed, and
+  `npm test -- --run tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 3 files / 15 tests. Final `npm run verify` passed with build,
+  32 test files / 287 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- Added explicit bounded fallback follow-up execution. Evidence-run now accepts
+  `sourceNavigation.fallbackFollowUps` /
+  `--source-navigation-fallback-followups` and
+  `sourceNavigation.maxFallbackFollowUps` /
+  `--source-navigation-max-fallback-followups`. The default remains disabled.
+  When enabled, if selected child evidence is downgraded and triage reports
+  unattempted fallback candidates, evidence-run executes a bounded fallback
+  pass, writes normal `source_navigation_followup` artifacts, expands only the
+  effective final follow-up/per-domain budgets needed to evaluate those
+  explicitly attempted candidates, and rebuilds final destination triage.
+- Added workflow coverage for the target QA case: first selected destination is
+  off-topic/thin, a lower-ranked blog destination remains unattempted under
+  `maxFollowUps: 1`, and enabling fallback follow-ups runs that lower-ranked
+  page and records it as useful query-overlap evidence without changing the
+  default behavior.
+- Verification for bounded fallback follow-ups:
+  `npm run build` passed, and
+  `npm test -- --run tests/evidence-runner.test.ts tests/mcp-server.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-calibration-loop.test.ts`
+  passed with 4 files / 30 tests. Final `npm run verify` passed with build,
+  32 test files / 288 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+
+## Next Recommended Work
+
+1. Broader executor and follow-up fixture coverage
+   Continue with real-site selector calibration and remaining provider-specific
+   variants after the local fixture pass. Manual-only recipe candidates and a
+   read-only calibration CLI now exist, and catalog proposals can classify
+   single-run and repeated-readiness. `news_media` / `ko-KR` now has a first
+   repeated read-only baseline for Naver News and Daum News. `search` /
+   `ko-KR` now has first repeated read-only baselines for Naver Search and Daum
+   Search, and Google Search has authenticated-profile maintained baselines for
+   hotel/result-card and knowledge-panel queries through `google-search-cdp`.
+   `map_local` / `ko-KR` now has first repeated
+   read-only baselines for Naver Map, KakaoMap, and Google Maps viewport/OCR
+   scopes. `content_media` / `ko-KR` now has first repeated read-only Naver
+   Blog and YouTube baselines. `social_feed` / `global` now has maintained
+   read-only baselines for Instagram hashtag search and X/Twitter search, while
+   TikTok search is currently blocked by a browser-visible server-error /
+   unavailable-media surface in the unattended browser. `community_forum` /
+   `ko-KR` now has
+   first repeated read-only baselines for Naver Cafe, DCInside, and Naver
+   Knowledge iN. `community_forum` / `global` now has local fixture coverage
+   for Reddit, Quora, and Stack Overflow search-result and destination thread
+   states, including question, answer, accepted/top-answer, comment, metadata,
+   and obstruction scopes, plus a first repeated real-site
+   calibration attempt; the current unattended browser is blocked by Reddit
+   network security and Cloudflare security verification on Quora and Stack
+   Overflow, so profile/headed calibration is the next global community path.
+   `marketplace_transaction` / `ko-KR` now has an attempted
+   repeated calibration for Coupang, Naver Shopping, and Gmarket; all three are
+   currently blocked by browser-visible access-denied or bot-check surfaces in
+   the unattended local browser, so profile/headed calibration is the next
+   commerce path. Global travel booking recipes now have provider-specific
+   Booking.com, Agoda, Trip.com, and Expedia candidate scopes and blocked-
+   signal handling. `marketplace_transaction` / `global` now has maintained
+   read-only baselines for Amazon, Booking.com, Agoda, and Trip.com.
+   Booking.com and Agoda currently preserve offer-card evidence; Trip.com also
+   has maintained price/OCR evidence. Expedia repeated calibration currently
+   resolves to a browser-visible human/bot challenge in the unattended browser,
+   so profile/headed Expedia calibration is the next travel path, along with
+   richer room/rate detail flows. The calibration/promotion handoff now
+   preserves profile/headed runtime flags so those retry batches can be
+   reproduced from the generated plan and promotion-review commands.
+   Readiness audits can also emit `auth-login` setup plus profile/headed retry
+   commands for blocked groups through
+   `source-coverage-readiness --format retry-commands`, or an ordered Markdown
+   QA handoff through `source-coverage-readiness --format retry-plan`.
+   Calibrated maintained provider recipe catalogs still need
+   profile/headed retries and real-site calibration for global community/forum
+   article-thread destination variants,
+   TikTok social-feed calibration, richer real-site SNS destination/post
+   variants,
+   broader Google Search news/image/video and locale variants, remaining
+   repeated real-site Bing/Yahoo/Yahoo Japan selector calibration beyond the
+   first Yahoo/Yahoo Japan vertical smoke and new local fixtures, and profile/headed
+   commerce calibration files. Naver-like
+   vertical tabs, Google-like filters, result cards, gallery, map/news/ad
+   modules, Google Maps selected-place sheets/reviews/photos/map labels,
+   Naver/Daum news modules, Naver Cafe public/member states, KakaoMap panels,
+   pagination, media gallery, video/social obstruction, map panels,
+   travel offer/rate cards,
+   richer room/rate variants, commerce product/seller/shipping/price-card
+   scopes, blog/cafe source/related/profile/official link extraction,
+   video/social public profile/caption/engagement/comment/thread/frame/overlay/
+   destination scopes,
+   community/forum destination question/answer/comment scopes, and one-depth
+   destination follow-up now have first local coverage. Google Search is now
+   authenticated-profile ready for read-only result-scope capture, first
+   result destination follow-up, initial narrower `#rso`/ad-module capture
+   scopes, `#rhs` right-side knowledge-panel capture, and first `#Odp5De`
+   local-pack capture for places, details, map canvas, and thumbnails. Naver
+   Search now has narrower planning candidates for integrated-result modules,
+   Blog/Cafe, news, and map/place destination extraction. Google Search now has
+   broader planning candidates for news/image/video modules and English/Korean/
+   Japanese vertical labels. Naver integrated search now also has local fixture
+   executor coverage for separate View/Blog/Cafe, News, Place, Image, Video,
+   Shopping module capture and mixed destination extraction. Google rich search
+   now also has local fixture executor coverage for local/map, news, image,
+   video, sponsored module capture, and mixed organic/news/local/image/video
+   destination extraction. Repeated real-site calibration for those expanded
+   Google/Naver candidates still needs work.
+
+2. Destination triage and useful-child selection
+   The current executor can resolve explicit `follow_up` links and can extract
+   multiple visible HTTP(S) links from an explicit result/module selector with
+   `extract_destinations`. Both paths score destinations, reject simple
+   low-value/duplicate/private/unsupported requests, and create one-depth child
+   evidence runs for selected candidates within top-K and per-domain budgets.
+   Selected child runs now feed first-pass evidence-density, obstruction, and
+   query-overlap signals back into triage, and candidate scores now include
+   deterministic authority/freshness/source-family-fit breakdowns plus
+   context-specific scoring profiles. Selected one-depth child runs can now
+   execute with bounded `followUpConcurrency` when explicitly requested, while
+   the default remains sequential. Proposal-only depth-2 artifacts and
+   explicit `maxDepth: 2` depth-2 execution with separate count, per-domain,
+   concurrency, timeout, and artifact budgets now exist, but broad maintained
+   provider selectors for arbitrary result cards/modules still do not.
+   Deterministic useful-child and rejection
+   reason codes now exist in candidate/triage artifacts and are aggregated in
+   summaries/final reports. Fallback diagnostics now flag when downgraded
+   selected child evidence leaves unattempted budget-limited candidates, so QA
+   can tell whether `maxFollowUps` or selector breadth hid a possible useful
+   lower-ranked source. Query/evidence script-family diagnostics now flag
+   cross-script query mismatch cases without treating them as useful by
+   default. Google Maps path-query and `authuser=0` tuning now lets promoted
+   Google Maps actions run one child place page instead of rejecting every place
+   URL as private. KakaoMap now proves the opposite QA path: a child follow-up
+   can run but still be downgraded as off-topic and fallback-retry-needed when
+   visible child evidence does not match the query. Naver Map now also has an
+   explicit client-state extraction path for Naver Place Apollo state when
+   visible cards expose no usable links, but that path still needs recipe,
+   catalog, promotion, and repeated live calibration before it counts as
+   maintained natural deepening. Destination extraction now prefers unique
+   normalized candidates
+   before duplicate hash variants, reducing the chance that repeated links hide
+   lower-ranked useful child sources. The executor also exposes duplicate and
+   omitted-duplicate counts in action metadata so QA can see when extraction
+   was crowded. Map-provider boilerplate filtering now keeps provider footer,
+   help, corporate, support, and policy links from polluting map/place child
+   selection and depth-2 proposals. Promotion now allows scoped Naver Place and
+    `/p/entry/place` selectors while continuing to block generic Naver Map-domain
+    selectors, and global destination-discovery diagnostics now show when the
+    visible page contains only non-promotable shell/hash/login links even though
+    planned selectors missed. Recipe catalog, promotion, and coverage readiness
+    now carry discovery pressure forward, so the next prerequisite for moving
+    Naver Map beyond capture-only evidence is clear: use `destinationDiscovery`
+    sample targets and selector hints to design narrower provider selectors,
+    not to run child evidence from broad page scans. The probe/discovery sample-
+    target metadata now exposes visible text, anchor-versus-attribute source,
+    attribute names, frame context, warnings, and host/path selector hints so
+    those next selectors can be based on observed browser evidence. Next:
+   calibrate provider-specific extraction selectors for
+   search, portal, review, community, blog/cafe, map/local, commerce, travel,
+   and media result surfaces; then run workflow and real-site QA cases where
+   the first result is useless but a lower-ranked official, news,
+   blog/community, review, map/place, product, or media destination is useful,
+   including English transliteration queries against Korean/Japanese visible
+   child pages.
+   Keep parent capture readiness and destination-extraction readiness separate,
+   then tune relevance/authority/freshness profile weights and reason-code
+   thresholds from real-site runs.
+
+3. OCR engine accuracy and fixture expansion
+   Run the live OCR harness with `tesseract.js` and add/adjust real screenshot
+   fixtures for maps, travel price cards, Korean/Japanese visible text, and OCR
+   engine failure modes. Deterministic unit coverage now includes currency/
+   amount adjacency, Korean/Japanese unit prices, Korean place cards, Japanese
+   travel price cards, empty OCR text, price-token counts, percent/discount
+   badges, map-like labels, travel/commerce-like context, ratings,
+   distance/duration text, business hours, contact/address context,
+   reservation-like text, menu-like text, and commerce policy-like text. The
+   opt-in live harness now validates English map/travel/coupon screenshots when
+   enabled; broader non-English live OCR and real-site screenshot calibration
+   remain pending.
+
+4. Scene-change tuning
+   Use the expanded scene-change threshold diagnostics on real media pages and
+   tune the 8x8 fingerprint threshold for false positives and false negatives.
+   Local diagnostics now expose unique fingerprint counts, zero-distance pairs,
+   distance p50/p90/p95, max distance, selected hits, and threshold
+   recommendations. They also expose adjacent sample pair gaps, near-threshold
+   below/above counts, and selected-hit spacing for sparse sampling analysis.
+   Scene-change hit expansion can now be capped independently from dense frame
+   capture via `sceneChangeMaxHits` / `--dense-scene-max-hits`, so real-media
+   false-positive tuning can limit how many midpoints expand without shrinking
+   each dense window. Live media calibration against broader real media pages
+   remains.
+
+5. Official API real-account validation
+   Run `FARM_OFFICIAL_API_INTEGRATION=1 npm run test:official-api` with real
+   provider credentials. Local unit fixtures now cover permission, ownership,
+   quota, rate-limit failure classification, and supported-platform
+   `missing_media_id` readiness for search/hashtag/listing URLs.
+   `official-api-readiness --url <url>` can preflight credential env references
+   and direct-media-ID applicability without calling provider APIs. Real-account
+   validation still depends on external credentials and provider access.
+
+6. Source strategy and navigation real-site tuning
+   Run real captures or profile/headed calibration for richer community/forum
+   destination article/thread states, TikTok, Google Search/Maps, Agoda,
+   Trip.com, Booking.com, and Expedia. Tune source
+   strategy hints, manual-only recipe candidates, obstruction rules, overlay
+   rules, and required query-state fields from actual browser-visible evidence.
+   Use `source-navigation-calibration-targets` to generate reviewed target
+   files, `source-navigation-calibrate-batch` for repeated read-only runs, or
+   `source-navigation-calibrate` for single targets, then promote only
+   repeatedly observed selectors into maintained explicit recipes. Pass the
+   resulting batch manifest to
+   `source-navigation-catalog --calibration-batch-manifest`, or pass run
+   directories to `--calibration-run-dirs` / raw artifacts to
+   `--calibration-files`, to separate repeated read-only proposals from
+   click/fill/select actions that still require human review or values. Then
+   use `source-navigation-promote-batch` for all manifest groups or
+   `source-navigation-export-recipes --actions-output-file` for a single URL to
+   produce the explicit action JSON for maintained read-only recipes. Use
+   `source-navigation-promotion-review --promotion-dir <promotion-dir>` after
+   batch promotion to decide which groups can flow into evidence-run and which
+   need repeated calibration, obstruction review, or manual values. Use
+   `source-coverage-readiness --category <name> --locale <segment>
+   --promotion-dir <promotion-dir>` to audit category/locale top slots and
+   generate `--format targets` lines for the next calibration batch. Use
+   `source-coverage-calibrate --category <name> --locale <segment>
+   --run-root <path>` when the desired loop is readiness audit -> target file
+   -> read-only calibration batch -> promotion -> review -> re-audit.
+
+7. Production server decision
+   Only evolve the local HTTP queue into a remote shared service after auth,
+   tenancy, artifact retention, storage roots, quotas, and cancellation policy
+   are explicitly designed.
+
+8. Release workflow
+   Push to GitHub and confirm Actions passes. Before npm publish, finalize
+   package name, README surface, exported API, and license.
+
+## Current Verification Baseline
+
+- `npm test`: 34 test files, 343 tests passed.
+- `npm run test:ocr-integration`: skips unless `FARM_OCR_INTEGRATION=1` and
+  optional peer dependency `tesseract.js` is installed.
+- `npm run test:official-api`: skips unless `FARM_OFFICIAL_API_INTEGRATION=1`.
+- `npm run verify`: passed with build, 34 test files / 343 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npm test -- tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts`: 28 tests passed after adding Google Search `#Odp5De` local-pack selectors and destination-triage docs.
+- `npm test -- tests/destination-triage.test.ts tests/evidence-runner.test.ts`: 11 tests passed after adding `destination_candidate` / `destination_triage` artifacts for explicit follow-up requests.
+- `npm test -- tests/destination-triage.test.ts tests/evidence-runner.test.ts`: 15 tests passed after adding child destination evidence-density summaries and query-overlap downgrades.
+- `npm test -- tests/destination-triage.test.ts tests/evidence-runner.test.ts`: 17 tests passed after adding authority/freshness/source-family-fit score breakdowns.
+- `npm test -- tests/destination-triage.test.ts tests/evidence-runner.test.ts`: 18 tests passed after adding source-family destination scoring profiles.
+- `npm test -- tests/destination-triage.test.ts tests/evidence-runner.test.ts`: 19 tests passed after adding proposal-only destination deepening artifacts.
+- `npm test -- tests/source-navigation-executor.test.ts tests/evidence-runner.test.ts`: 35 tests passed after adding explicit `extract_destinations` multi-link candidate extraction and bounded destination triage workflow coverage.
+- `npm test -- source-navigation-executor`: 36 tests passed after adding
+  explicit Naver Place `extract_client_state_destinations` support.
+- `npm test -- source-navigation-executor`: 37 tests passed after making
+  client-state destination extraction selector checks frame-aware.
+- `npm test -- browser-pool`: 14 tests passed after making page capture
+  visible text/link metadata frame-aware.
+- `npm test -- evidence-runner`: 18 tests passed after adding iframe-only child
+  evidence usefulness coverage.
+- `npm test -- evidence-runner`: 19 tests passed after separating successful
+  child page capture from failed child capture artifacts.
+- `npm run verify`: passed with build, 32 test files / 218 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities after the child destination evidence-density pass.
+- `npm run verify`: passed with build, 32 test files / 220 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities after the destination authority/freshness scoring pass.
+- `npm run verify`: passed with build, 32 test files / 221 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities after the destination scoring profiles pass.
+- `npm run verify`: passed with build, 32 test files / 222 tests, local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities after the destination deepening proposal artifact pass.
+- `npm run build`: passed after the Google Search local-pack and destination-triage documentation updates.
+- `npm pack --dry-run`: passed with 143 files after the community destination
+  video/social public post scope, OCR map/local numeric context, and
+  scene-change sparse sampling diagnostics updates.
+- `npm test -- tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`: 32 tests passed after adding fixture-backed community/forum destination question, answer, thread, comment, metadata, and obstruction scopes.
+- `npm test -- tests/ocr-text-profile.test.ts tests/ocr.test.ts`: 12 tests passed after adding OCR map/local rating, distance/duration, business-hours, and contact/address context metadata.
+- `npm test -- tests/frame-sampler.test.ts tests/evidence-runner.test.ts`: 19 tests passed after adding scene-change pair-gap, near-threshold, and selected-hit-spacing diagnostics.
+- `npm test -- tests/official-api.test.ts`: 11 tests passed after extending
+  official API readiness and collection artifacts for supported listing URLs
+  blocked by missing media IDs.
+- `npm test -- tests/source-coverage-readiness.test.ts
+  tests/source-coverage-calibration-loop.test.ts
+  tests/source-navigation-calibration-batch.test.ts
+  tests/source-navigation-promotion.test.ts tests/mcp-server.test.ts`: 16
+  tests passed after browser-channel runtime propagation and retry-command
+  updates.
+- `node .\dist\cli.js evidence-run --url https://example.com/ --no-frames
+  --wait-ms 0 --timeout-ms 10000 --browser-channel chrome`: final claim gate
+  OK, confirming the installed Chrome channel can run evidence capture on this
+  machine.
+- `npx vitest run tests/browser-obstructions.test.ts tests/source-navigation-recipes.test.ts`: 14 tests passed after adding Korean commerce block signals and provider-specific commerce selectors.
+- `npx vitest run tests/source-navigation-calibration.test.ts tests/browser-obstructions.test.ts tests/source-navigation-recipes.test.ts`: 21 tests passed after adding a calibration-layer Korean commerce blocked-page fixture.
+- `npx vitest run tests/browser-obstructions.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`: 33 tests passed after the marketplace blocked-state calibration work.
+- `npx vitest run tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`: 41 tests passed after adding global Reddit/Quora/Stack Overflow community fixture coverage and recipe signal deduplication.
+- `npx vitest run tests/browser-obstructions.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts`: 40 tests passed after adding Cloudflare/network-security block signals and blocking portal action promotion from security-verification pages.
+- `node .\dist\cli.js source-coverage-calibrate --category community_forum --locale global --top-rank 3 --query "tokyo travel" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 30000 --selector-timeout-ms 1500`: classified Reddit, Quora, and Stack Overflow as blocked in the current unattended browser, with zero ready action files and profile/headed retry commands for all three.
+- `node .\dist\cli.js evidence-run --url "https://www.reddit.com/search/?q=tokyo+travel" --no-frames --wait-ms 1000 --timeout-ms 30000`, plus equivalent Quora and Stack Overflow runs: final claim gate OK and 2 `browser_obstruction` artifacts for each blocked page.
+- `npx vitest run tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/browser-obstructions.test.ts`: 24 tests passed after adding provider-specific Booking.com/Agoda/Trip.com/Expedia travel candidates, global travel blocked-signal calibration, obstruction classification, and recipe candidate deduplication.
+- `node .\dist\cli.js evidence-run --url https://example.com/ --no-frames --wait-ms 0 --timeout-ms 10000`: final claim gate OK, 16 artifacts, 4 claims, 4 citations.
+- `node .\dist\cli.js evidence-run --url https://example.com/ --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation`: final claim gate OK, source navigation execution summary recorded 0 executed, 4 skipped, 1 unsupported, 5 action artifacts.
+- `node .\dist\cli.js source-navigation-recipes --url https://www.google.com/search?q=tokyo+hotel`: returned manual-only Google Search recipe candidates with fixture-verified query/filter/result/follow-up scopes.
+- `node .\dist\cli.js source-navigation-recipes --url https://x.com/example/status/1234567890`: returned fixture-verified X/Twitter video/social candidates for visible metadata, thread context, media frame, overlay OCR scope, and obstruction checks.
+- `node .\dist\cli.js source-navigation-recipes --url "https://www.booking.com/searchresults.html?ss=Tokyo"`: returned fixture-verified travel booking candidates with 8 actions, including provider-specific Booking.com selectors and the read-only `offer-card` capture action.
+- `node .\dist\cli.js source-navigation-recipes --url "https://www.expedia.com/Hotel-Search?destination=Tokyo"`: returned fixture-verified travel booking candidates with 8 actions and provider-specific Expedia selectors.
+- `node .\dist\cli.js source-coverage-readiness --category marketplace_transaction --locale global --top-rank 4 --format targets`: returned Amazon, Booking.com, Agoda, and Trip.com global marketplace/booking targets in registry order.
+- `npx vitest run tests/source-navigation-calibration-targets.test.ts`: 7 tests passed after adding future stay-window parameters to travel booking calibration targets.
+- `node .\dist\cli.js source-coverage-calibrate --category marketplace_transaction --locale global --top-rank 4 --query "Tokyo hotel" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 30000 --selector-timeout-ms 1500`: promoted maintained read-only action files for Amazon, Booking.com, Agoda, and Trip.com after the travel `offer-card` capture and Booking.com/Agoda target tuning pass. Booking.com and Agoda export `offer-card:capture`; Trip.com exports `offer-card:capture` and `price-ocr:capture`.
+- `node .\dist\cli.js evidence-run --url <booking-com-target> --source-navigation --source-navigation-actions-file <booking-com-actions.json> --no-frames --wait-ms 3000 --timeout-ms 30000`: final claim gate OK, 131 artifacts, 4 claims, 4 citations, 0 browser obstruction artifacts, and 1 executed source-navigation action.
+- `node .\dist\cli.js evidence-run --url <agoda-target> --source-navigation --source-navigation-actions-file <agoda-actions.json> --no-frames --wait-ms 3000 --timeout-ms 30000`: final claim gate OK, 104 artifacts, 4 claims, 4 citations, 0 browser obstruction artifacts, and 1 executed source-navigation action.
+- `npx vitest run tests/browser-obstructions.test.ts tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration-targets.test.ts tests/source-navigation-recipe-catalog.test.ts`: 41 tests passed after the travel offer-card promotion and obstruction false-positive refinements.
+- `npx vitest run tests/source-navigation-calibration-targets.test.ts tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/browser-obstructions.test.ts`: 56 tests passed after the global travel offer-card promotion pass.
+- `node .\dist\cli.js evidence-run --url "https://www.trip.com/hotels/list?searchword=Tokyo+hotel&checkin=<date>&checkout=<date>&rooms=1&adults=2&children=0&curr=USD" --source-navigation --source-navigation-actions-file <trip-com-actions.json> --no-frames --wait-ms 3000 --timeout-ms 30000`: final claim gate OK, 122 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js evidence-run --url "https://www.amazon.com/s?k=Tokyo+hotel" --source-navigation --source-navigation-actions-file <amazon-actions.json> --no-frames --wait-ms 3000 --timeout-ms 30000`: final claim gate OK, 193 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js source-navigation-calibrate --url https://example.com/ --timeout-ms 10000 --selector-timeout-ms 1000`: read-only calibration OK, wrote page capture plus `source_navigation_calibration` artifacts.
+- `node .\dist\cli.js source-navigation-calibrate-batch --urls-file <targets> --run-root <run-root> --repeat 1 --timeout-ms 10000 --selector-timeout-ms 1000`: read-only batch calibration OK, wrote one per-target calibration run plus `calibration-batch-manifest.json`.
+- `node .\dist\cli.js source-navigation-catalog --url https://example.com/ --calibration-batch-manifest <manifest>`: loaded one succeeded calibration report from a batch manifest.
+- `node .\dist\cli.js source-navigation-export-recipes --url https://example.com/ --calibration-batch-manifest <manifest>`: loaded one succeeded calibration report from a batch manifest.
+- `node .\dist\cli.js source-navigation-export-recipes --url https://www.google.com/search?q=tokyo+hotel --actions-output-file <actions> --export-output-file <bundle>`: wrote an empty action array plus full export bundle when no maintained actions were ready.
+- `node .\dist\cli.js source-navigation-export-recipes --url https://www.google.com/search?q=tokyo+hotel --fail-empty-export`: exited non-zero with `ok: false` when no maintained actions were ready.
+- `node .\dist\cli.js source-navigation-promote-batch --calibration-batch-manifest <manifest> --output-dir <promotion-dir>`: wrote grouped catalog/export/actions files plus `promotion-summary.json`.
+- `node .\dist\cli.js source-navigation-promotion-review --promotion-summary <promotion-summary> --format commands`: prints exact evidence-run commands for ready promoted action files, or a no-ready diagnostic when none are available.
+- `node .\dist\cli.js source-coverage-readiness --category search --locale ko-KR --format targets`: prints Naver, Google, and Daum Korean-search top-slot calibration target lines when no promotion summary is supplied.
+- `node .\dist\cli.js source-coverage-readiness --category ai_search --locale global`: classifies AI search top slots as derivative evidence and excludes them from actionable unattended calibration failures.
+- `node .\dist\cli.js source-coverage-calibrate --category search --locale ko-KR --run-root <run-root> --plan-only`: writes `coverage-readiness-before.json`, `calibration-targets.txt`, `coverage-calibration-plan.json`, and `coverage-calibration-report.md` without opening browsers.
+- `node .\dist\cli.js source-coverage-calibrate --category search --locale ko-KR --top-rank 3 --query "성수 카페" --run-root <run-root> --repeat 2 --timeout-ms 10000 --selector-timeout-ms 750`: promoted Naver Search and Daum Search read-only result-scope capture actions as ready, and classified Google Search as blocked by browser-visible unusual-traffic/not-a-robot signals.
+- `node .\dist\cli.js source-coverage-calibrate --category map_local --locale ko-KR --top-rank 3 --query "성수 카페" --run-root <run-root> --repeat 2 --timeout-ms 15000 --selector-timeout-ms 1000`: promoted Naver Map, KakaoMap, and Google Maps read-only viewport/OCR-scope capture actions as ready.
+- `node .\dist\cli.js source-coverage-calibrate --category content_media --locale ko-KR --top-rank 1 --query "성수 카페" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 20000 --selector-timeout-ms 1500`: promoted Naver Blog read-only content/page-shell capture and obstruction-check actions as ready.
+- `node .\dist\cli.js evidence-run --url "https://section.blog.naver.com/Search/Post.naver?keyword=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <naver-blog-actions.json> --no-frames --wait-ms 1000 --timeout-ms 20000`: final claim gate OK, 168 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js source-coverage-calibrate --category content_media --locale ko-KR --top-rank 3 --query "성수 카페" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 25000 --selector-timeout-ms 1500`: promoted Naver Blog and YouTube read-only actions as ready and classified Instagram hashtag exploration as browser-visible login-wall blocked.
+- `node .\dist\cli.js evidence-run --url "https://www.youtube.com/results?search_query=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <youtube-actions.json> --no-frames --wait-ms 3000 --timeout-ms 25000`: final claim gate OK, 184 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js source-coverage-readiness --category content_media --locale ko-KR --top-rank 3 --query "성수 카페" --promotion-dir <content-media-promotion-dir>`: Naver Blog ready, YouTube ready, Instagram blocked.
+- `node .\dist\cli.js source-coverage-calibrate --category community_forum --locale ko-KR --top-rank 3 --query "성수 카페" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 25000 --selector-timeout-ms 1500`: promoted Naver Cafe, DCInside, and Naver Knowledge iN read-only action files as ready after fixture-backed community portal recipes were added.
+- `node .\dist\cli.js source-coverage-readiness --category community_forum --locale ko-KR --top-rank 3 --query "성수 카페" --promotion-dir <community-promotion-dir>`: Naver Cafe, DCInside, and Naver Knowledge iN ready.
+- `node .\dist\cli.js evidence-run --url "https://cafe.naver.com/ca-fe/home/search/articles?q=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <naver-cafe-actions.json> --no-frames --wait-ms 3000 --timeout-ms 25000`: final claim gate OK, 127 artifacts, 4 claims, 4 citations, and no browser obstruction artifacts after narrowing bot-block `robot` matching.
+- `node .\dist\cli.js evidence-run --url "https://search.dcinside.com/post?keyword=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <dcinside-actions.json> --no-frames --wait-ms 3000 --timeout-ms 25000`: final claim gate OK, 101 artifacts, 4 claims, 4 citations, no browser obstruction artifacts, and one follow-up run to `gall.dcinside.com`.
+- `node .\dist\cli.js evidence-run --url "https://kin.naver.com/search/list.naver?query=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <naver-kin-actions.json> --no-frames --wait-ms 3000 --timeout-ms 25000`: final claim gate OK, 162 artifacts, 4 claims, 4 citations, no browser obstruction artifacts, and one follow-up run to `kin.naver.com`.
+- `node .\dist\cli.js source-coverage-calibrate --category marketplace_transaction --locale ko-KR --top-rank 3 --query "무선 이어폰" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 30000 --selector-timeout-ms 1500`: classified Coupang, Naver Shopping, and Gmarket as browser-visible blocked on the current network, with zero maintained action files exported.
+- `node .\dist\cli.js evidence-run --url "https://shopping.naver.com/search/all?query=%EB%AC%B4%EC%84%A0+%EC%9D%B4%EC%96%B4%ED%8F%B0" --no-frames --wait-ms 1000 --timeout-ms 15000`: final claim gate OK, 24 artifacts, 5 claims, 5 citations, and 2 obstruction artifacts.
+- `node .\dist\cli.js evidence-run --url "https://browse.gmarket.co.kr/search?keyword=%EB%AC%B4%EC%84%A0+%EC%9D%B4%EC%96%B4%ED%8F%B0" --no-frames --wait-ms 1000 --timeout-ms 15000`: final claim gate OK, 25 artifacts, 5 claims, 5 citations, and 2 obstruction artifacts.
+- `node .\dist\cli.js evidence-run --url "https://map.naver.com/p/search/%EC%84%B1%EC%88%98%20%EC%B9%B4%ED%8E%98" --no-frames --wait-ms 0 --timeout-ms 15000 --source-navigation --source-navigation-actions-file <naver-map-actions.json>`: final claim gate OK, 62 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js evidence-run --url "https://map.kakao.com/?q=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --no-frames --wait-ms 0 --timeout-ms 15000 --source-navigation --source-navigation-actions-file <kakao-map-actions.json>`: final claim gate OK, 277 artifacts, 4 claims, 4 citations.
+- `node .\dist\cli.js evidence-run --url "https://www.google.com/maps/search/%EC%84%B1%EC%88%98%20%EC%B9%B4%ED%8E%98" --no-frames --wait-ms 0 --timeout-ms 15000 --source-navigation --source-navigation-actions-file <google-maps-actions.json>`: final claim gate OK, 133 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js source-coverage-calibrate --category news_media --locale ko-KR --top-rank 2 --query "AI policy" --run-root <run-root> --repeat 2 --timeout-ms 10000 --selector-timeout-ms 750`: promoted Naver News and Daum News read-only article capture, destination follow-up, and obstruction-check actions as ready.
+- `node .\dist\cli.js source-navigation-calibration-targets --category search --locale ko-KR --min-tier 2 --query "성수 카페" --format lines`: returned Naver, Google, Daum, and Bing search calibration targets ordered by local top-slot rank first.
+- `node .\dist\cli.js evidence-run --url https://example.com/ --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation-calibrate --source-navigation-calibration-timeout-ms 1000`: final claim gate OK with two `source_navigation_calibration` artifacts.
+- `node .\dist\cli.js source-navigation-catalog --url https://www.google.com/search?q=tokyo+hotel`: returned explicit-opt-in catalog proposals with all actions calibration-required until calibration evidence is supplied.
+- `node .\dist\cli.js source-navigation-export-recipes --url https://www.google.com/search?q=tokyo+hotel`: returned an empty explicit action export because no calibration files were supplied.
+- `node .\dist\cli.js source-navigation-catalog --url https://example.com/ --calibration-run-dir <run-dir>`: loaded one `source_navigation_calibration` report from an evidence run directory.
+- `node .\dist\cli.js source-navigation-export-recipes --url https://example.com/ --calibration-run-dir <run-dir>`: loaded one `source_navigation_calibration` report from an evidence run directory and returned an empty export because no maintained repeated recipe was ready.
+- `node .\dist\cli.js source-navigation-catalog --url https://www.google.com/search?q=tokyo+hotel --calibration-run-dir <generic-run-dir>`: skipped the incompatible generic calibration report through catalog compatibility filtering.
+- `node .\dist\cli.js evidence-run --url "https://search.naver.com/search.naver?where=news&query=AI+policy" --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation --source-navigation-actions-file <naver-news-actions.json>`: final claim gate OK, 205 artifacts, 5 claims, 5 citations, and one follow-up run to `n.news.naver.com`.
+- `node .\dist\cli.js evidence-run --url "https://search.daum.net/search?w=news&q=AI+policy" --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation --source-navigation-actions-file <daum-news-actions.json>`: final claim gate OK and one follow-up run to `v.daum.net`.
+- `node .\dist\cli.js evidence-run --url "https://search.naver.com/search.naver?query=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation --source-navigation-actions-file <naver-search-actions.json>`: final claim gate OK, 169 artifacts, 5 claims, 5 citations.
+- `node .\dist\cli.js evidence-run --url "https://search.daum.net/search?q=%EC%84%B1%EC%88%98+%EC%B9%B4%ED%8E%98" --no-frames --wait-ms 0 --timeout-ms 10000 --source-navigation --source-navigation-actions-file <daum-search-actions.json>`: final claim gate OK, 133 artifacts, 4 claims, 4 citations.
+- `npx vitest run tests/source-navigation-calibration-targets.test.ts tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts`: 48 tests passed after the long scoped capture filename collision fix.
+- `npx vitest run tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-executor.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`: 40 tests passed after the search/ko-KR real-site calibration refinements.
+- `npx vitest run tests/source-navigation-recipes.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipe-catalog.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`: 21 tests passed after the map/ko-KR real-site calibration refinements.
+- `npx vitest run tests/browser-obstructions.test.ts tests/source-navigation-calibration.test.ts tests/source-navigation-recipes.test.ts`: 27 tests passed after adding Expedia human-or-bot challenge obstruction and calibration signals.
+- `npx vitest run tests/source-navigation-calibration-batch.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-calibration-loop.test.ts`: 9 tests passed after adding profile/headed calibration runtime propagation through loop plans, batch manifests, promotion groups, and ready evidence-run commands.
+- `npx vitest run tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts tests/source-navigation-promotion.test.ts`:
+  8 tests passed after adding profile/headed retry command output for blocked
+  source coverage readiness slots.
+- `npx vitest run tests/ocr-text-profile.test.ts tests/ocr.test.ts`:
+  9 tests passed after extending OCR text-profile metadata with price token
+  counts, percent/discount-like badges, map-like labels, and travel/commerce-
+  like context.
+- `npm run test:ocr-integration`:
+  skipped by default with `FARM_OCR_INTEGRATION` unset after expanding the
+  opt-in harness to validate map-label, travel-price, coupon/discount, and
+  optional Korean/Japanese OCR text-profile metadata.
+- `npx vitest run tests/frame-sampler.test.ts tests/evidence-runner.test.ts`:
+  17 tests passed after adding scene-change threshold recommendations, selected
+  distance ranges, recommended thresholds, and final-report recommendation
+  output.
+- `npx vitest run tests/official-api.test.ts`:
+  8 tests passed after adding official API credential readiness diagnostics.
+- `node .\dist\cli.js official-api-readiness --url https://www.youtube.com/watch?v=dQw4w9WgXcQ --youtube-api-key-env FARM_TEST_YOUTUBE_KEY --youtube-oauth-token-env FARM_TEST_YOUTUBE_OAUTH_TOKEN`:
+  returned a no-API-call readiness report with one ready YouTube lookup and one
+  missing-env lookup without printing the test token value.
+- `npm run test:official-api`:
+  skipped by default with `FARM_OFFICIAL_API_INTEGRATION` unset.
+- `node .\dist\cli.js source-coverage-readiness --category search --locale ko-KR --query "seoul hotel" --promotion-summary <blocked-promotion-summary> --format retry-commands`:
+  printed a runnable `auth-login --profile 'google_search-profile' --url
+  '<google-search-target>' --wait-ms '120000' --persistent-profile` setup
+  command followed by
+  `source-coverage-calibrate --platform 'google_search' --query 'seoul hotel'
+  --repeat '2' --headed --profile 'google_search-profile'
+  --persistent-profile`.
+- `node .\dist\cli.js source-coverage-calibrate --platform expedia --query "Tokyo hotel" --run-root <run-root> --plan-only --headed --profile expedia-login --persistent-profile`: wrote a plan-only calibration handoff whose `calibrateBatch` command includes `--headed --profile 'expedia-login' --persistent-profile`.
+- `node .\dist\cli.js source-coverage-calibrate --platform expedia --query "Tokyo hotel" --run-root <run-root> --repeat 2 --wait-ms 5000 --timeout-ms 30000 --selector-timeout-ms 1500`: succeeded with two calibration attempts; both attempts classified all 8 Expedia travel actions as blocked by visible "Bot or Not?" / human-or-bot signals, and promotion review reported the Expedia group as blocked with zero exported maintained actions.
+- `node .\dist\cli.js evidence-run --url "https://www.expedia.com/Hotel-Search?destination=Tokyo+hotel&startDate=<date>&endDate=<date>&rooms=1&adults=2" --no-frames --wait-ms 1000 --timeout-ms 20000`: final claim gate OK, 24 artifacts, 5 claims, 5 citations, and 2 browser obstruction artifacts for the Expedia challenge page.
+- `npm run build`: passed after the real-site calibration and filename-collision changes.
+- `npm pack --dry-run`: passed, 143 files, including
+  `docs/INFORMATION_SOURCE_TAXONOMY.md`.
+- `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  21 tests passed after adding deterministic destination decision reason codes
+  to candidate/triage artifacts and workflow artifact assertions.
+- `npm run verify`: passed after the destination reason-code pass with build,
+  32 test files / 228 tests, local smoke, public web smoke, media smoke, proxy
+  smoke, and 0 npm audit vulnerabilities.
+- `npm run verify`: passed after the destination reason summary pass with
+  build, 32 test files / 228 tests, local smoke, public web smoke, media smoke,
+  proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`:
+  45 tests passed after adding map/local `destination-followup` planning,
+  Naver Map/KakaoMap/Google Maps `extract_destinations` recipe candidates, and
+  Google Maps fixture extraction of a visible official-website follow-up.
+- `npm run verify`: passed after the map/local destination extraction candidate
+  pass with build, 32 test files / 228 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`:
+  45 tests passed after adding commerce `destination-followup` planning,
+  Amazon/Coupang/Naver Shopping/Gmarket/11st `extract_destinations` recipe
+  candidates, and commerce fixture extraction of visible product/review/seller/
+  brand follow-ups.
+- `npm run verify`: passed after the commerce destination extraction candidate
+  pass with build, 32 test files / 228 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-navigation.test.ts tests/source-navigation-recipes.test.ts tests/source-navigation-executor.test.ts`:
+  45 tests passed after adding blog/cafe and video/social
+  `destination-followup` planning, Naver Blog/Cafe source/related/profile/
+  official link extraction candidates, YouTube/Instagram/TikTok/X-Twitter
+  profile/channel/canonical-media/external-link extraction candidates, and
+  fixture extraction of visible blog/cafe and social follow-ups.
+- `npm run verify`: passed after the blog/cafe and video/social destination
+  extraction candidate pass with build, 32 test files / 228 tests, local smoke,
+  public web smoke, media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  28 tests passed after adding destination-extraction readiness tracking to
+  promotion summaries and coverage readiness audits.
+- `npm run verify`: passed after the destination-extraction readiness QA pass
+  with build, 32 test files / 229 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-coverage-calibration-loop.test.ts tests/source-coverage-readiness.test.ts tests/source-navigation-promotion.test.ts`:
+  10 tests passed after adding destination-extraction readiness lines to the
+  source coverage calibration Markdown report.
+- `npm run verify`: passed after the destination-extraction report QA pass
+  with build, 32 test files / 230 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `node .\dist\cli.js source-coverage-calibrate --category map_local --locale ko-KR --top-rank 1 --query "seongsu cafe" --repeat 2`:
+  live Naver Map calibration succeeded and initially showed why broad fallback
+  destination selectors were unsafe for child follow-up.
+- `node .\dist\cli.js evidence-run --url "https://map.naver.com/p/search/seongsu%20cafe" --source-navigation --source-navigation-actions-file <initial-naver-map-actions.json> --no-frames --wait-ms 1000 --timeout-ms 25000`:
+  passed final claim gate but followed `https://www.naver.com/`, proving
+  `#root a[href^="http"]` was too broad for maintained destination extraction.
+- `node .\dist\cli.js source-navigation-promote-batch --calibration-batch-manifest <naver-map-manifest> --output-dir <promotion-regated>`:
+  after the broad-fallback promotion gate, Naver Map stayed parent-capture
+  ready but `destinationExtraction.readyActionCount` became `0`.
+- `node .\dist\cli.js evidence-run --url "https://map.naver.com/p/search/seongsu%20cafe" --source-navigation --source-navigation-actions-file <regated-naver-map-actions.json> --no-frames --wait-ms 1000 --timeout-ms 25000`:
+  passed final claim gate with 0 follow-up requests and 0 destination triage
+  artifacts.
+- `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`:
+  19 tests passed after excluding broad page-shell destination selectors from
+  maintained `extract_destinations` export.
+- `npm run verify`: passed after the broad destination fallback promotion gate
+  with build, 32 test files / 231 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npm run build`: passed after adding destination child
+  query/evidence script-family diagnostics.
+- `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  25 tests passed after adding `query_script_mismatch_possible` diagnostics and
+  workflow coverage for a Latin query reaching Hangul child evidence.
+- `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  27 tests passed after adding map path-query extraction, avoiding Google Maps
+  `authuser=0` login-surface false positives, and keeping same-host map place
+  URLs out of `portal_shell` reason-code counts.
+- `node .\dist\cli.js evidence-run --url "https://www.google.com/maps/search/seongsu%20cafe" --source-navigation --source-navigation-actions-file <google-maps-actions.json> --no-frames --wait-ms 1000 --timeout-ms 25000`:
+  final claim gate OK after the Google Maps destination QA hardening, with one
+  child place follow-up, `matchedQueryTokens: ["seongsu"]`, script-family
+  diagnostics, one proposal-only Instagram depth-2 candidate, and no
+  login/private or portal-shell reason-code false positives.
+- `node .\dist\cli.js evidence-run --url "https://map.kakao.com/?q=seongsu+cafe" --source-navigation --source-navigation-actions-file <kakao-map-actions.json> --no-frames --wait-ms 1000 --timeout-ms 25000`:
+  final claim gate OK; the child follow-up ran but was downgraded as off-topic
+  with `query_script_mismatch_possible`, `unattemptedFallbackCount`, and
+  `retryRecommended` diagnostics.
+- `node .\dist\cli.js evidence-run --url "https://map.naver.com/p/search/seongsu%20cafe" --source-navigation --source-navigation-actions-file <naver-map-actions.json> --no-frames --wait-ms 1000 --timeout-ms 25000`:
+  final claim gate OK; the current maintained Naver Map action file remained
+  capture-only with no extracted child candidates.
+- `npm run verify`: passed after the natural-deepening documentation and map QA
+  handoff with build, 32 test files / 237 tests, local smoke, public web smoke,
+  media smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-navigation-executor.test.ts`: 26 tests passed
+  after changing destination extraction to prefer unique normalized URLs before
+  duplicate hash variants and record duplicate/omitted-duplicate metadata.
+- `npx vitest run tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  27 tests passed after the unique-first destination extraction change.
+- `npm run build`: passed after the unique-first destination extraction change.
+- `npm run verify`: passed after the unique-first destination extraction and
+  extraction-metadata change
+  with build, 32 test files / 238 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/destination-triage.test.ts`: 15 tests passed after
+  adding map-provider boilerplate filtering for Naver/Kakao/Google map/place
+  contexts.
+- `npx vitest run tests/evidence-runner.test.ts tests/source-navigation-executor.test.ts`:
+  40 tests passed after the map-provider boilerplate filtering pass.
+- `npx vitest run tests/source-navigation-recipes.test.ts`: 10 tests passed
+  after the map-provider boilerplate filtering pass.
+- `npm run verify`: passed after the map-provider boilerplate filtering pass
+  with build, 32 test files / 240 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `npx vitest run tests/source-navigation-recipe-catalog.test.ts tests/source-navigation-recipes.test.ts`:
+  21 tests passed after the scoped Naver Place selector promotion pass.
+- `npx vitest run tests/source-navigation-promotion.test.ts tests/source-coverage-readiness.test.ts tests/source-coverage-calibration-loop.test.ts`:
+  10 tests passed after the scoped Naver Place selector promotion pass.
+- `npx vitest run tests/source-navigation-calibration.test.ts tests/source-navigation-calibration-batch.test.ts`:
+  15 tests passed after the scoped Naver Place selector promotion pass.
+- `npm run verify`: passed after the scoped Naver Place selector promotion pass
+  with build, 32 test files / 242 tests, local smoke, public web smoke, media
+  smoke, proxy smoke, and 0 npm audit vulnerabilities.
+- `node .\dist\cli.js evidence-run --url "https://map.naver.com/p/search/%EC%84%B1%EC%88%98%20%EC%B9%B4%ED%8E%98" --source-navigation --source-navigation-actions-file <latest-naver-map-actions.json> --no-frames --wait-ms 3000 --timeout-ms 25000`:
+  final claim gate OK with 187 artifacts, 4 claims, 4 citations, 120
+  source-navigation action artifacts, 0 follow-up requests, 0 destination
+  candidates, and `destinationTriage.status: "no_candidates"`. This confirms
+  Naver Map is still capture-ready but not destination-extraction ready for
+  natural deepening.
+- `npm run build`,
+  `npx vitest run tests/source-navigation-executor.test.ts`, and
+  `npx vitest run tests/source-navigation-executor.test.ts tests/destination-triage.test.ts tests/evidence-runner.test.ts`:
+  passed after the SPA-style non-anchor destination attribute extraction pass.
+  Final `npm run verify` also passed with build, 32 test files / 243 tests,
+  local smoke, public web smoke, media smoke, proxy smoke, and 0 npm audit
+  vulnerabilities.

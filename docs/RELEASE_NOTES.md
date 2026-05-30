@@ -1,0 +1,181 @@
+# Release Notes
+
+This file summarizes version-level and pass-level progress. The authoritative
+chronological detail remains in `docs/DEVELOPMENT_HISTORY.md`.
+
+## Current Version
+
+Package version: `0.3.0`
+
+Current state: local evidence-first BrowserContext farm with MCP, CLI, HTTP
+queue, source coverage registry, source navigation, calibration/promotion,
+destination triage/deepening, OCR, official API readiness, and browser-visible
+obstruction handling.
+
+## Version / Pass Scale
+
+The project has been developed through many small implementation passes rather
+than one release per feature. Use these rough size categories when explaining
+update size:
+
+- Small pass: 1-3 files, focused schema/test/docs change.
+- Medium pass: 4-10 files, one workflow or module behavior.
+- Large pass: 10+ files, cross-module workflow, CLI/MCP/HTTP/docs/tests.
+- Release-level update: multiple passes that change the product surface.
+
+## Major Release-Level Progress
+
+### Split-Out Initial Repo
+
+Baseline:
+
+- independent repo split from the Japan travel planning workspace
+- package, build, tests, MCP registration, and CLI baseline established
+- initial BrowserContext leasing and capture workflow
+
+### Evidence Workflow And Claim Gate
+
+Scope:
+
+- page text, HTML, screenshot, metadata, media, transcript, OCR, official API,
+  and obstruction evidence kinds
+- typed claims, verification levels, and final claim/citation gate
+- final reports fail when claims are missing or uncited
+- visual/video claims require timestamped frame screenshots in final mode
+
+Scale: large release-level update.
+
+### OCR And Dense Sampling
+
+Scope:
+
+- optional `tesseract.js` peer dependency
+- OCR metadata with timestamp, confidence, word boxes, script/profile flags
+- OCR-hit dense sampling
+- engine error and timeout artifacts
+- deterministic OCR text profiles for price, discounts, maps, travel/commerce,
+  ratings, distance, hours, contact/address, reservation, menu, and commerce
+  policy text
+
+Scale: large release-level update.
+
+Current caveat: live non-English OCR and real-site screenshot calibration remain
+pending.
+
+### Official API Readiness
+
+Scope:
+
+- YouTube, Instagram, and TikTok official API readiness scaffolding
+- credentials-gated collection with env var references
+- credential redaction
+- permission, ownership, quota, rate-limit, not-found, missing-media-ID, and
+  readiness diagnostics
+
+Scale: medium-to-large update.
+
+Current caveat: real-account validation requires explicit credentials.
+
+### Information Source Coverage Registry
+
+Scope:
+
+- source categories for search, social, community, content, news, review,
+  map/local, marketplace, knowledge DB, messenger/private, recommendation, and
+  AI-agent services
+- locale/source top-slot coverage and support tiers
+- source coverage readiness and calibration-loop planning
+
+Scale: large release-level update.
+
+### Portal Navigation And Safe Execution
+
+Scope:
+
+- source navigation plans
+- explicit safe recipe execution
+- read-only selector calibration
+- recipe catalog and promotion
+- batch promotion and readiness review
+- provider fixtures for search, maps, commerce, travel, community/news, and
+  video/social surfaces
+
+Scale: large release-level update.
+
+### Destination Extraction, Triage, Follow-Up, And Deepening
+
+Scope:
+
+- anchor and SPA destination extraction
+- bounded destination candidates and triage
+- redirect resolution
+- scoring profiles, reason codes, query intent, visible metadata, and
+  cross-script aliases
+- one-depth child evidence runs
+- per-domain and concurrency budgets
+- fallback follow-up advice
+- proposal-only depth-2 candidates
+- explicit opt-in depth-2 execution
+- blocked-child recovery planning
+
+Scale: large release-level update.
+
+### Real-Site Platform Calibration
+
+Scope so far:
+
+- Google Search/Maps, Naver Search/Map/Blog/Cafe, KakaoMap, Daum/Kakao, Bing,
+  Yahoo, Yahoo Japan, YouTube, TikTok fixture coverage, Amazon, Coupang, Naver
+  Shopping, Gmarket, 11st, Trip.com, Agoda, Booking.com, Expedia, Reuters,
+  Yelp, Reddit/Hacker News style community/news/review surfaces
+- maintained export discipline for broad versus narrow selectors
+- repeated calibration handoffs and selector hints
+
+Scale: large release-level update.
+
+Current caveat: broader real-site calibration is still ongoing, especially for
+authenticated, bot-sensitive, or highly dynamic pages.
+
+### Scene-Change Tuning
+
+Scope:
+
+- visual fingerprints for sampled frames
+- scene-change dense sampling
+- threshold diagnostics
+- distribution diagnostics
+- sampling-density diagnostics
+- threshold recommendations
+- separate scene-change hit cap through `sceneChangeMaxHits` /
+  `--dense-scene-max-hits`
+
+Scale: medium update.
+
+Current caveat: final full `npm run verify` after the latest hit-cap pass was
+interrupted and must be rerun.
+
+## Current Verification Snapshot
+
+Last completed full verification:
+
+- after OCR CTA/policy text-profile pass
+- `npm run verify` passed
+- build passed
+- 34 test files / 351 tests passed
+- local smoke passed
+- public web smoke passed
+- media smoke passed
+- proxy smoke passed
+- 0 npm audit vulnerabilities
+
+Latest focused verification:
+
+- after scene-change hit-cap pass
+- `npx vitest run tests/frame-sampler.test.ts tests/evidence-runner.test.ts tests/mcp-server.test.ts --testTimeout 60000`
+- 3 files / 36 tests passed
+- `npm run build` passed
+
+Pending:
+
+- rerun full `npm run verify` after scene-change hit-cap pass
+
