@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { BrowserPool } from "./browser-pool.js";
@@ -25,6 +26,7 @@ import {
   ReadReportInputSchema,
   ListArtifactsInputSchema,
   RunClaimGateInputSchema,
+  ReadArtifactInputSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
   type CaptureInput,
@@ -43,7 +45,8 @@ import {
   type EvidenceRunInput,
   type ReadReportInput,
   type ListArtifactsInput,
-  type RunClaimGateInput
+  type RunClaimGateInput,
+  type ReadArtifactInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -198,6 +201,58 @@ export class FarmService {
     return runClaimGate(parsed.runDir, options);
   }
 
+  // Read one registered artifact's bytes, RE-HASHING on read so a parallel agent
+  // can both see the evidence and detect tampering (recordedSha256 vs recomputed).
+  async readArtifact(input: ReadArtifactInput) {
+    const parsed = ReadArtifactInputSchema.parse(input);
+    const text = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
+    const rows = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          return undefined;
+        }
+      })
+      .filter((row): row is Record<string, unknown> => row !== undefined);
+    const row = rows.find((candidate) =>
+      (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) ||
+      (parsed.path !== undefined && candidate.path === parsed.path));
+    if (row === undefined || typeof row.path !== "string") {
+      return { ok: false as const, found: false as const, runDir: parsed.runDir };
+    }
+    let bytes: Buffer;
+    try {
+      bytes = await readFile(join(parsed.runDir, row.path));
+    } catch {
+      return { ok: false as const, found: true as const, missingOnDisk: true as const, path: row.path };
+    }
+    const recomputedSha256 = createHash("sha256").update(bytes).digest("hex");
+    const recordedSha256 = typeof row.sha256 === "string" ? row.sha256 : undefined;
+    const tampered = recordedSha256 !== undefined && recordedSha256 !== recomputedSha256;
+    const evidenceKind = typeof row.evidence_kind === "string" ? row.evidence_kind : undefined;
+    const asText = parsed.asText ?? isTextLikeEvidenceKind(evidenceKind);
+    const slice = bytes.subarray(0, parsed.maxBytes);
+    return {
+      ok: !tampered,
+      found: true as const,
+      artifactId: typeof row.artifact_id === "string" ? row.artifact_id : undefined,
+      path: row.path,
+      evidenceKind,
+      sourceUrl: typeof row.source_url === "string" ? row.source_url : undefined,
+      bytes: bytes.byteLength,
+      recordedSha256,
+      recomputedSha256,
+      tampered,
+      encoding: asText ? ("utf8" as const) : ("base64" as const),
+      truncated: bytes.byteLength > slice.byteLength,
+      content: asText ? slice.toString("utf8") : slice.toString("base64")
+    };
+  }
+
   async evidenceRun(input: EvidenceRunInput) {
     const parsed = EvidenceRunInputSchema.parse(input);
     if (parsed.headed) {
@@ -260,4 +315,8 @@ export class FarmService {
   shutdown() {
     return this.browserPool.shutdown();
   }
+}
+
+function isTextLikeEvidenceKind(kind: string | undefined): boolean {
+  return kind !== "page_screenshot" && kind !== "frame_screenshot" && kind !== "media";
 }

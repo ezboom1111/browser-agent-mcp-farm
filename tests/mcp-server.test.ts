@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { ArtifactWriter } from "../src/artifact-writer.js";
 import type { FarmService } from "../src/farm-service.js";
 import { createMcpServer } from "../src/mcp-server.js";
 
@@ -172,6 +173,40 @@ describe("createMcpServer", () => {
     const result = await tool.handler({ runDir: dir, mode: "final" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("claim count below required minimum");
+  });
+
+  it("farm_read_artifact reads bytes, re-hashes, and flags tampering", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-mcp-readart-"));
+    dirs.push(dir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir: dir,
+      sourceUrl: "https://example.com/",
+      contextToken: "ctx",
+      pageId: "p",
+      captureId: "c",
+      text: "grounded evidence text"
+    });
+    const textRecord = records.find((record) => record.evidence_kind === "page_text");
+    if (!textRecord) {
+      throw new Error("expected a page_text artifact");
+    }
+
+    const tools = registeredTools(createMcpServer());
+    const okResult = await tools.farm_read_artifact.handler({ runDir: dir, artifactId: textRecord.artifact_id });
+    const ok = JSON.parse(okResult.content[0].text) as { found: boolean; tampered: boolean; content: string; recordedSha256: string; recomputedSha256: string };
+    expect(okResult.isError).toBeUndefined();
+    expect(ok.found).toBe(true);
+    expect(ok.tampered).toBe(false);
+    expect(ok.content).toContain("grounded evidence text");
+    expect(ok.recomputedSha256).toBe(ok.recordedSha256);
+
+    // Mutate the on-disk bytes after registration; the read must detect it.
+    await writeFile(join(dir, textRecord.path), "tampered bytes", "utf8");
+    const tamperedResult = await tools.farm_read_artifact.handler({ runDir: dir, path: textRecord.path });
+    const tampered = JSON.parse(tamperedResult.content[0].text) as { tampered: boolean };
+    expect(tampered.tampered).toBe(true);
+    expect(tamperedResult.isError).toBe(true);
   });
 });
 

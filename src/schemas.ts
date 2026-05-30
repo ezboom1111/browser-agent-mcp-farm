@@ -34,6 +34,7 @@ export const EvidenceKindSchema = z.enum([
 ]);
 export const VerificationLevelSchema = z.enum([
   "verified",
+  "grounded",
   "browser_visible",
   "official_api",
   "transcript_cue",
@@ -110,6 +111,37 @@ export const FingerprintSchema = z.object({
   }).optional(),
   colorScheme: z.enum(["light", "dark", "no-preference"]).optional()
 });
+
+// Claim grounding (master-plan flagship, slice 1). A claim's anchor says WHERE in
+// the cited artifact it is grounded; the claim gate verifies it against the
+// artifact bytes in grounding mode. The taxonomy lets paraphrase/aggregation
+// claims be graded by supporting tokens rather than naive whole-sentence match.
+export const ClaimTaxonomySchema = z.enum(["quote", "derived", "aggregated"]);
+
+export const ClaimAnchorSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("text_span"),
+    quote: z.string().min(1).describe("Exact text the claim is grounded on; must appear in the cited text/HTML/OCR artifact."),
+    normalizedTokens: z.array(z.string().min(1)).max(200).optional().describe("Optional normalized supporting tokens for derived/aggregated claims.")
+  }),
+  z.object({
+    type: z.literal("ocr_bbox"),
+    wordIndexes: z.array(z.number().int().nonnegative()).max(500).optional(),
+    bbox: OcrBoundingBoxSchema.optional()
+  }),
+  z.object({
+    type: z.literal("transcript_cue"),
+    cueIndex: z.number().int().nonnegative().optional(),
+    timeRangeSec: z.object({
+      start: z.number().nonnegative().max(86_400),
+      end: z.number().nonnegative().max(86_400)
+    }).optional()
+  }),
+  z.object({
+    type: z.literal("frame"),
+    timestampSec: z.number().nonnegative().max(86_400)
+  })
+]);
 
 export const AcquireContextInputSchema = z.object({
   agentId: z.string().min(1).describe("ID of the calling agent; recorded as the lease owner and required by every later tool call."),
@@ -407,6 +439,16 @@ export const RunClaimGateInputSchema = z.object({
   minClaims: z.number().int().nonnegative().max(1000).optional().describe("Minimum number of claims required (defaults to 1 in final mode, 0 in smoke mode).")
 });
 
+export const ReadArtifactInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory (the `runDir` from farm_evidence_run) containing the artifact ledger."),
+  artifactId: z.string().min(1).optional().describe("artifact_id to read (from farm_list_artifacts). Provide this OR `path`."),
+  path: z.string().min(1).optional().describe("The artifact's ledger `path` relative to runDir. Provide this OR `artifactId`."),
+  maxBytes: z.number().int().positive().max(5_000_000).default(1_000_000).describe("Maximum bytes to return; content is truncated past this."),
+  asText: z.boolean().optional().describe("Force text (utf8) vs binary (base64). Default: text for text-like evidence kinds, base64 for screenshots/media.")
+}).refine((value) => value.artifactId !== undefined || value.path !== undefined, {
+  message: "provide artifactId or path"
+});
+
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
 export type HeartbeatInput = z.input<typeof HeartbeatInputSchema>;
 export type OpenPageInput = z.input<typeof OpenPageInputSchema>;
@@ -436,3 +478,6 @@ export type NormalizedEvidenceRunInput = z.output<typeof EvidenceRunInputSchema>
 export type ReadReportInput = z.input<typeof ReadReportInputSchema>;
 export type ListArtifactsInput = z.input<typeof ListArtifactsInputSchema>;
 export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
+export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
+export type ClaimAnchor = z.infer<typeof ClaimAnchorSchema>;
+export type ClaimTaxonomy = z.infer<typeof ClaimTaxonomySchema>;

@@ -24,7 +24,8 @@ import {
   WaitInputSchema,
   ReadReportInputSchema,
   ListArtifactsInputSchema,
-  RunClaimGateInputSchema
+  RunClaimGateInputSchema,
+  ReadArtifactInputSchema
 } from "./schemas.js";
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
@@ -41,6 +42,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_read_report: "Read back the Markdown report a prior farm_evidence_run produced, given its reportPath. Read-only; no browser.",
   farm_list_artifacts: "List the artifact ledger (artifacts.jsonl) for a prior run's runDir, optionally filtered by evidence kind. Read-only; no browser.",
   farm_run_claim_gate: "Re-run the claim gate over an existing run's runDir to validate that claims cite registered, hash-verified artifacts. Read-only; the result is isError when the gate fails.",
+  farm_read_artifact: "Read one registered artifact's bytes (text or base64) by artifactId or path, RE-HASHING on read to detect tampering (recordedSha256 vs recomputed). Lets a parallel agent SEE another run's evidence and verify it. Read-only; isError if not found or tampered.",
   farm_close_page: "Close a page in a leased context when finished with it.",
   farm_click: "Guarded click on a selector. Requires a read-write lease; payment/booking/account-changing controls are refused.",
   farm_fill: "Guarded fill of a form field. Requires a read-write lease.",
@@ -70,6 +72,7 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_read_report", ReadReportInputSchema, (input) => service.readReport(input));
   registerJsonTool(server, "farm_list_artifacts", ListArtifactsInputSchema, (input) => service.listArtifacts(input));
   registerJsonTool(server, "farm_run_claim_gate", RunClaimGateInputSchema, (input) => service.runClaimGate(input), (result) => resultHasFailedClaimGate(result));
+  registerJsonTool(server, "farm_read_artifact", ReadArtifactInputSchema, (input) => service.readArtifact(input), (result) => resultHasFailedClaimGate(result));
   registerJsonTool(server, "farm_close_page", ClosePageInputSchema, (input) => service.closePage(input));
   registerJsonTool(server, "farm_click", ClickInputSchema, (input) => service.click(input));
   registerJsonTool(server, "farm_fill", FillInputSchema, (input) => service.fill(input));
