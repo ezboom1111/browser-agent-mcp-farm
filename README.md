@@ -824,6 +824,35 @@ fingerprint when the page allows canvas reads. It also records available
 server BrowserPool lifecycle, so visible headed debugging remains a CLI-only
 option.
 
+## Trust, Verification & Structured Tools
+
+Read-only tools to inspect and re-verify evidence (no browser):
+
+- `farm_list_runs` — discover prior run directories (artifact/claim counts).
+- `farm_read_report` — read a run's Markdown report by `reportPath`.
+- `farm_list_artifacts` — list a run's artifact ledger (optional `evidenceKind`).
+- `farm_read_artifact` — read one artifact's bytes (text/base64), re-hashing on
+  read to flag tampering.
+- `farm_run_claim_gate` — re-validate a run's claims against its artifacts.
+- `farm_capabilities` — server identity, evidence kinds, non-goals, optional deps.
+
+Cite-or-fail authoring (so the gate covers your own answer, not just runner output):
+
+- `farm_register_evidence` — register the bytes you saw as a hash-verified artifact.
+- `farm_add_claim` — author a claim citing an artifact with an `anchor`; the gate
+  rejects a claim whose quoted text is not present in the cited bytes.
+
+Portable attestation and structured derivatives:
+
+- `farm_export_bundle` / `farm_verify_bundle` — a Merkle-rooted (optionally
+  Ed25519-signed) manifest a second agent can re-verify offline; also available as
+  the `export-bundle` / `verify-bundle` CLI commands.
+- `farm_extract_structured` — deterministic JSON-LD / Open Graph / typed
+  price+rating extraction from captured HTML (a *site claim* — cross-check it).
+
+See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for exactly what the claim gate
+and the bundle prove and do not prove.
+
 The payment guard blocks write actions on URLs, selectors, and target element
 text/attributes containing payment-like terms such as `checkout`, `payment`,
 `billing`, `credit-card`, `card number`, `cvv`, `pay now`, or `결제`.
