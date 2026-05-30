@@ -312,6 +312,27 @@ describe("createMcpServer", () => {
     const reVerified = await tools.farm_verify_bundle.handler({ runDir: dir, manifest: exported.manifest });
     expect(reVerified.isError).toBe(true);
   });
+
+  it("farm_extract_structured can load HTML from a run artifact", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-mcp-struct-run-"));
+    dirs.push(dir);
+    const writer = new ArtifactWriter();
+    const records = await writer.writeCaptureBundle({
+      runDir: dir, sourceUrl: "https://example.com/", contextToken: "c", pageId: "p", captureId: "x",
+      html: '<script type="application/ld+json">{"@type":"Place","name":"Acme"}</script>'
+    });
+    const htmlRecord = records.find((record) => record.evidence_kind === "page_html");
+    if (!htmlRecord) {
+      throw new Error("expected a page_html artifact");
+    }
+
+    const tools = registeredTools(createMcpServer());
+    const res = JSON.parse((await tools.farm_extract_structured.handler({ runDir: dir, artifactId: htmlRecord.artifact_id })).content[0].text) as {
+      jsonLd: unknown[]; summary: { name?: string };
+    };
+    expect(res.jsonLd.length).toBe(1);
+    expect(res.summary.name).toBe("Acme");
+  });
 });
 
 function registeredTools(server: unknown): Record<string, { description?: string; handler: (input: unknown) => Promise<{ isError?: boolean; content: Array<{ text: string }> }> }> {

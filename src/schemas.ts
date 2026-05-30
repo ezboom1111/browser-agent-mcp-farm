@@ -480,7 +480,12 @@ export const ListRunsInputSchema = z.object({
 });
 
 export const ExtractStructuredInputSchema = z.object({
-  html: z.string().min(1).describe("Captured HTML to parse for deterministic structured derivatives (JSON-LD, Open Graph, Twitter cards, canonical, title). Get it from farm_read_artifact on a page_html artifact.")
+  html: z.string().min(1).optional().describe("Captured HTML to parse. Provide this, OR runDir + artifactId/path to load a page_html artifact."),
+  runDir: z.string().min(1).optional().describe("Run directory holding the HTML artifact (alternative to passing html)."),
+  artifactId: z.string().min(1).optional().describe("artifact_id of a page_html artifact in runDir to parse."),
+  path: z.string().min(1).optional().describe("Ledger path of the HTML artifact (alternative to artifactId).")
+}).refine((value) => value.html !== undefined || (value.runDir !== undefined && (value.artifactId !== undefined || value.path !== undefined)), {
+  message: "provide html, or runDir + artifactId/path"
 });
 
 export const ExportBundleInputSchema = z.object({

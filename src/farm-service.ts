@@ -387,11 +387,23 @@ export class FarmService {
 
   // Deterministic structured-data extraction over captured HTML (JSON-LD, Open
   // Graph, Twitter cards, canonical, title). Publisher markup is a site claim.
-  extractStructured(input: ExtractStructuredInput) {
+  async extractStructured(input: ExtractStructuredInput) {
     const parsed = ExtractStructuredInputSchema.parse(input);
+    let html = parsed.html;
+    if (html === undefined && parsed.runDir !== undefined) {
+      const row = (await this.readArtifactRows(parsed.runDir)).find((candidate) =>
+        (parsed.artifactId !== undefined && candidate.artifact_id === parsed.artifactId) ||
+        (parsed.path !== undefined && candidate.path === parsed.path));
+      if (row !== undefined && typeof row.path === "string") {
+        html = await readFile(join(parsed.runDir, row.path), "utf8").catch(() => undefined);
+      }
+    }
+    if (html === undefined) {
+      return { ok: false as const, error: "could not load HTML (provide html, or a valid runDir + artifactId/path)" };
+    }
     return {
       ok: true as const,
-      ...extractStructuredData(parsed.html),
+      ...extractStructuredData(html),
       note: "Publisher markup (JSON-LD / Open Graph) is a site claim, not ground truth; cross-check against DOM/OCR."
     };
   }
