@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { codexServerBlock, registerCodex } from "../src/registration.js";
+import { codexServerBlock, registerClaudeSkill, registerCodex } from "../src/registration.js";
 
 let dirs: string[] = [];
 
@@ -62,5 +62,20 @@ describe("registerCodex", () => {
     expect(occurrences).toBe(1);
     // The pre-existing config must be preserved.
     expect(content).toContain("[existing]");
+  });
+});
+
+describe("registerClaudeSkill", () => {
+  it("installs the in-repo skill into a skills root", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-skill-"));
+    dirs.push(dir);
+
+    const result = await registerClaudeSkill(dir);
+    expect(result.ok).toBe(true);
+
+    const installed = join(dir, "browser-agent-mcp-farm", "SKILL.md");
+    expect(existsSync(installed)).toBe(true);
+    const content = await readFile(installed, "utf8");
+    expect(content).toContain("name: browser-agent-mcp-farm");
   });
 });

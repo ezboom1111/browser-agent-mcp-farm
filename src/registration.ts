@@ -91,11 +91,40 @@ export async function registerClaude(): Promise<RegistrationResult> {
 }
 
 export async function registerAll(): Promise<RegistrationResult[]> {
-  return [await registerCodex(), await registerClaude()];
+  return [await registerCodex(), await registerClaude(), await registerClaudeSkill()];
+}
+
+// Install the in-repo Claude skill (skills/browser-agent-mcp-farm/SKILL.md) so a
+// Claude agent auto-discovers and routes to the farm, not just the raw MCP tools.
+export async function registerClaudeSkill(skillsRoot = join(homedir(), ".claude", "skills")): Promise<RegistrationResult> {
+  const source = skillSourcePath();
+  if (!existsSync(source)) {
+    return { ok: false, target: "claude", message: `Skill source not found at ${source}.` };
+  }
+  const destDir = join(skillsRoot, SERVER_NAME);
+  const dest = join(destDir, "SKILL.md");
+  const backupPath = existsSync(dest) ? await backupFile(dest) : undefined;
+  await mkdir(destDir, { recursive: true });
+  await copyFile(source, dest);
+
+  const result: RegistrationResult = {
+    ok: true,
+    target: "claude",
+    configPath: dest,
+    message: `Installed ${SERVER_NAME} skill into ${dest}.`
+  };
+  if (backupPath !== undefined) {
+    result.backupPath = backupPath;
+  }
+  return result;
 }
 
 export function distCliPath(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "cli.js");
+}
+
+export function skillSourcePath(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "..", "skills", SERVER_NAME, "SKILL.md");
 }
 
 async function backupFile(path: string): Promise<string> {
