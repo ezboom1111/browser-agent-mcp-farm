@@ -1,0 +1,13 @@
+# Normalize all text to LF in the repo AND on checkout, so the Biome formatter
+# (lineEnding: lf) stays consistent across Windows/macOS/Linux regardless of git's
+# core.autocrlf. Binary assets are left untouched.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.evb binary
+*.tgz binary
