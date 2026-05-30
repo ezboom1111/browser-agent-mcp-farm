@@ -4,6 +4,8 @@
   "private": false,
   "type": "module",
   "description": "Playwright BrowserContext farm exposed through MCP tools.",
+  "license": "Apache-2.0",
+  "author": "이지범 <cheonhorollerbounce@gmail.com>",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -24,6 +26,7 @@
   "files": [
     "dist",
     "skills",
+    "LICENSE",
     "README.md",
     "CHANGELOG.md",
     "HOST-ADAPTERS.md",
@@ -56,10 +59,11 @@
     "smoke:web": "node ./dist/cli.js smoke-web --timeout-ms 10000",
     "smoke:media": "node ./dist/cli.js smoke-media",
     "smoke:proxy": "node ./dist/cli.js smoke-proxy",
+    "test:tarball": "node scripts/test-tarball.mjs",
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",
-    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status && npm run scorecard"
+    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm run test:tarball && npm audit --audit-level=moderate && npm run status && npm run scorecard"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
