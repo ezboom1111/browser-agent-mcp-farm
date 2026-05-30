@@ -8,12 +8,12 @@
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.3.0 |
 | Branch | `claude/handoff-baseline` |
-| Commit | `09fd1e3` |
+| Commit | `1040aed` |
 | Working tree | dirty (1 files) |
-| Generated | 2026-05-30T07:53:37.479Z |
+| Generated | 2026-05-30T08:03:02.817Z |
 | Verify gate | **PASS** (build + tests + 4 smokes + npm audit) |
-| Tests | 465 tests in 48 files (465 passed, 0 failed) |
-| Coverage | lines 75.67% · statements 75.78% · functions 84.29% · branches 69.42% (ratcheting floor toward 80%) |
+| Tests | 473 tests in 48 files (473 passed, 0 failed) |
+| Coverage | lines 75.7% · statements 75.82% · functions 84.29% · branches 69.45% (ratcheting floor toward 80%) |
 
 The verify gate is:
 `npm run build && npm run test:ci && smoke + smoke:web + smoke:media + smoke:proxy && npm audit && npm run status`.

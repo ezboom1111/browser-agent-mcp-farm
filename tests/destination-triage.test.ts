@@ -4,10 +4,80 @@ import {
   buildDestinationDeepeningCandidates,
   buildDestinationDeepeningProposals,
   buildDestinationTriage,
+  classifyDestinationChildUsefulness,
   classifyDestinationProbeCandidate,
+  matchingDestinationQueryTokens,
   selectedDestinationRequests,
-  summarizeDestinationTriageResult
+  summarizeDestinationTriageResult,
+  type DestinationChildEvidenceSummary,
+  type DestinationChildRunResult
 } from "../src/destination-triage.js";
+
+function childEvidence(overrides: Partial<DestinationChildEvidenceSummary> = {}): DestinationChildEvidenceSummary {
+  return {
+    artifactCount: 5,
+    claimCount: 2,
+    browserCaptureRecords: 1,
+    obstructionCount: 0,
+    pageTextLength: 200,
+    queryOverlapTokenCount: 3,
+    matchedQueryTokens: ["coffee"],
+    deeperCandidateCount: 0,
+    evidenceSignals: [],
+    evidenceWarnings: [],
+    ...overrides
+  };
+}
+
+function okResult(evidence: DestinationChildEvidenceSummary | undefined): DestinationChildRunResult {
+  return { actionKey: "a", url: "https://example.com/", status: "ok", ...(evidence === undefined ? {} : { childEvidence: evidence }) };
+}
+
+function errResult(error: string): DestinationChildRunResult {
+  return { actionKey: "a", url: "https://example.com/", status: "error", error };
+}
+
+describe("classifyDestinationChildUsefulness", () => {
+  it("treats a missing result or missing evidence as useful (benefit of the doubt)", () => {
+    expect(classifyDestinationChildUsefulness(undefined, "coffee")).toBe("useful");
+    expect(classifyDestinationChildUsefulness(okResult(undefined), "coffee")).toBe("useful");
+  });
+
+  it("classifies good evidence as useful", () => {
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence()), "coffee")).toBe("useful");
+  });
+
+  it("flags obstructions as blocked", () => {
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ obstructionCount: 1 })), "coffee")).toBe("blocked");
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ evidenceWarnings: ["browser_obstruction_detected"] })), "coffee")).toBe("blocked");
+  });
+
+  it("flags empty captures/text/claims as low_value", () => {
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ claimCount: 0 })), "coffee")).toBe("low_value");
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ browserCaptureRecords: 0 })), "coffee")).toBe("low_value");
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ pageTextLength: 0 })), "coffee")).toBe("low_value");
+  });
+
+  it("flags zero query overlap as off_topic", () => {
+    expect(classifyDestinationChildUsefulness(okResult(childEvidence({ queryOverlapTokenCount: 0 })), "coffee")).toBe("off_topic");
+  });
+
+  it("maps error surfaces to paywalled / private / blocked", () => {
+    expect(classifyDestinationChildUsefulness(errResult("subscribe to read this paywalled article"), "x")).toBe("paywalled");
+    expect(classifyDestinationChildUsefulness(errResult("please sign in to your account to continue"), "x")).toBe("private");
+    expect(classifyDestinationChildUsefulness(errResult("navigation timeout"), "x")).toBe("blocked");
+  });
+});
+
+describe("matchingDestinationQueryTokens", () => {
+  it("returns the overlapping query tokens", () => {
+    expect(matchingDestinationQueryTokens("coffee shop", "the best coffee in town")).toEqual(["coffee"]);
+  });
+
+  it("returns nothing when there is no overlap", () => {
+    expect(matchingDestinationQueryTokens("airline tickets", "vintage guitar amplifier")).toEqual([]);
+  });
+});
 
 describe("buildDestinationTriage", () => {
   it("selects useful query-matching destinations over low-value navigation links", () => {
