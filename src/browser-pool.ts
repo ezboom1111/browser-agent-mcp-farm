@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page, type Request, type Response } from "playwright";
+import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Frame, type Page, type Request, type Response } from "playwright";
+import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord, type CaptureBundleInput, type MediaArtifactInput } from "./artifact-writer.js";
 import { FarmError } from "./farm-error.js";
 import {
@@ -10,6 +11,7 @@ import {
   frameCaptureId,
   type FrameSample,
   type FrameSampleRunResult,
+  type FrameVisualFingerprint,
   type MediaElementSnapshot,
   type SeekResult,
   type SerializedCue
@@ -21,6 +23,31 @@ const MAX_MEDIA_ARTIFACTS_PER_PAGE = 40;
 const MAX_SINGLE_MEDIA_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_MEDIA_BYTES_PER_PAGE = 100 * 1024 * 1024;
 const MEDIA_DRAIN_TIMEOUT_MS = 2_000;
+const DEFAULT_ACTION_TIMEOUT_MS = 10_000;
+const DESTINATION_ATTRIBUTE_NAMES = [
+  "data-href",
+  "data-url",
+  "data-link",
+  "data-link-url",
+  "data-target-url",
+  "data-destination-url",
+  "data-original-url",
+  "data-canonical-url",
+  "data-place-url",
+  "data-source-url",
+  "data-item-url",
+  "data-product-url",
+  "data-travel-url",
+  "data-hotel-url",
+  "data-offer-url",
+  "data-review-url",
+  "data-seller-url",
+  "data-brand-url",
+  "data-profile-url",
+  "data-channel-url",
+  "data-media-url"
+] as const;
+const DESTINATION_ATTRIBUTE_SELECTOR = DESTINATION_ATTRIBUTE_NAMES.map((name) => `[${name}]`).join(",");
 
 interface ContextState {
   context: BrowserContext;
@@ -57,7 +84,111 @@ interface MediaCaptureEvent {
 export interface BrowserPoolOptions {
   navigationTimeoutMs?: number;
   launchHeadless?: boolean;
+  browserChannel?: string;
   artifactWriter?: ArtifactWriter;
+}
+
+export interface BrowserActionOptions {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+export interface BrowserLinkTarget {
+  index: number;
+  url: string;
+  text: string;
+  elementIndex: number;
+  source?: "anchor" | "attribute";
+  attributeName?: string;
+  frameIndex?: number;
+  frameUrl?: string;
+  frameName?: string;
+}
+
+export interface BrowserLinkTargetsResult {
+  ok: true;
+  url: string;
+  links: BrowserLinkTarget[];
+  rawCandidateCount: number;
+  usableCandidateCount: number;
+  uniqueCandidateCount: number;
+  duplicateCandidateCount: number;
+  omittedDuplicateCount: number;
+  anchorCandidateCount: number;
+  attributeCandidateCount: number;
+  frameCount?: number;
+  matchedFrameCount?: number;
+}
+
+export interface BrowserClientStateFrame {
+  frameIndex: number;
+  frameUrl: string;
+  frameName?: string;
+  found: boolean;
+  truncated: boolean;
+  json?: string;
+  error?: string;
+}
+
+export interface BrowserClientStateResult {
+  ok: true;
+  url: string;
+  propertyName: string;
+  frameCount: number;
+  matchedFrameCount: number;
+  frames: BrowserClientStateFrame[];
+}
+
+export interface BrowserSelectorInspectionMatch {
+  index: number;
+  tagName: string;
+  visible: boolean;
+  textSnippet: string;
+  id?: string;
+  role?: string;
+  ariaLabel?: string;
+  name?: string;
+  href?: string;
+  frameIndex?: number;
+  frameUrl?: string;
+  frameName?: string;
+}
+
+export interface BrowserSelectorInspection {
+  ok: true;
+  url: string;
+  selector: string;
+  matchCount: number;
+  inspectedCount: number;
+  visibleCount: number;
+  firstTextSnippet?: string;
+  firstVisibleTextSnippet?: string;
+  frameCount?: number;
+  matchedFrameCount?: number;
+  visibleFrameCount?: number;
+  matches: BrowserSelectorInspectionMatch[];
+}
+
+export type BrowserOverlayDismissalKind =
+  | "cookie_consent"
+  | "app_banner"
+  | "newsletter_prompt"
+  | "modal_close"
+  | "generic_overlay";
+
+export interface BrowserOverlayDismissalAction {
+  kind: BrowserOverlayDismissalKind;
+  label: string;
+  status: "dismissed" | "skipped" | "error";
+  reason?: string;
+}
+
+export interface BrowserOverlayDismissalReport {
+  status: "clear" | "dismissed" | "partial" | "skipped";
+  dismissedCount: number;
+  skippedCount: number;
+  actions: BrowserOverlayDismissalAction[];
+  warnings: string[];
 }
 
 export class BrowserPool {
@@ -65,6 +196,7 @@ export class BrowserPool {
   private readonly leaseManager: LeaseManager;
   private readonly navigationTimeoutMs: number;
   private readonly launchHeadless: boolean;
+  private readonly browserChannel: string | undefined;
   private readonly artifactWriter: ArtifactWriter;
   private readonly activeProfileLeases = new Map<string, string>();
   private browser: Browser | undefined;
@@ -74,12 +206,15 @@ export class BrowserPool {
     this.leaseManager = leaseManager;
     this.navigationTimeoutMs = options.navigationTimeoutMs ?? 20_000;
     this.launchHeadless = options.launchHeadless ?? true;
+    this.browserChannel = normalizeBrowserChannel(options.browserChannel);
     this.artifactWriter = options.artifactWriter ?? new ArtifactWriter();
   }
 
-  async openPage(agentId: string, contextToken: string, url: string): Promise<{ pageId: string; url: string; title: string }> {
+  async openPage(agentId: string, contextToken: string, url: string, signal?: AbortSignal): Promise<{ pageId: string; url: string; title: string }> {
+    throwIfAborted(signal);
     const lease = this.leaseManager.assertCanOpen(contextToken, agentId, url);
     const state = await this.ensureContext(lease);
+    throwIfAborted(signal);
     const page = await state.context.newPage();
     const pageId = `page_${randomUUID()}`;
     const pageState: PageState = {
@@ -95,7 +230,7 @@ export class BrowserPool {
     attachEventCapture(pageState);
 
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: this.navigationTimeoutMs });
+      await withAbort(page.goto(url, { waitUntil: "domcontentloaded", timeout: this.navigationTimeoutMs }), signal);
       state.pages.set(pageId, pageState);
       this.leaseManager.registerPage(contextToken, agentId, pageId, url);
       return { pageId, url: page.url(), title: await page.title().catch(() => "") };
@@ -105,20 +240,23 @@ export class BrowserPool {
     }
   }
 
-  async capturePage(agentId: string, contextToken: string, pageId: string, captureId?: string): Promise<{ records: ArtifactRecord[] }> {
+  async capturePage(agentId: string, contextToken: string, pageId: string, captureId?: string, signal?: AbortSignal): Promise<{ records: ArtifactRecord[] }> {
+    throwIfAborted(signal);
     const lease = this.leaseManager.get(contextToken, agentId);
     const pageState = this.getPageState(contextToken, pageId);
     const page = pageState.page;
     const sourceUrl = page.url() || pageState.url;
 
     try {
-      await drainMediaCaptures(pageState);
-      const [html, text, title, screenshot] = await Promise.all([
+      await drainMediaCaptures(pageState, signal);
+      throwIfAborted(signal);
+      const [html, visibleText, title, screenshot, visibleLinks] = await withAbort(Promise.all([
         page.content(),
-        page.locator("body").innerText({ timeout: 2_000 }).catch(() => ""),
+        collectVisibleFrameText(page, sourceUrl),
         page.title().catch(() => ""),
-        page.screenshot({ fullPage: true, timeout: 10_000 })
-      ]);
+        page.screenshot({ fullPage: true, timeout: 10_000 }),
+        collectVisibleLinks(page, sourceUrl)
+      ]), signal);
 
       const bundleInput: CaptureBundleInput = {
         runDir: lease.artifactRunDir,
@@ -126,13 +264,15 @@ export class BrowserPool {
         contextToken,
         pageId,
         html,
-        text,
+        text: visibleText.text,
         screenshot,
         metadata: {
           title,
           finalUrl: sourceUrl,
           originalUrl: pageState.url,
-          status: "ok"
+          status: "ok",
+          visibleTextFrames: visibleText.metadata,
+          ...(visibleLinks.length === 0 ? {} : { visibleLinks })
         },
         networkEvents: pageState.networkEvents,
         consoleEvents: pageState.consoleEvents
@@ -144,12 +284,15 @@ export class BrowserPool {
       if (mediaArtifacts !== undefined) {
         bundleInput.mediaArtifacts = mediaArtifacts;
       }
-      const records = await this.artifactWriter.writeCaptureBundle(
+      const records = await withAbort(this.artifactWriter.writeCaptureBundle(
         captureId === undefined ? bundleInput : { ...bundleInput, captureId }
-      );
+      ), signal);
 
       return { records };
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
       const failureInput = {
         runDir: lease.artifactRunDir,
         sourceUrl,
@@ -165,6 +308,65 @@ export class BrowserPool {
     }
   }
 
+  async captureLocator(agentId: string, contextToken: string, pageId: string, selector: string, captureId?: string, signal?: AbortSignal): Promise<{ records: ArtifactRecord[] }> {
+    throwIfAborted(signal);
+    const lease = this.leaseManager.get(contextToken, agentId);
+    const pageState = this.getPageState(contextToken, pageId);
+    const page = pageState.page;
+    const sourceUrl = page.url() || pageState.url;
+
+    try {
+      const locator = page.locator(selector).first();
+      await withAbort(locator.waitFor({ state: "visible", timeout: 10_000 }), signal);
+      const [html, text, screenshot] = await withAbort(Promise.all([
+        locator.evaluate((element) => (element as HTMLElement).outerHTML).catch(() => ""),
+        locator.innerText({ timeout: 2_000 }).catch(() => ""),
+        locator.screenshot({ timeout: 10_000 })
+      ]), signal);
+
+      const bundleInput: CaptureBundleInput = {
+        runDir: lease.artifactRunDir,
+        sourceUrl,
+        contextToken,
+        pageId,
+        html,
+        text,
+        screenshot,
+        metadata: {
+          selector,
+          finalUrl: sourceUrl,
+          originalUrl: pageState.url,
+          status: "ok"
+        },
+        captureMethod: "browser-agent-mcp-farm scoped-capture",
+        toolName: "farm_capture_scope"
+      };
+      const records = await withAbort(this.artifactWriter.writeCaptureBundle(
+        captureId === undefined ? bundleInput : { ...bundleInput, captureId }
+      ), signal);
+      return { records };
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      const failureInput = {
+        runDir: lease.artifactRunDir,
+        sourceUrl,
+        contextToken,
+        pageId,
+        error: error instanceof Error ? error.message : String(error),
+        status: "error",
+        metadata: { selector, stage: "scoped_capture" },
+        captureMethod: "browser-agent-mcp-farm scoped-capture",
+        toolName: "farm_capture_scope"
+      } as const;
+      const records = await this.artifactWriter.recordFailure(
+        captureId === undefined ? failureInput : { ...failureInput, captureId }
+      );
+      return { records };
+    }
+  }
+
   async closePage(agentId: string, contextToken: string, pageId: string): Promise<void> {
     const pageState = this.getPageState(contextToken, pageId);
     await pageState.page.close().catch(() => undefined);
@@ -172,46 +374,529 @@ export class BrowserPool {
     this.leaseManager.closePage(contextToken, agentId, pageId);
   }
 
-  async click(agentId: string, contextToken: string, pageId: string, selector: string): Promise<{ ok: true; url: string }> {
+  async click(agentId: string, contextToken: string, pageId: string, selector: string, options: BrowserActionOptions = {}): Promise<{ ok: true; url: string }> {
     const pageState = this.getMutablePageState(agentId, contextToken, pageId);
-    await assertNotPaymentAction(pageState.page, selector);
-    await pageState.page.click(selector, { timeout: 10_000 });
+    const timeout = actionTimeoutMs(options);
+    await withAbort(assertNotPaymentAction(pageState.page, selector), options.signal);
+    await withAbort(pageState.page.click(selector, { timeout }), options.signal);
     return { ok: true, url: pageState.page.url() };
   }
 
-  async fill(agentId: string, contextToken: string, pageId: string, selector: string, value: string): Promise<{ ok: true; url: string }> {
+  async fill(agentId: string, contextToken: string, pageId: string, selector: string, value: string, options: BrowserActionOptions = {}): Promise<{ ok: true; url: string }> {
     const pageState = this.getMutablePageState(agentId, contextToken, pageId);
-    await assertNotPaymentAction(pageState.page, selector);
-    await pageState.page.fill(selector, value, { timeout: 10_000 });
+    const timeout = actionTimeoutMs(options);
+    await withAbort(assertNotPaymentAction(pageState.page, selector), options.signal);
+    await withAbort(pageState.page.fill(selector, value, { timeout }), options.signal);
     return { ok: true, url: pageState.page.url() };
   }
 
-  async press(agentId: string, contextToken: string, pageId: string, key: string): Promise<{ ok: true; url: string }> {
+  async press(agentId: string, contextToken: string, pageId: string, key: string, options: BrowserActionOptions = {}): Promise<{ ok: true; url: string }> {
     const pageState = this.getMutablePageState(agentId, contextToken, pageId);
-    await assertNotPaymentAction(pageState.page);
-    await pageState.page.keyboard.press(key);
+    await withAbort(assertNotPaymentAction(pageState.page), options.signal);
+    await withAbort(pageState.page.keyboard.press(key), options.signal);
     return { ok: true, url: pageState.page.url() };
   }
 
-  async selectOption(agentId: string, contextToken: string, pageId: string, selector: string, value: string): Promise<{ ok: true; url: string }> {
+  async selectOption(agentId: string, contextToken: string, pageId: string, selector: string, value: string, options: BrowserActionOptions = {}): Promise<{ ok: true; url: string }> {
     const pageState = this.getMutablePageState(agentId, contextToken, pageId);
-    await assertNotPaymentAction(pageState.page, selector);
-    await pageState.page.selectOption(selector, value, { timeout: 10_000 });
+    const timeout = actionTimeoutMs(options);
+    await withAbort(assertNotPaymentAction(pageState.page, selector), options.signal);
+    await withAbort(pageState.page.selectOption(selector, value, { timeout }), options.signal);
     return { ok: true, url: pageState.page.url() };
   }
 
-  async waitForPage(agentId: string, contextToken: string, pageId: string, waitMs: number): Promise<{ ok: true; url: string }> {
+  async waitForPage(agentId: string, contextToken: string, pageId: string, waitMs: number, signal?: AbortSignal): Promise<{ ok: true; url: string }> {
     const lease = this.leaseManager.assertActive(contextToken, agentId);
     const pageState = this.getPageState(lease.contextToken, pageId);
-    await pageState.page.waitForTimeout(waitMs);
+    await abortableDelay(waitMs, signal);
     return { ok: true, url: pageState.page.url() };
   }
 
-  async waitForSelector(agentId: string, contextToken: string, pageId: string, selector: string, timeoutMs: number): Promise<{ ok: true; url: string }> {
+  async waitForSelector(agentId: string, contextToken: string, pageId: string, selector: string, timeoutMs: number, signal?: AbortSignal): Promise<{ ok: true; url: string }> {
     const lease = this.leaseManager.assertActive(contextToken, agentId);
     const pageState = this.getPageState(lease.contextToken, pageId);
-    await pageState.page.locator(selector).first().waitFor({ state: "visible", timeout: timeoutMs });
+    await withAbort(pageState.page.locator(selector).first().waitFor({ state: "visible", timeout: timeoutMs }), signal);
     return { ok: true, url: pageState.page.url() };
+  }
+
+  async readVisibleText(agentId: string, contextToken: string, pageId: string, selector = "body", timeoutMs = 2_000, signal?: AbortSignal): Promise<{ ok: true; url: string; text: string }> {
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    const locator = pageState.page.locator(selector).first();
+    await withAbort(locator.waitFor({ state: "visible", timeout: timeoutMs }), signal);
+    const text = await withAbort(locator.innerText({ timeout: timeoutMs }), signal);
+    return { ok: true, url: pageState.page.url(), text };
+  }
+
+  async readLinkTarget(agentId: string, contextToken: string, pageId: string, selector: string, timeoutMs = 2_000, signal?: AbortSignal): Promise<{ ok: true; url: string; text: string }> {
+    const result = await this.readLinkTargets(agentId, contextToken, pageId, selector, 1, timeoutMs, signal);
+    const target = result.links[0];
+    if (target === undefined) {
+      throw new FarmError("link_target_invalid", `No usable follow-up link target found for selector: ${selector}`);
+    }
+    return { ok: true, url: target.url, text: target.text };
+  }
+
+  async readClientState(
+    agentId: string,
+    contextToken: string,
+    pageId: string,
+    propertyName: string,
+    maxJsonLength = 2_000_000,
+    signal?: AbortSignal
+  ): Promise<BrowserClientStateResult> {
+    if (!isSafeWindowPropertyName(propertyName)) {
+      throw new FarmError("client_state_property_invalid", `Client state property must be a plain window property name: ${propertyName}`);
+    }
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    const currentUrl = pageState.page.url() || pageState.url;
+    const normalizedMaxJsonLength = Math.max(1_000, Math.min(5_000_000, maxJsonLength));
+    const frames = pageState.page.frames();
+    const frameResults = await withAbort(Promise.all(frames.map(async (frame, frameIndex): Promise<BrowserClientStateFrame> => {
+      const frameUrl = frame.url() || currentUrl;
+      const frameName = frame.name();
+      try {
+        const result = await frame.evaluate((args) => {
+          const globalObject = window as unknown as Record<string, unknown>;
+          const value = globalObject[args.propertyName];
+          if (value === undefined) {
+            return { found: false, truncated: false };
+          }
+          const json = JSON.stringify(value);
+          if (json === undefined) {
+            return { found: true, truncated: false, error: "client state value is not JSON serializable" };
+          }
+          return {
+            found: true,
+            truncated: json.length > args.maxJsonLength,
+            json: json.length > args.maxJsonLength ? json.slice(0, args.maxJsonLength) : json
+          };
+        }, { propertyName, maxJsonLength: normalizedMaxJsonLength });
+        return {
+          frameIndex,
+          frameUrl,
+          ...(frameName.length === 0 ? {} : { frameName }),
+          found: result.found,
+          truncated: result.truncated,
+          ...(result.json === undefined ? {} : { json: result.json }),
+          ...(result.error === undefined ? {} : { error: result.error })
+        };
+      } catch (error) {
+        return {
+          frameIndex,
+          frameUrl,
+          ...(frameName.length === 0 ? {} : { frameName }),
+          found: false,
+          truncated: false,
+          error: error instanceof Error ? error.message : String(error)
+        };
+      }
+    })), signal);
+    return {
+      ok: true,
+      url: currentUrl,
+      propertyName,
+      frameCount: frames.length,
+      matchedFrameCount: frameResults.filter((result) => result.found).length,
+      frames: frameResults
+    };
+  }
+
+  async discoverLinkTargets(agentId: string, contextToken: string, pageId: string, maxLinks = 25, signal?: AbortSignal): Promise<BrowserLinkTargetsResult> {
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    const currentUrl = pageState.page.url() || pageState.url;
+    const normalizedMaxLinks = Math.max(1, Math.min(100, maxLinks));
+    const frames = pageState.page.frames();
+    const perFrameTargets = await withAbort(Promise.all(frames.map(async (frame, frameIndex) => {
+      const baseUrl = frame.url() || currentUrl;
+      try {
+        const frameTargets = await frame.locator(`a, ${DESTINATION_ATTRIBUTE_SELECTOR}`).evaluateAll((elements, args) => {
+          let currentWithoutHash = "";
+          try {
+            const currentUrl = new URL(args.baseUrl);
+            currentWithoutHash = `${currentUrl.origin}${currentUrl.pathname}${currentUrl.search}`;
+          } catch {
+            currentWithoutHash = "";
+          }
+          const candidates: Array<{ href: string; text: string; visible: boolean; valid: boolean; elementIndex: number; source: "anchor" | "attribute"; attributeName?: string }> = [];
+          const seenAttributeCandidates = new Set<string>();
+          const visible = (element: Element): boolean => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 &&
+              rect.height > 0 &&
+              style.visibility !== "hidden" &&
+              style.display !== "none" &&
+              Number(style.opacity || "1") > 0;
+          };
+          const textFor = (element: Element): string => {
+            const imageAlt = element.querySelector("img")?.getAttribute("alt") ?? "";
+            const textParts = [
+              element.textContent,
+              element.getAttribute("aria-label"),
+              element.getAttribute("title"),
+              element.getAttribute("data-title"),
+              element.getAttribute("data-name"),
+              imageAlt
+            ].map((value) => (value ?? "").replace(/\s+/g, " ").trim()).filter((value) => value.length > 0);
+            return textParts[0] ?? "";
+          };
+          const addCandidate = (
+            rawHref: string,
+            element: Element,
+            elementIndex: number,
+            source: "anchor" | "attribute",
+            attributeName?: string
+          ): boolean => {
+            let hrefValue = "";
+            try {
+              hrefValue = new URL(rawHref, args.baseUrl).href;
+            } catch {
+              hrefValue = rawHref;
+            }
+            const text = textFor(element);
+            const isVisible = visible(element);
+            let valid = false;
+            try {
+              const href = new URL(hrefValue);
+              const hrefWithoutHash = `${href.origin}${href.pathname}${href.search}`;
+              valid = isVisible &&
+                (href.protocol === "http:" || href.protocol === "https:") &&
+                (source === "anchor" || text.length > 0) &&
+                (currentWithoutHash.length === 0 || hrefWithoutHash !== currentWithoutHash);
+            } catch {
+              valid = false;
+            }
+            candidates.push({
+              href: hrefValue,
+              text,
+              visible: isVisible,
+              valid,
+              elementIndex,
+              source,
+              ...(attributeName === undefined ? {} : { attributeName })
+            });
+            return candidates.length >= args.maxCandidates;
+          };
+          for (const [elementIndex, element] of elements.slice(0, args.maxElements).entries()) {
+            if (element instanceof HTMLAnchorElement) {
+              if (addCandidate(element.href, element, elementIndex, "anchor")) {
+                return candidates;
+              }
+              continue;
+            }
+            for (const attributeName of args.destinationAttributeNames) {
+              const rawValue = element.getAttribute(attributeName)?.trim();
+              if (rawValue === undefined || rawValue.length === 0) {
+                continue;
+              }
+              const key = `${elementIndex}:${attributeName}:${rawValue}`;
+              if (seenAttributeCandidates.has(key)) {
+                continue;
+              }
+              seenAttributeCandidates.add(key);
+              if (addCandidate(rawValue, element, elementIndex, "attribute", attributeName)) {
+                return candidates;
+              }
+            }
+          }
+          return candidates;
+        }, {
+          baseUrl,
+          maxElements: 300,
+          maxCandidates: Math.max(normalizedMaxLinks * 10, normalizedMaxLinks),
+          destinationAttributeNames: DESTINATION_ATTRIBUTE_NAMES
+        });
+        return frameTargets.map((target) => ({
+          ...target,
+          frameIndex,
+          frameUrl: baseUrl,
+          frameName: frame.name()
+        }));
+      } catch {
+        return [];
+      }
+    })), signal);
+    return linkTargetsResultFromCandidates({
+      currentUrl,
+      targets: perFrameTargets.flat(),
+      normalizedMaxLinks,
+      frameCount: frames.length,
+      matchedFrameCount: perFrameTargets.filter((targets) => targets.length > 0).length
+    });
+  }
+
+  async readLinkTargets(agentId: string, contextToken: string, pageId: string, selector: string, maxLinks = 10, timeoutMs = 2_000, signal?: AbortSignal): Promise<BrowserLinkTargetsResult> {
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    const currentUrl = pageState.page.url() || pageState.url;
+    const normalizedMaxLinks = Math.max(1, Math.min(50, maxLinks));
+    const frames = pageState.page.frames();
+    const visibleFrames = await framesWithVisibleSelector(frames, selector, timeoutMs, signal);
+    if (visibleFrames.length === 0) {
+      throw new FarmError("selector_not_visible", `No visible selector found for link extraction: ${selector}`);
+    }
+    const perFrameTargets = await withAbort(Promise.all(visibleFrames.map(async (frameInfo) => {
+      const baseUrl = frameInfo.frame.url() || currentUrl;
+      try {
+        const frameTargets = await frameInfo.frame.locator(selector).evaluateAll((elements, args) => {
+        let currentWithoutHash = "";
+        try {
+          const currentUrl = new URL(args.baseUrl);
+          currentWithoutHash = `${currentUrl.origin}${currentUrl.pathname}${currentUrl.search}`;
+        } catch {
+          currentWithoutHash = "";
+        }
+        const candidates: Array<{ href: string; text: string; visible: boolean; valid: boolean; elementIndex: number; source: "anchor" | "attribute"; attributeName?: string }> = [];
+        const seen = new Set<HTMLAnchorElement>();
+        const seenAttributeCandidates = new Set<string>();
+        const visible = (element: Element): boolean => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== "hidden" &&
+            style.display !== "none" &&
+            Number(style.opacity || "1") > 0;
+        };
+        const textFor = (element: Element): string => {
+          const imageAlt = element.querySelector("img")?.getAttribute("alt") ?? "";
+          const textParts = [
+            element.textContent,
+            element.getAttribute("aria-label"),
+            element.getAttribute("title"),
+            element.getAttribute("data-title"),
+            element.getAttribute("data-name"),
+            imageAlt
+          ].map((value) => (value ?? "").replace(/\s+/g, " ").trim()).filter((value) => value.length > 0);
+          return textParts[0] ?? "";
+        };
+        const addCandidate = (
+          rawHref: string,
+          element: Element,
+          elementIndex: number,
+          source: "anchor" | "attribute",
+          attributeName?: string
+        ): boolean => {
+          let hrefValue = "";
+          try {
+            hrefValue = new URL(rawHref, args.baseUrl).href;
+          } catch {
+            hrefValue = rawHref;
+          }
+          const text = textFor(element);
+          const isVisible = visible(element);
+          let valid = false;
+          try {
+            const href = new URL(hrefValue);
+            const hrefWithoutHash = `${href.origin}${href.pathname}${href.search}`;
+            valid = isVisible &&
+              (href.protocol === "http:" || href.protocol === "https:") &&
+              (source === "anchor" || text.length > 0) &&
+              (currentWithoutHash.length === 0 || hrefWithoutHash !== currentWithoutHash);
+          } catch {
+            valid = false;
+          }
+          candidates.push({
+            href: hrefValue,
+            text,
+            visible: isVisible,
+            valid,
+            elementIndex,
+            source,
+            ...(attributeName === undefined ? {} : { attributeName })
+          });
+          return candidates.length >= args.maxCandidates;
+        };
+        for (const [elementIndex, element] of elements.slice(0, args.maxContainers).entries()) {
+          const anchors: HTMLAnchorElement[] = [];
+          if (element instanceof HTMLAnchorElement) {
+            anchors.push(element);
+          }
+          const closest = element.closest("a");
+          if (closest instanceof HTMLAnchorElement) {
+            anchors.push(closest);
+          }
+          anchors.push(...Array.from(element.querySelectorAll("a")));
+          for (const link of anchors) {
+            if (seen.has(link)) {
+              continue;
+            }
+            seen.add(link);
+            if (addCandidate(link.href, link, elementIndex, "anchor")) {
+              return candidates;
+            }
+          }
+          const attributeElements: Element[] = [];
+          if (element.matches(args.attributeSelector)) {
+            attributeElements.push(element);
+          }
+          attributeElements.push(...Array.from(element.querySelectorAll(args.attributeSelector)));
+          for (const attributeElement of attributeElements) {
+            for (const attributeName of args.destinationAttributeNames) {
+              const rawValue = attributeElement.getAttribute(attributeName)?.trim();
+              if (rawValue === undefined || rawValue.length === 0) {
+                continue;
+              }
+              const key = `${elementIndex}:${attributeName}:${rawValue}`;
+              if (seenAttributeCandidates.has(key)) {
+                continue;
+              }
+              seenAttributeCandidates.add(key);
+              if (addCandidate(rawValue, attributeElement, elementIndex, "attribute", attributeName)) {
+                return candidates;
+              }
+            }
+          }
+        }
+        return candidates;
+      }, {
+        baseUrl,
+        maxContainers: 50,
+        maxCandidates: Math.max(normalizedMaxLinks * 10, normalizedMaxLinks),
+        destinationAttributeNames: DESTINATION_ATTRIBUTE_NAMES,
+        attributeSelector: DESTINATION_ATTRIBUTE_SELECTOR
+      });
+        return frameTargets.map((target) => ({
+          ...target,
+          frameIndex: frameInfo.index,
+          frameUrl: baseUrl,
+          frameName: frameInfo.frame.name()
+        }));
+      } catch {
+        return [];
+      }
+    })), signal);
+    return linkTargetsResultFromCandidates({
+      currentUrl,
+      targets: perFrameTargets.flat(),
+      normalizedMaxLinks,
+      frameCount: frames.length,
+      matchedFrameCount: visibleFrames.length
+    });
+  }
+
+  async inspectSelector(
+    agentId: string,
+    contextToken: string,
+    pageId: string,
+    selector: string,
+    options: { maxMatches?: number; maxTextLength?: number; signal?: AbortSignal } = {}
+  ): Promise<BrowserSelectorInspection> {
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    const maxMatches = Math.max(1, Math.min(50, options.maxMatches ?? 10));
+    const maxTextLength = Math.max(20, Math.min(2_000, options.maxTextLength ?? 300));
+    const frameInspections = await withAbort(Promise.all(pageState.page.frames().map(async (frame, frameIndex) => {
+      const frameUrl = frame.url();
+      const frameName = frame.name();
+      try {
+        const result = await frame.locator(selector).evaluateAll((nodes, args) => {
+        const matches = nodes.slice(0, args.maxMatches).map((node, index) => {
+          const element = node as Element;
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          const visible = rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== "hidden" &&
+            style.display !== "none" &&
+            Number(style.opacity || "1") > 0;
+          const textSnippet = (element.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, args.maxTextLength);
+          const match: BrowserSelectorInspectionMatch = {
+            index,
+            tagName: element.tagName.toLowerCase(),
+            visible,
+            textSnippet
+          };
+          const id = element.getAttribute("id");
+          if (id !== null && id.length > 0) {
+            match.id = id;
+          }
+          const role = element.getAttribute("role");
+          if (role !== null && role.length > 0) {
+            match.role = role;
+          }
+          const ariaLabel = element.getAttribute("aria-label");
+          if (ariaLabel !== null && ariaLabel.length > 0) {
+            match.ariaLabel = ariaLabel;
+          }
+          const name = element.getAttribute("name");
+          if (name !== null && name.length > 0) {
+            match.name = name;
+          }
+          const href = element instanceof HTMLAnchorElement ? element.href : element.closest("a")?.href;
+          if (href !== undefined && href.length > 0) {
+            match.href = href;
+          }
+          return match;
+        });
+        return {
+          matchCount: nodes.length,
+          inspectedCount: matches.length,
+          visibleCount: matches.filter((match) => match.visible).length,
+          matches
+        };
+      }, { maxMatches, maxTextLength });
+        return {
+          frameIndex,
+          frameUrl,
+          frameName,
+          ...result
+        };
+      } catch {
+        return {
+          frameIndex,
+          frameUrl,
+          frameName,
+          matchCount: 0,
+          inspectedCount: 0,
+          visibleCount: 0,
+          matches: []
+        };
+      }
+    })), options.signal);
+    const matches = frameInspections.flatMap((frameInspection) => frameInspection.matches.map((match) => ({
+      ...match,
+      frameIndex: frameInspection.frameIndex,
+      frameUrl: frameInspection.frameUrl,
+      ...(frameInspection.frameName.length === 0 ? {} : { frameName: frameInspection.frameName })
+    })));
+    const inspection = {
+      matchCount: frameInspections.reduce((sum, frameInspection) => sum + frameInspection.matchCount, 0),
+      inspectedCount: matches.length,
+      visibleCount: matches.filter((match) => match.visible).length,
+      matches
+    };
+    const firstTextSnippet = matches.find((match) => match.textSnippet.length > 0)?.textSnippet;
+    const firstVisibleTextSnippet = matches.find((match) => match.visible && match.textSnippet.length > 0)?.textSnippet;
+    return {
+      ok: true,
+      url: pageState.page.url(),
+      selector,
+      matchCount: inspection.matchCount,
+      inspectedCount: inspection.inspectedCount,
+      visibleCount: inspection.visibleCount,
+      ...(firstTextSnippet === undefined ? {} : { firstTextSnippet }),
+      ...(firstVisibleTextSnippet === undefined ? {} : { firstVisibleTextSnippet }),
+      frameCount: frameInspections.length,
+      matchedFrameCount: frameInspections.filter((frameInspection) => frameInspection.matchCount > 0).length,
+      visibleFrameCount: frameInspections.filter((frameInspection) => frameInspection.visibleCount > 0).length,
+      matches: inspection.matches
+    };
+  }
+
+  async dismissBenignOverlays(
+    agentId: string,
+    contextToken: string,
+    pageId: string,
+    maxActions = 3,
+    signal?: AbortSignal
+  ): Promise<BrowserOverlayDismissalReport> {
+    const lease = this.leaseManager.assertActive(contextToken, agentId);
+    const pageState = this.getPageState(lease.contextToken, pageId);
+    return withAbort(runBenignOverlayDismissal(pageState.page, Math.max(0, Math.min(10, maxActions))), signal);
   }
 
   async scroll(
@@ -219,11 +904,12 @@ export class BrowserPool {
     contextToken: string,
     pageId: string,
     direction: "down" | "up" | "bottom" | "top",
-    pixels: number
+    pixels: number,
+    signal?: AbortSignal
   ): Promise<{ ok: true; url: string; scrollY: number }> {
     const lease = this.leaseManager.assertActive(contextToken, agentId);
     const pageState = this.getPageState(lease.contextToken, pageId);
-    const scrollY = await pageState.page.evaluate(({ direction: pageDirection, pixels: pagePixels }) => {
+    const scrollY = await withAbort(pageState.page.evaluate(({ direction: pageDirection, pixels: pagePixels }) => {
       if (pageDirection === "top") {
         window.scrollTo(0, 0);
       } else if (pageDirection === "bottom") {
@@ -232,7 +918,7 @@ export class BrowserPool {
         window.scrollBy(0, pageDirection === "up" ? -pagePixels : pagePixels);
       }
       return window.scrollY;
-    }, { direction, pixels });
+    }, { direction, pixels }), signal);
     return { ok: true, url: pageState.page.url(), scrollY };
   }
 
@@ -243,18 +929,19 @@ export class BrowserPool {
     captureId: string | undefined,
     waitMs: number,
     idleMs: number,
-    timeoutMs: number
+    timeoutMs: number,
+    signal?: AbortSignal
   ): Promise<{ records: ArtifactRecord[] }> {
     const lease = this.leaseManager.assertActive(contextToken, agentId);
     const pageState = this.getPageState(lease.contextToken, pageId);
     if (waitMs > 0) {
-      await pageState.page.waitForTimeout(waitMs);
+      await abortableDelay(waitMs, signal);
     }
-    await pageState.page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined);
+    await withAbort(pageState.page.waitForLoadState("networkidle", { timeout: timeoutMs }).catch(() => undefined), signal);
     if (idleMs > 0) {
-      await pageState.page.waitForTimeout(idleMs);
+      await abortableDelay(idleMs, signal);
     }
-    return this.capturePage(agentId, lease.contextToken, pageId, captureId);
+    return this.capturePage(agentId, lease.contextToken, pageId, captureId, signal);
   }
 
   async sampleFrames(
@@ -270,14 +957,16 @@ export class BrowserPool {
       maxFrames: number;
       seekTimeoutMs: number;
       settleMs: number;
+      abortSignal?: AbortSignal | undefined;
     }
   ): Promise<FrameSampleRunResult> {
+    throwIfAborted(input.abortSignal);
     const lease = this.leaseManager.assertActive(contextToken, agentId);
     const pageState = this.getPageState(lease.contextToken, pageId);
     const page = pageState.page;
     const sourceUrl = page.url() || pageState.url;
     const baseCaptureId = sanitizeFileBase(input.captureId ?? `frame-sample-${new URL(sourceUrl).hostname}-${randomUUID()}`);
-    const media = await readMediaElementSnapshot(page, input.selector);
+    const media = await withAbort(readMediaElementSnapshot(page, input.selector), input.abortSignal);
     const plan = buildTimestampPlan({
       timestampsSec: input.timestampsSec,
       durationSec: input.durationSec ?? media.durationSec,
@@ -300,7 +989,7 @@ export class BrowserPool {
       captureMethod: "browser-agent-mcp-farm frame-sample",
       toolName: "farm_sample_frames"
     };
-    const summaryRecords = await this.artifactWriter.writeCaptureBundle({
+    const summaryRecords = await withAbort(this.artifactWriter.writeCaptureBundle({
       ...commonInput,
       captureId: baseCaptureId,
       metadata: {
@@ -315,22 +1004,24 @@ export class BrowserPool {
         }
       },
       note: "frame sample summary"
-    });
+    }), input.abortSignal);
 
     const frames: FrameSample[] = [];
     const records: ArtifactRecord[] = [...summaryRecords];
     for (const [index, timestampSec] of plan.timestampsSec.entries()) {
+      throwIfAborted(input.abortSignal);
       const ordinal = index + 1;
       const currentCaptureId = frameCaptureId(baseCaptureId, ordinal, timestampSec);
-      const seek = await seekMediaElement(page, input.selector, timestampSec, input.seekTimeoutMs);
+      const seek = await withAbort(seekMediaElement(page, input.selector, timestampSec, input.seekTimeoutMs), input.abortSignal);
       if (input.settleMs > 0) {
-        await page.waitForTimeout(input.settleMs);
+        await abortableDelay(input.settleMs, input.abortSignal);
       }
-      const activeCues = await readActiveCues(page, input.selector).catch(() => []);
+      const activeCues = await withAbort(readActiveCues(page, input.selector).catch(() => []), input.abortSignal);
+      const visualFingerprint = await withAbort(readVisualFingerprint(page, input.selector), input.abortSignal);
       const frameStatus = seek.ok ? "ok" : "partial";
       try {
-        const screenshot = await page.locator(input.selector).first().screenshot({ timeout: 10_000 });
-        const frameRecords = await this.artifactWriter.writeCaptureBundle({
+        const screenshot = await withAbort(page.locator(input.selector).first().screenshot({ timeout: 10_000 }), input.abortSignal);
+        const frameRecords = await withAbort(this.artifactWriter.writeCaptureBundle({
           ...commonInput,
           captureId: currentCaptureId,
           screenshot,
@@ -344,11 +1035,12 @@ export class BrowserPool {
               ordinal,
               timestampSec,
               seek,
-              activeCues
+              activeCues,
+              visualFingerprint
             }
           },
           note: seek.ok ? `frame sample at ${timestampSec}s` : `partial frame sample at ${timestampSec}s: ${seek.reason ?? "seek_failed"}`
-        });
+        }), input.abortSignal);
         records.push(...frameRecords);
         frames.push({
           ordinal,
@@ -357,9 +1049,13 @@ export class BrowserPool {
           status: frameStatus,
           seek,
           activeCues,
+          visualFingerprint,
           records: frameRecords
         });
       } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
         const message = error instanceof Error ? error.message : String(error);
         const failureRecords = await this.artifactWriter.recordFailure({
           ...commonInput,
@@ -372,7 +1068,8 @@ export class BrowserPool {
               ordinal,
               timestampSec,
               seek,
-              activeCues
+              activeCues,
+              visualFingerprint
             }
           },
           note: `frame screenshot failed at ${timestampSec}s: ${message}`
@@ -385,6 +1082,7 @@ export class BrowserPool {
           status: "partial",
           seek,
           activeCues,
+          visualFingerprint,
           records: failureRecords,
           error: message
         });
@@ -402,7 +1100,8 @@ export class BrowserPool {
       media,
       frames,
       records,
-      warnings
+      warnings,
+      denseSamplingEvents: []
     };
   }
 
@@ -464,7 +1163,7 @@ export class BrowserPool {
         persistent = true;
         context = await chromium.launchPersistentContext(resolveUserDataDir(lease), {
           ...options,
-          headless: this.launchHeadless
+          ...this.launchOptions()
         });
       } else {
         const browser = await this.ensureBrowser();
@@ -493,12 +1192,19 @@ export class BrowserPool {
       return this.browser;
     }
     if (!this.browserLaunch) {
-      this.browserLaunch = chromium.launch({ headless: this.launchHeadless }).then((browser) => {
+      this.browserLaunch = chromium.launch(this.launchOptions()).then((browser) => {
         this.browser = browser;
         return browser;
       });
     }
     return this.browserLaunch;
+  }
+
+  private launchOptions(): { headless: boolean; channel?: string } {
+    return {
+      headless: this.launchHeadless,
+      ...(this.browserChannel === undefined ? {} : { channel: this.browserChannel })
+    };
   }
 
   private getPageState(contextToken: string, pageId: string): PageState {
@@ -515,6 +1221,289 @@ export class BrowserPool {
     const pageState = this.getPageState(contextToken, pageId);
     return pageState;
   }
+}
+
+function normalizeBrowserChannel(channel: string | undefined): string | undefined {
+  const trimmed = channel?.trim();
+  return trimmed === undefined || trimmed.length === 0 || trimmed === "chromium" ? undefined : trimmed;
+}
+
+function isUsableFollowUpUrl(href: string, current: string): boolean {
+  let target: URL;
+  let currentUrl: URL;
+  try {
+    target = new URL(href);
+    currentUrl = new URL(current);
+  } catch {
+    return false;
+  }
+  if (target.protocol !== "http:" && target.protocol !== "https:") {
+    return false;
+  }
+  return `${target.origin}${target.pathname}${target.search}` !== `${currentUrl.origin}${currentUrl.pathname}${currentUrl.search}`;
+}
+
+interface BrowserVisibleTextFrameMetadata {
+  frameIndex: number;
+  frameUrl: string;
+  frameName?: string;
+  textLength: number;
+  truncated: boolean;
+  textSnippet?: string;
+  error?: string;
+}
+
+interface BrowserVisibleTextResult {
+  text: string;
+  metadata: {
+    frameCount: number;
+    textFrameCount: number;
+    frames: BrowserVisibleTextFrameMetadata[];
+  };
+}
+
+async function collectVisibleFrameText(page: Page, currentUrl: string): Promise<BrowserVisibleTextResult> {
+  const maxPerFrame = 50_000;
+  const maxTotal = 200_000;
+  const frames = page.frames();
+  const frameResults = await Promise.all(frames.map(async (frame, frameIndex): Promise<BrowserVisibleTextFrameMetadata & { text: string }> => {
+    const frameUrl = frame.url() || currentUrl;
+    const frameName = frame.name();
+    try {
+      const rawText = await frame.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
+      const text = rawText.trim();
+      const textSnippet = text.replace(/\s+/g, " ").slice(0, 300);
+      return {
+        frameIndex,
+        frameUrl,
+        ...(frameName.length === 0 ? {} : { frameName }),
+        textLength: text.length,
+        truncated: text.length > maxPerFrame,
+        ...(textSnippet.length === 0 ? {} : { textSnippet }),
+        text: text.length > maxPerFrame ? text.slice(0, maxPerFrame) : text
+      };
+    } catch (error) {
+      return {
+        frameIndex,
+        frameUrl,
+        ...(frameName.length === 0 ? {} : { frameName }),
+        textLength: 0,
+        truncated: false,
+        error: error instanceof Error ? error.message : String(error),
+        text: ""
+      };
+    }
+  }));
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  let remaining = maxTotal;
+  for (const frame of frameResults) {
+    if (remaining <= 0 || frame.text.length === 0) {
+      continue;
+    }
+    const normalized = frame.text.replace(/\s+/g, " ").trim();
+    if (normalized.length === 0 || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    const selected = frame.text.length > remaining ? frame.text.slice(0, remaining) : frame.text;
+    parts.push(selected);
+    remaining -= selected.length;
+  }
+  return {
+    text: parts.join("\n\n"),
+    metadata: {
+      frameCount: frameResults.length,
+      textFrameCount: frameResults.filter((frame) => frame.textLength > 0).length,
+      frames: frameResults.map(({ text: _text, ...metadata }) => metadata)
+    }
+  };
+}
+
+async function collectVisibleLinks(page: Page, currentUrl: string, maxLinks = 25): Promise<BrowserLinkTarget[]> {
+  const normalizedMaxLinks = Math.max(1, Math.min(100, maxLinks));
+  const frames = page.frames();
+  const perFrameCandidates = await Promise.all(frames.map(async (frame, frameIndex) => {
+    const baseUrl = frame.url() || currentUrl;
+    const frameName = frame.name();
+    try {
+      const candidates = await frame.evaluate((args) => {
+    const selector = `a, ${args.attributeSelector}`;
+    const elements = Array.from(document.querySelectorAll(selector)).slice(0, 200);
+    const candidateRows: Array<{ href: string; text: string; visible: boolean; elementIndex: number; source: "anchor" | "attribute"; attributeName?: string }> = [];
+    const textFor = (element: Element): string => {
+      const imageAlt = element.querySelector("img")?.getAttribute("alt") ?? "";
+      const textParts = [
+        element.textContent,
+        element.getAttribute("aria-label"),
+        element.getAttribute("title"),
+        element.getAttribute("data-title"),
+        element.getAttribute("data-name"),
+        imageAlt
+      ].map((value) => (value ?? "").replace(/\s+/g, " ").trim()).filter((value) => value.length > 0);
+      return textParts[0] ?? "";
+    };
+    const visible = (element: Element): boolean => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return rect.width > 0 &&
+        rect.height > 0 &&
+        style.visibility !== "hidden" &&
+        style.display !== "none" &&
+        Number(style.opacity || "1") > 0;
+    };
+    for (const [elementIndex, element] of elements.entries()) {
+      if (element instanceof HTMLAnchorElement) {
+        candidateRows.push({
+          href: element.href,
+          text: textFor(element),
+          visible: visible(element),
+          elementIndex,
+          source: "anchor"
+        });
+        continue;
+      }
+      for (const attributeName of args.destinationAttributeNames) {
+        const rawValue = element.getAttribute(attributeName)?.trim();
+        if (rawValue === undefined || rawValue.length === 0) {
+          continue;
+        }
+        let hrefValue = rawValue;
+        try {
+          hrefValue = new URL(rawValue, args.currentUrl).href;
+        } catch {
+          hrefValue = rawValue;
+        }
+        candidateRows.push({
+          href: hrefValue,
+          text: textFor(element),
+          visible: visible(element),
+          elementIndex,
+          source: "attribute",
+          attributeName
+        });
+        break;
+      }
+    }
+    return candidateRows.slice(0, args.maxCandidates);
+  }, {
+        currentUrl: baseUrl,
+        maxCandidates: Math.max(normalizedMaxLinks * 8, normalizedMaxLinks),
+        destinationAttributeNames: DESTINATION_ATTRIBUTE_NAMES,
+        attributeSelector: DESTINATION_ATTRIBUTE_SELECTOR
+      });
+      return candidates.map((candidate) => {
+        let valid = false;
+        try {
+          const parsed = new URL(candidate.href);
+          valid = candidate.visible &&
+            (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+            (candidate.source === "anchor" || candidate.text.length > 0);
+        } catch {
+          valid = false;
+        }
+        return {
+          href: candidate.href,
+          text: candidate.text,
+          visible: candidate.visible,
+          valid,
+          elementIndex: candidate.elementIndex,
+          source: candidate.source,
+          ...(candidate.attributeName === undefined ? {} : { attributeName: candidate.attributeName }),
+          frameIndex,
+          frameUrl: baseUrl,
+          ...(frameName.length === 0 ? {} : { frameName })
+        };
+      });
+    } catch {
+      return [];
+    }
+  }));
+  return linkTargetsResultFromCandidates({
+    currentUrl,
+    targets: perFrameCandidates.flat(),
+    normalizedMaxLinks,
+    frameCount: frames.length,
+    matchedFrameCount: perFrameCandidates.filter((candidates) => candidates.length > 0).length
+  }).links;
+}
+
+function normalizedHrefWithoutHash(href: string): string | undefined {
+  try {
+    const url = new URL(href);
+    url.hash = "";
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function isSafeWindowPropertyName(propertyName: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]{0,120}$/.test(propertyName);
+}
+
+function linkTargetsResultFromCandidates(input: {
+  currentUrl: string;
+  targets: Array<{
+    href: string;
+    text: string;
+    visible: boolean;
+    valid: boolean;
+    elementIndex: number;
+    source: "anchor" | "attribute";
+    attributeName?: string;
+    frameIndex?: number;
+    frameUrl?: string;
+    frameName?: string;
+  }>;
+  normalizedMaxLinks: number;
+  frameCount?: number;
+  matchedFrameCount?: number;
+}): BrowserLinkTargetsResult {
+  const usableTargets = input.targets.filter((target) => target.valid && isUsableFollowUpUrl(target.href, input.currentUrl));
+  const seenNormalizedUrls = new Set<string>();
+  const uniqueTargets: typeof usableTargets = [];
+  const duplicateTargets: typeof usableTargets = [];
+  for (const target of usableTargets) {
+    const normalized = normalizedHrefWithoutHash(target.href);
+    if (normalized !== undefined && seenNormalizedUrls.has(normalized)) {
+      duplicateTargets.push(target);
+      continue;
+    }
+    if (normalized !== undefined) {
+      seenNormalizedUrls.add(normalized);
+    }
+    uniqueTargets.push(target);
+  }
+  const selectedTargets = uniqueTargets.length >= input.normalizedMaxLinks
+    ? uniqueTargets.slice(0, input.normalizedMaxLinks)
+    : [...uniqueTargets, ...duplicateTargets].slice(0, input.normalizedMaxLinks);
+  const selectedDuplicateCount = selectedTargets.filter((target) => duplicateTargets.includes(target)).length;
+  const links = selectedTargets.map((target, index) => ({
+    index,
+    url: target.href,
+    text: target.text,
+    elementIndex: target.elementIndex,
+    source: target.source,
+    ...(target.attributeName === undefined ? {} : { attributeName: target.attributeName }),
+    ...(target.frameIndex === undefined ? {} : { frameIndex: target.frameIndex }),
+    ...(target.frameUrl === undefined ? {} : { frameUrl: target.frameUrl }),
+    ...(target.frameName === undefined || target.frameName.length === 0 ? {} : { frameName: target.frameName })
+  }));
+  return {
+    ok: true,
+    url: input.currentUrl,
+    links,
+    rawCandidateCount: input.targets.length,
+    usableCandidateCount: usableTargets.length,
+    uniqueCandidateCount: uniqueTargets.length,
+    duplicateCandidateCount: duplicateTargets.length,
+    omittedDuplicateCount: Math.max(0, duplicateTargets.length - selectedDuplicateCount),
+    anchorCandidateCount: input.targets.filter((target) => target.source === "anchor").length,
+    attributeCandidateCount: input.targets.filter((target) => target.source === "attribute").length,
+    ...(input.frameCount === undefined ? {} : { frameCount: input.frameCount }),
+    ...(input.matchedFrameCount === undefined ? {} : { matchedFrameCount: input.matchedFrameCount })
+  };
 }
 
 function attachEventCapture(state: PageState): void {
@@ -553,6 +1542,235 @@ function attachEventCapture(state: PageState): void {
       at: new Date().toISOString()
     });
   });
+}
+
+async function runBenignOverlayDismissal(page: Page, maxActions: number): Promise<BrowserOverlayDismissalReport> {
+  const report = await page.evaluate(async ({ maxActions: actionLimit }) => {
+    const actions: BrowserOverlayDismissalAction[] = [];
+    const warnings: string[] = [];
+    const sleep = (ms: number): Promise<void> => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
+
+    for (let attempt = 0; attempt < actionLimit; attempt += 1) {
+      const candidate = findDismissibleCandidate();
+      if (candidate === undefined) {
+        break;
+      }
+      candidate.element.setAttribute("data-browser-farm-dismiss-attempted", "true");
+      try {
+        candidate.element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
+        candidate.element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window }));
+        candidate.element.click();
+        actions.push({
+          kind: candidate.kind,
+          label: candidate.label,
+          status: "dismissed"
+        });
+        await sleep(150);
+      } catch (error) {
+        actions.push({
+          kind: candidate.kind,
+          label: candidate.label,
+          status: "error",
+          reason: error instanceof Error ? error.message : String(error)
+        });
+        warnings.push(`overlay_dismissal_error:${candidate.label}`);
+        break;
+      }
+    }
+
+    const skipped = collectSkippedCandidates();
+    actions.push(...skipped);
+    const dismissedCount = actions.filter((action) => action.status === "dismissed").length;
+    const skippedCount = actions.filter((action) => action.status === "skipped").length;
+    const hasError = actions.some((action) => action.status === "error");
+
+    return {
+      status: hasError ? "partial" : dismissedCount > 0 ? "dismissed" : "clear",
+      dismissedCount,
+      skippedCount,
+      actions: actions.slice(0, 20),
+      warnings
+    };
+
+    function findDismissibleCandidate(): { element: HTMLElement; label: string; kind: BrowserOverlayDismissalKind } | undefined {
+      for (const element of interactiveElements()) {
+        if (element.hasAttribute("data-browser-farm-dismiss-attempted") || !isVisible(element)) {
+          continue;
+        }
+        const label = normalizedLabel(element);
+        const context = normalizedOverlayContext(element);
+        if (!isOverlayRelated(element, context) || isBlockedAction(label, context) || !isAllowedDismissal(label)) {
+          continue;
+        }
+        return { element, label, kind: kindFor(label, context) };
+      }
+      return undefined;
+    }
+
+    function collectSkippedCandidates(): BrowserOverlayDismissalAction[] {
+      const skipped: BrowserOverlayDismissalAction[] = [];
+      for (const element of interactiveElements()) {
+        if (!isVisible(element)) {
+          continue;
+        }
+        const label = normalizedLabel(element);
+        const context = normalizedOverlayContext(element);
+        if (!isOverlayRelated(element, context) || !isBlockedAction(label, context)) {
+          continue;
+        }
+        skipped.push({
+          kind: kindFor(label, context),
+          label,
+          status: "skipped",
+          reason: "access-control-or-state-changing-action"
+        });
+        if (skipped.length >= 10) {
+          break;
+        }
+      }
+      return skipped;
+    }
+
+    function interactiveElements(): HTMLElement[] {
+      return Array.from(document.querySelectorAll("button,a,[role='button'],input[type='button'],input[type='submit'],[aria-label]"))
+        .filter((element): element is HTMLElement => element instanceof HTMLElement);
+    }
+
+    function normalizedLabel(element: HTMLElement): string {
+      return normalize([
+        element.innerText,
+        element.getAttribute("aria-label"),
+        element.getAttribute("title"),
+        element.getAttribute("value"),
+        element.getAttribute("id"),
+        element.getAttribute("class")
+      ].filter((value): value is string => value !== null && value.trim().length > 0).join(" "));
+    }
+
+    function normalizedOverlayContext(element: HTMLElement): string {
+      const values: string[] = [];
+      let current: Element | null = element;
+      for (let depth = 0; current !== null && depth < 5; depth += 1) {
+        if (current instanceof HTMLElement) {
+          values.push(
+            current.innerText.slice(0, 500),
+            current.getAttribute("aria-label") ?? "",
+            current.getAttribute("role") ?? "",
+            current.id,
+            current.className
+          );
+        }
+        current = current.parentElement;
+      }
+      return normalize(values.join(" "));
+    }
+
+    function isVisible(element: HTMLElement): boolean {
+      const style = window.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) {
+        return false;
+      }
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom >= 0 && rect.right >= 0 && rect.top <= window.innerHeight && rect.left <= window.innerWidth;
+    }
+
+    function isOverlayRelated(element: HTMLElement, context: string): boolean {
+      if (containsAny(context, ["cookie", "consent", "privacy", "gdpr", "newsletter", "subscribe", "popup", "modal", "dialog", "overlay", "banner"])) {
+        return true;
+      }
+
+      let current: Element | null = element;
+      for (let depth = 0; current !== null && depth < 5; depth += 1) {
+        if (current instanceof HTMLElement) {
+          const style = window.getComputedStyle(current);
+          const rect = current.getBoundingClientRect();
+          const zIndex = Number.parseInt(style.zIndex || "0", 10);
+          const role = current.getAttribute("role");
+          const ariaModal = current.getAttribute("aria-modal");
+          if (current instanceof HTMLDialogElement || role === "dialog" || role === "alertdialog" || ariaModal === "true") {
+            return true;
+          }
+          if (["fixed", "sticky"].includes(style.position) && (Number.isFinite(zIndex) ? zIndex >= 10 : true) && rect.width >= 120 && rect.height >= 40) {
+            return true;
+          }
+        }
+        current = current.parentElement;
+      }
+      return false;
+    }
+
+    function isAllowedDismissal(label: string): boolean {
+      if (["x", "×", "✕", "close"].includes(label)) {
+        return true;
+      }
+      return containsAny(label, [
+        "close",
+        "dismiss",
+        "not now",
+        "no thanks",
+        "maybe later",
+        "skip",
+        "reject all",
+        "reject optional",
+        "decline",
+        "only necessary",
+        "necessary only",
+        "continue without accepting",
+        "got it"
+      ]);
+    }
+
+    function isBlockedAction(label: string, context: string): boolean {
+      const actionText = `${label} ${context}`;
+      if (containsAny(actionText, ["captcha", "verify you are human", "challenge required", "age-restricted", "confirm your age", "verify your age", "18+", "payment", "checkout", "pay now"])) {
+        return true;
+      }
+      return containsAny(label, [
+        "log in",
+        "login",
+        "sign in",
+        "sign up",
+        "create account",
+        "continue with facebook",
+        "continue with google",
+        "open app",
+        "open the app",
+        "download the app",
+        "get the app",
+        "continue in the app",
+        "accept all",
+        "allow all",
+        "i agree",
+        "agree and continue"
+      ]);
+    }
+
+    function kindFor(label: string, context: string): BrowserOverlayDismissalKind {
+      if (containsAny(context, ["cookie", "consent", "privacy", "gdpr"])) {
+        return "cookie_consent";
+      }
+      if (containsAny(context, ["open app", "download the app", "get the app", "continue in the app"])) {
+        return "app_banner";
+      }
+      if (containsAny(context, ["newsletter", "subscribe", "email signup"])) {
+        return "newsletter_prompt";
+      }
+      if (["x", "×", "✕", "close"].includes(label) || containsAny(context, ["modal", "dialog", "popup"])) {
+        return "modal_close";
+      }
+      return "generic_overlay";
+    }
+
+    function containsAny(value: string, tokens: string[]): boolean {
+      return tokens.some((token) => value.includes(token));
+    }
+
+    function normalize(value: string): string {
+      return value.toLowerCase().replace(/\s+/g, " ").trim();
+    }
+  }, { maxActions });
+
+  return report as BrowserOverlayDismissalReport;
 }
 
 async function readMediaElementSnapshot(page: Page, selector: string): Promise<MediaElementSnapshot> {
@@ -674,6 +1892,52 @@ async function readActiveCues(page: Page, selector: string): Promise<SerializedC
   });
 }
 
+async function readVisualFingerprint(page: Page, selector: string): Promise<FrameVisualFingerprint> {
+  return page.locator(selector).first().evaluate((node) => {
+    const sampleSide = 8;
+    try {
+      if (!(node instanceof HTMLVideoElement)) {
+        return {
+          status: "unavailable",
+          sampleSize: sampleSide * sampleSide,
+          reason: "element_is_not_video"
+        };
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = sampleSide;
+      canvas.height = sampleSide;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (context === null) {
+        return {
+          status: "unavailable",
+          sampleSize: sampleSide * sampleSide,
+          reason: "canvas_2d_context_unavailable"
+        };
+      }
+      context.drawImage(node, 0, 0, sampleSide, sampleSide);
+      const data = context.getImageData(0, 0, sampleSide, sampleSide).data;
+      const lumas: number[] = [];
+      for (let index = 0; index < data.length; index += 4) {
+        lumas.push((data[index] ?? 0) * 0.299 + (data[index + 1] ?? 0) * 0.587 + (data[index + 2] ?? 0) * 0.114);
+      }
+      const average = lumas.reduce((sum, value) => sum + value, 0) / Math.max(1, lumas.length);
+      const hash = lumas.map((value) => value >= 128 ? "1" : "0").join("");
+      return {
+        status: "ok",
+        sampleSize: lumas.length,
+        hash,
+        averageLuma: Math.round(average * 1000) / 1000
+      };
+    } catch (error) {
+      return {
+        status: "unavailable",
+        sampleSize: sampleSide * sampleSide,
+        reason: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+}
+
 async function captureMediaResponse(state: PageState, request: Request, response: Response): Promise<void> {
   const headers = response.headers();
   const mime = normalizeMime(headers["content-type"]);
@@ -728,15 +1992,45 @@ async function captureMediaResponse(state: PageState, request: Request, response
   }
 }
 
-async function drainMediaCaptures(state: PageState): Promise<void> {
+async function drainMediaCaptures(state: PageState, signal?: AbortSignal): Promise<void> {
   const pending = [...state.pendingMediaCaptures];
   if (pending.length === 0) {
     return;
   }
   await Promise.race([
     Promise.allSettled(pending),
-    new Promise((resolvePromise) => setTimeout(resolvePromise, MEDIA_DRAIN_TIMEOUT_MS))
+    abortableDelay(MEDIA_DRAIN_TIMEOUT_MS, signal)
   ]);
+}
+
+function abortableDelay(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  throwIfAborted(signal);
+  return new Promise((resolvePromise, reject) => {
+    let timeout: NodeJS.Timeout | undefined;
+    let removeAbortListener: (() => void) | undefined;
+    const finish = (): void => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
+      removeAbortListener?.();
+    };
+    timeout = setTimeout(() => {
+      finish();
+      resolvePromise();
+    }, ms);
+    if (signal !== undefined) {
+      const listener = (): void => {
+        finish();
+        try {
+          throwIfAborted(signal);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      signal.addEventListener("abort", listener, { once: true });
+      removeAbortListener = () => signal.removeEventListener("abort", listener);
+    }
+  });
 }
 
 function mediaArtifactsForPage(state: PageState): MediaArtifactInput[] | undefined {
@@ -905,6 +2199,31 @@ async function assertNotPaymentAction(page: Page, selector?: string): Promise<vo
   if (matched !== undefined) {
     throw new FarmError("payment_guard_blocked", `Write action blocked on payment-like surface: ${page.url()}`);
   }
+}
+
+async function framesWithVisibleSelector(
+  frames: Frame[],
+  selector: string,
+  timeoutMs: number,
+  signal?: AbortSignal
+): Promise<Array<{ frame: Frame; index: number }>> {
+  const results = await withAbort(Promise.all(frames.map(async (frame, index) => {
+    try {
+      await frame.locator(selector).first().waitFor({ state: "visible", timeout: timeoutMs });
+      return { frame, index };
+    } catch {
+      return undefined;
+    }
+  })), signal);
+  return results.filter((result): result is { frame: Frame; index: number } => result !== undefined);
+}
+
+function actionTimeoutMs(options: BrowserActionOptions): number {
+  const timeout = options.timeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
+  if (!Number.isInteger(timeout) || timeout <= 0) {
+    throw new RangeError("timeoutMs must be a positive integer");
+  }
+  return timeout;
 }
 
 function containsPaymentSignal(value: string): boolean {

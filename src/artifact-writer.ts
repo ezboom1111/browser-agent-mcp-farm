@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, rename, writeFile, appendFile } from "node:fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { FarmError } from "./farm-error.js";
+import type { EvidenceKind } from "./schemas.js";
 import { parseWebVtt } from "./transcript-parser.js";
 
 export type ArtifactKind = "text" | "structured" | "screenshot" | "html" | "raw" | "media";
@@ -23,6 +24,7 @@ export interface ArtifactRecord {
   backend: "playwright-mcp";
   tool_name: string;
   session_ref?: string;
+  evidence_kind?: EvidenceKind;
 }
 
 export interface CaptureBundleInput {
@@ -43,6 +45,7 @@ export interface CaptureBundleInput {
   note?: string;
   captureMethod?: string;
   toolName?: string;
+  evidenceKind?: EvidenceKind;
 }
 
 export interface MediaArtifactInput {
@@ -235,6 +238,10 @@ export class ArtifactWriter {
       tool_name: input.toolName ?? "farm_capture",
       session_ref: input.contextToken
     };
+    const evidenceKind = input.evidenceKind ?? inferEvidenceKind(kind, relPath, input);
+    if (evidenceKind !== undefined) {
+      record.evidence_kind = evidenceKind;
+    }
     if (input.note !== undefined) {
       record.note = input.note;
     }
@@ -242,9 +249,84 @@ export class ArtifactWriter {
   }
 }
 
+function inferEvidenceKind(kind: ArtifactKind, relPath: string, input: CaptureBundleInput): EvidenceKind | undefined {
+  if (relPath.includes(".transcripts/")) {
+    return "transcript_cue";
+  }
+  if (relPath.includes(".ocr/")) {
+    return "ocr_text";
+  }
+  if (relPath.includes(".api-cache")) {
+    return "api_cache";
+  }
+  if (input.captureMethod?.includes("source-strategy")) {
+    return "source_strategy";
+  }
+  if (input.captureMethod?.includes("source-registry")) {
+    return "source_registry";
+  }
+  if (input.captureMethod?.includes("source-navigation-execution-plan")) {
+    return "source_navigation_execution_plan";
+  }
+  if (input.captureMethod?.includes("source-navigation-recipe-plan")) {
+    return "source_navigation_recipe_plan";
+  }
+  if (input.captureMethod?.includes("source-navigation-calibration")) {
+    return "source_navigation_calibration";
+  }
+  if (input.captureMethod?.includes("source-navigation-action")) {
+    return "source_navigation_action";
+  }
+  if (input.captureMethod?.includes("source-navigation-followup")) {
+    return "source_navigation_followup";
+  }
+  if (input.captureMethod?.includes("destination-candidate")) {
+    return "destination_candidate";
+  }
+  if (input.captureMethod?.includes("destination-triage")) {
+    return "destination_triage";
+  }
+  if (input.captureMethod?.includes("source-navigation")) {
+    return "source_navigation_plan";
+  }
+  if (input.captureMethod?.includes("official-api")) {
+    return "official_api_metadata";
+  }
+  if (input.captureMethod?.includes("obstruction")) {
+    return "browser_obstruction";
+  }
+  if (input.captureMethod?.includes("overlay-dismissal")) {
+    return "browser_overlay_dismissal";
+  }
+  if (kind === "screenshot" && input.toolName === "farm_sample_frames") {
+    return "frame_screenshot";
+  }
+  if (kind === "screenshot") {
+    return "page_screenshot";
+  }
+  if (kind === "text") {
+    return "page_text";
+  }
+  if (kind === "html") {
+    return "page_html";
+  }
+  if (kind === "media") {
+    return "media";
+  }
+  if (kind === "structured" && relPath.includes(".media-index.")) {
+    return "media_index";
+  }
+  if (kind === "structured") {
+    return "metadata";
+  }
+  return undefined;
+}
+
+export const SANITIZED_FILE_BASE_MAX_LENGTH = 96;
+
 export function sanitizeFileBase(value: string): string {
   const cleaned = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  return cleaned.slice(0, 96) || `capture-${randomUUID()}`;
+  return cleaned.slice(0, SANITIZED_FILE_BASE_MAX_LENGTH) || `capture-${randomUUID()}`;
 }
 
 export function extensionForMedia(mime: string, url: string): string {

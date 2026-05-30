@@ -10,6 +10,7 @@ import {
   ClickInputSchema,
   ClosePageInputSchema,
   FillInputSchema,
+  EvidenceRunInputSchema,
   HeartbeatInputSchema,
   ListLeasesInputSchema,
   OpenPageInputSchema,
@@ -26,7 +27,7 @@ import {
 export function createMcpServer(service = new FarmService()): McpServer {
   const server = new McpServer({
     name: "browser-agent-mcp-farm",
-    version: "0.2.6"
+    version: "0.3.0"
   });
 
   registerJsonTool(server, "farm_acquire_context", AcquireContextInputSchema, (input) => service.acquireContext(input));
@@ -38,6 +39,7 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_scroll", ScrollInputSchema, (input) => service.scroll(input));
   registerJsonTool(server, "farm_capture_after_idle", CaptureAfterIdleInputSchema, (input) => service.captureAfterIdle(input));
   registerJsonTool(server, "farm_sample_frames", SampleFramesInputSchema, (input) => service.sampleFrames(input));
+  registerJsonTool(server, "farm_evidence_run", EvidenceRunInputSchema, (input) => service.evidenceRun(input), (result) => resultHasFailedClaimGate(result));
   registerJsonTool(server, "farm_close_page", ClosePageInputSchema, (input) => service.closePage(input));
   registerJsonTool(server, "farm_click", ClickInputSchema, (input) => service.click(input));
   registerJsonTool(server, "farm_fill", FillInputSchema, (input) => service.fill(input));
@@ -60,7 +62,8 @@ function registerJsonTool<T extends z.ZodRawShape>(
   server: McpServer,
   name: string,
   schema: z.ZodObject<T>,
-  handler: (input: z.infer<z.ZodObject<T>>) => unknown | Promise<unknown>
+  handler: (input: z.infer<z.ZodObject<T>>) => unknown | Promise<unknown>,
+  isErrorResult?: (result: unknown) => boolean
 ): void {
   server.registerTool(
     name,
@@ -73,6 +76,7 @@ function registerJsonTool<T extends z.ZodRawShape>(
       try {
         const result = await handler(schema.parse(input));
         return {
+          ...(isErrorResult?.(result) ? { isError: true as const } : {}),
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }]
         };
       } catch (error) {
@@ -83,4 +87,11 @@ function registerJsonTool<T extends z.ZodRawShape>(
       }
     }
   );
+}
+
+function resultHasFailedClaimGate(result: unknown): boolean {
+  return typeof result === "object"
+    && result !== null
+    && "ok" in result
+    && (result as { ok?: unknown }).ok === false;
 }
