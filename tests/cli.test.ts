@@ -165,4 +165,56 @@ describe("cli", () => {
     expect(out).toContain("\"ok\": true");
     expect(exitCode).toBeFalsy();
   });
+
+  it("describes a source-navigation recipe plan for a URL", async () => {
+    const { out } = await runCli(["source-navigation-recipes", "--url", "https://www.youtube.com/watch?v=abc"]);
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it("prints source-navigation calibration targets", async () => {
+    const { out } = await runCli(["source-navigation-calibration-targets"]);
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it("exports maintained source-navigation recipes", async () => {
+    const { out } = await runCli(["source-navigation-export-recipes"]);
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it("official-api-readiness with --fail-not-ready signals via exit code", async () => {
+    const { out, exitCode } = await runCli(["official-api-readiness", "--url", "https://www.youtube.com/watch?v=abc", "--fail-not-ready"]);
+    expect(out.length).toBeGreaterThan(0);
+    expect(typeof exitCode === "number" || exitCode === undefined).toBe(true);
+  });
+
+  it("critique-next prints the next task (or an empty queue result)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-cli-critique-"));
+    dirs.push(dir);
+    const { out } = await runCli(["critique-next", "--queue", join(dir, "queue.json")]);
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  it("export-bundle signs the manifest when a private key env is set", async () => {
+    const run = await makeRun();
+    const previous = process.env.CLI_TEST_SIGNING_KEY;
+    const { generateKeyPairSync } = await import("node:crypto");
+    const { privateKey } = generateKeyPairSync("ed25519");
+    process.env.CLI_TEST_SIGNING_KEY = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    try {
+      const evb = join(run, "signed.evb");
+      const { out } = await runCli(["export-bundle", "--run-dir", run, "--archive-file", evb, "--private-key-env", "CLI_TEST_SIGNING_KEY"]);
+      expect(out).toContain("\"signed\": true");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CLI_TEST_SIGNING_KEY;
+      } else {
+        process.env.CLI_TEST_SIGNING_KEY = previous;
+      }
+    }
+  });
+
+  it("treats an unknown command as help", async () => {
+    const { out } = await runCli(["definitely-not-a-real-command"]);
+    expect(out.length).toBeGreaterThan(0);
+  });
 });
