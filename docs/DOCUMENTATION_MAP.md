@@ -64,35 +64,34 @@ For a new Codex or Claude session, read these files in this order:
 
 | File | Purpose | How to use |
 | --- | --- | --- |
-| `AGENTS.md` | Primary session memory for coding agents. | First file to read in every new session. Keep concise but current. |
+| `AGENTS.md` | Primary session memory for coding agents (slim capability map). | First file to read in every new session. Keep concise; the long feature log is archived. |
 | `docs/CLAUDE_HANDOFF.md` | Copy/paste handoff for Claude or another coding agent. | Give this to Claude together with `AGENTS.md` when switching agents. |
+| `docs/ARCHITECTURE.md` | One-page layering and the build-enforced dependency rule. | Read before changing module boundaries or the core/intelligence split. |
+| `STATUS.md` | Generated build/test/coverage status (single source of truth). | Read for current verify state; never hand-edit or copy counts into prose. |
+| `skills/browser-agent-mcp-farm/SKILL.md` | Claude skill that drives the farm. | The agent-facing entry point; installed into `~/.claude/skills` by `register-all`. |
+| `docs/archive/AGENTS_STATUS_LOG.md` | Archived long implemented-feature log. | Search when reconstructing why a feature exists; not in the read-first path. |
 
-## Current Verification Caveat
+## Current Verification Status
 
-The latest completed full verification before the scene-change hit-cap pass was:
+`npm run verify` is green on the working branch (`claude/handoff-baseline`). The
+generated [`STATUS.md`](../STATUS.md) records the exact build/test/coverage
+result and the commit it came from — read it instead of relying on counts
+written into prose. The gate now also runs a standalone typecheck over src and
+tests, a dependency-direction boundary guard, a browser-presence guard, and a
+coverage threshold, in addition to build, tests, four smoke captures, and
+`npm audit`.
 
-```powershell
-npm run verify
-```
-
-It passed with build, 34 test files / 351 tests, local smoke, public web smoke,
-media smoke, proxy smoke, and 0 npm audit vulnerabilities after the OCR CTA and
-policy text-profile pass.
-
-After that, the scene-change hit-cap pass added
-`denseSampling.sceneChangeMaxHits` and `--dense-scene-max-hits`. Focused tests
-and build passed, but the final full `npm run verify` for that latest change was
-interrupted by the user and must be rerun before claiming the whole worktree is
-fully verified.
+The previously-documented "scene-change verify was interrupted" caveat is
+resolved: the full gate was rerun and passes.
 
 ## Recommended Resume Prompt
 
 Use this prompt for Codex or Claude:
 
 ```text
-Read AGENTS.md, docs/DOCUMENTATION_MAP.md, docs/CLAUDE_HANDOFF.md,
-docs/NEXT_TASKS.md, and docs/DEVELOPMENT_HISTORY.md. Continue from the current
-worktree. Do not revert user changes. First rerun npm run verify because the
-last full verify was interrupted after the scene-change hit-cap pass, then
-continue the next item in docs/NEXT_TASKS.md.
+Read AGENTS.md, docs/DOCUMENTATION_MAP.md, docs/ARCHITECTURE.md,
+docs/CLAUDE_HANDOFF.md, STATUS.md, and docs/NEXT_TASKS.md. Continue from the
+current worktree on branch claude/handoff-baseline. Do not revert user changes.
+Run npm run verify to confirm the gate is green, then continue the next item in
+docs/NEXT_TASKS.md.
 ```
