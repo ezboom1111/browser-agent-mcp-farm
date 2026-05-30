@@ -33,6 +33,7 @@
     "check:browser": "node scripts/check-browser.mjs",
     "ratchet": "node scripts/ratchet-coverage.mjs",
     "status": "node scripts/generate-status.mjs",
+    "scorecard": "node scripts/generate-scorecard.mjs",
     "test:ocr-integration": "vitest run --config vitest.ocr.config.ts",
     "test:official-api": "vitest run --config vitest.official-api.config.ts",
     "smoke": "node ./dist/cli.js smoke",
@@ -42,7 +43,7 @@
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",
-    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status"
+    "verify": "npm run build && npm run typecheck && npm run boundaries && npm run check:browser && npm run test:ci && npm run ratchet && npm run smoke && npm run smoke:web && npm run smoke:media && npm run smoke:proxy && npm audit --audit-level=moderate && npm run status && npm run scorecard"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

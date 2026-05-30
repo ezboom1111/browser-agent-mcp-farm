@@ -1,0 +1,266 @@
+{
+  "package": "browser-agent-mcp-farm",
+  "version": "0.3.0",
+  "commit": "6e11a97",
+  "generatedAt": "2026-05-30T07:26:01.122Z",
+  "overallScore": 9.7,
+  "weakestDomain": {
+    "key": "engineering",
+    "score10": 7.5
+  },
+  "measured": {
+    "coverageLines": 73.49,
+    "coverageBranches": 67.85,
+    "testsGreen": true
+  },
+  "domains": [
+    {
+      "key": "trust",
+      "title": "Trust & integrity — claim-gate moonshot (FLAGSHIP)",
+      "score10": 10,
+      "passed": 4,
+      "total": 4,
+      "gates": [
+        {
+          "id": "non_tautological_grounding",
+          "kind": "wired",
+          "desc": "Anchor verified against artifact bytes",
+          "pass": true
+        },
+        {
+          "id": "cite_or_fail_authoring",
+          "kind": "wired",
+          "desc": "register_evidence + add_claim authoring path",
+          "pass": true
+        },
+        {
+          "id": "structured_value_grounding",
+          "kind": "wired",
+          "desc": "Typed structured values are groundable",
+          "pass": true
+        },
+        {
+          "id": "tamper_evident_decision_log",
+          "kind": "wired",
+          "desc": "Hash-chained gate-verdict decision log",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "modality",
+      "title": "Modality & data types (structured/semi/unstructured)",
+      "score10": 10,
+      "passed": 6,
+      "total": 6,
+      "gates": [
+        {
+          "id": "jsonld_og",
+          "kind": "wired",
+          "desc": "JSON-LD / OpenGraph / canonical / title",
+          "pass": true
+        },
+        {
+          "id": "typed_summary",
+          "kind": "wired",
+          "desc": "Typed price / rating summary",
+          "pass": true
+        },
+        {
+          "id": "html_tables",
+          "kind": "wired",
+          "desc": "HTML tables (semi-structured)",
+          "pass": true
+        },
+        {
+          "id": "headings_outline",
+          "kind": "wired",
+          "desc": "Document heading outline",
+          "pass": true
+        },
+        {
+          "id": "dom_crosscheck",
+          "kind": "wired",
+          "desc": "Structured-vs-DOM disagreement signal",
+          "pass": true
+        },
+        {
+          "id": "pipeline_integration",
+          "kind": "wired",
+          "desc": "structured_data registered by the run pipeline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "evidence_quality",
+      "title": "Evidence-quality evaluation & measurement",
+      "score10": 10,
+      "passed": 3,
+      "total": 3,
+      "gates": [
+        {
+          "id": "golden_corpus",
+          "kind": "wired",
+          "desc": "Labeled golden corpus (cat × locale)",
+          "pass": true
+        },
+        {
+          "id": "benchmark_scorer",
+          "kind": "wired",
+          "desc": "Precision/recall/exact scorer",
+          "pass": true
+        },
+        {
+          "id": "ci_threshold_gate",
+          "kind": "wired",
+          "desc": "Benchmark gated in CI against thresholds",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "portability",
+      "title": "Portable, offline-verifiable signed bundle (.evb)",
+      "score10": 10,
+      "passed": 3,
+      "total": 3,
+      "gates": [
+        {
+          "id": "merkle_manifest",
+          "kind": "wired",
+          "desc": "Merkle-rooted manifest",
+          "pass": true
+        },
+        {
+          "id": "ed25519_signature",
+          "kind": "wired",
+          "desc": "Ed25519 sign + verify",
+          "pass": true
+        },
+        {
+          "id": "self_contained_evb",
+          "kind": "wired",
+          "desc": "Self-contained .evb verifies offline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "parity",
+      "title": "Dual-agent parity, MCP ergonomics & routing",
+      "score10": 10,
+      "passed": 3,
+      "total": 3,
+      "gates": [
+        {
+          "id": "shared_guidance",
+          "kind": "wired",
+          "desc": "One shared agent-guidance template",
+          "pass": true
+        },
+        {
+          "id": "register_all",
+          "kind": "wired",
+          "desc": "Codex + Claude skill registration",
+          "pass": true
+        },
+        {
+          "id": "capabilities",
+          "kind": "wired",
+          "desc": "farm_capabilities + farm_list_runs",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "safety",
+      "title": "Safety & parallel-execution correctness",
+      "score10": 10,
+      "passed": 3,
+      "total": 3,
+      "gates": [
+        {
+          "id": "profile_lock_refresh",
+          "kind": "wired",
+          "desc": "Heartbeat refreshes the profile lock",
+          "pass": true
+        },
+        {
+          "id": "secret_redaction",
+          "kind": "wired",
+          "desc": "Proxy/profile redaction in results",
+          "pass": true
+        },
+        {
+          "id": "boundary_guard",
+          "kind": "wired",
+          "desc": "Dependency-direction guard",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "security_lifecycle",
+      "title": "Security-at-rest, legal posture & data lifecycle",
+      "score10": 10,
+      "passed": 3,
+      "total": 3,
+      "gates": [
+        {
+          "id": "secret_scanner",
+          "kind": "wired",
+          "desc": "Secret-at-rest scanner + CLI",
+          "pass": true
+        },
+        {
+          "id": "legal_basis",
+          "kind": "wired",
+          "desc": "Per-source legal_basis posture",
+          "pass": true
+        },
+        {
+          "id": "retention_lifecycle",
+          "kind": "wired",
+          "desc": "purge-run / prune-runs lifecycle",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "key": "engineering",
+      "title": "Engineering quality, observability & SLO",
+      "score10": 7.5,
+      "passed": 3,
+      "total": 4,
+      "gates": [
+        {
+          "id": "tests_green",
+          "kind": "measured",
+          "desc": "Full verify gate green",
+          "pass": true
+        },
+        {
+          "id": "per_run_metrics",
+          "kind": "wired",
+          "desc": "Per-run metrics.json (p50/p95)",
+          "pass": true
+        },
+        {
+          "id": "util_consolidated",
+          "kind": "wired",
+          "desc": "Shared src/util helpers",
+          "pass": true
+        },
+        {
+          "id": "coverage_80",
+          "kind": "measured",
+          "desc": "Product line coverage ≥ 80%",
+          "pass": false,
+          "detail": "73.49%"
+        }
+      ]
+    }
+  ],
+  "note": "Gates are automatable proxies: \"wired\" = capability present in code, \"measured\" = a real number from this run. Tracks build-completeness + measured quality; the adversarial behaviors are proven by the test suite (see STATUS)."
+}

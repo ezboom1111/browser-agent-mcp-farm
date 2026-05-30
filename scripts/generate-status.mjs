@@ -43,7 +43,7 @@ const dirtyCount = git('status --porcelain', '')
   .split('\n')
   .filter((line) => line.length > 0)
   .map((line) => line.slice(3).replace(/^"|"$/g, ''))
-  .filter((path) => path && path !== 'STATUS.md' && path !== 'STATUS.json' && !path.startsWith('.status/'))
+  .filter((path) => path && path !== 'STATUS.md' && path !== 'STATUS.json' && path !== 'SCORECARD.md' && path !== 'SCORECARD.json' && !path.startsWith('.status/'))
   .length;
 
 let files = null;
