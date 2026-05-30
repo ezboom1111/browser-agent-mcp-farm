@@ -1047,6 +1047,49 @@ Publish npm only after docs and exported API are stable. Remote shared server
 mode remains out of scope until auth, tenancy, artifact retention, storage
 roots, quotas, cancellation, and concurrency controls are designed.
 
+## Coverage Definition of Done and Freeze
+
+The per-provider calibration loop (calibrate -> catalog -> promote -> readiness)
+is powerful but open-ended: the web is not a finite taxonomy, selectors decay,
+and the highest-value targets (Google Search, TikTok, Expedia, Coupang, Reddit,
+Quora, Stack Overflow, ...) bot-block the default unattended browser. To keep
+effort bounded and the product honest, coverage is now governed by an explicit
+definition of done and a freeze policy.
+
+**Coverage is "done"** when, for each prioritized category/locale slot:
+
+1. the top reviewed slots have maintained, narrow, non-mutating recipes that
+   pass an explicit `evidence-run` claim gate,
+2. those recipes have a recorded last-verified result (a recipe canary), and
+3. blocked slots are recorded as blocked with a profile/headed retry plan, not
+   as open calibration debt.
+
+Reaching that bar for the already-baselined categories (Korean search, maps,
+news, content/media, community; global news; selected global travel/commerce;
+global social for Instagram/X) **closes** the calibration effort for those
+slots. Adding the 30th provider is explicitly **not** a goal.
+
+**Freeze:** do not start new open-ended provider expansion. A provider is added
+only when a concrete user need names it, and then through the same bounded loop
+with a canary.
+
+**Descope of bot-hostile autonomous coverage:** categories whose top targets
+reliably bot-block the unattended browser are **not** claimed as autonomous
+coverage. They are either official-API-only (structured, credential-gated
+supplements) or human-headed-only (a user-driven profile/headed retry), and the
+docs and readiness audits must not imply the farm can autonomously crawl them.
+This applies to much of marketplace/transaction (Coupang, Naver Shopping,
+Gmarket, Expedia), parts of community/forum (Reddit, Quora, Stack Overflow), and
+TikTok in unattended mode.
+
+**Deferred (documented, not yet executed):** physically quarantining the
+calibration/promotion/coverage-readiness modules into `src/research/` and gating
+their CLI subcommands behind a single `research` parent command, plus a
+`recipe-canary` command and per-recipe `lastVerifiedAt` tags. These are
+mechanical refactors that touch ~7,600 lines and the whole CLI surface; they
+should land as a focused, separately-reviewed change rather than be bundled with
+behavior work. Until then, this section is the binding policy.
+
 ## Acceptance Tasks
 
 These five tasks define the first product acceptance set for portal-native
