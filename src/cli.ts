@@ -16,6 +16,7 @@ import { LeaseManager } from "./lease-manager.js";
 import { runStdioServer } from "./mcp-server.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { runClaimGate } from "./claim-gate.js";
+import { buildBundleManifest, signManifest, verifyBundle, type BundleManifest } from "./evidence-bundle.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
@@ -73,6 +74,50 @@ async function main(): Promise<void> {
 
   if (command === "claim-gate") {
     await runClaimGateCommand();
+    return;
+  }
+
+  if (command === "export-bundle") {
+    const runDir = getArgValue("--run-dir");
+    if (runDir === undefined) {
+      console.error("export-bundle requires --run-dir <evidence-run-dir>");
+      process.exitCode = 1;
+      return;
+    }
+    const manifest = await buildBundleManifest(runDir);
+    const privateKeyEnv = getArgValue("--private-key-env");
+    if (privateKeyEnv !== undefined) {
+      const pem = process.env[privateKeyEnv];
+      if (pem !== undefined && pem.length > 0) {
+        manifest.signature = signManifest(manifest, pem);
+      }
+    }
+    const outputFile = getArgValue("--output-file");
+    if (outputFile !== undefined) {
+      await writeFile(outputFile, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+      console.log(JSON.stringify({ ok: true, outputFile, merkleRoot: manifest.merkleRoot, signed: manifest.signature !== undefined, artifactCount: manifest.artifactCount }, null, 2));
+    } else {
+      console.log(JSON.stringify({ ok: true, manifest }, null, 2));
+    }
+    return;
+  }
+
+  if (command === "verify-bundle") {
+    const runDir = getArgValue("--run-dir");
+    const manifestFile = getArgValue("--manifest-file");
+    if (runDir === undefined || manifestFile === undefined) {
+      console.error("verify-bundle requires --run-dir <dir> --manifest-file <manifest.json>");
+      process.exitCode = 1;
+      return;
+    }
+    const manifest = JSON.parse(await readFile(manifestFile, "utf8")) as BundleManifest;
+    const publicKeyEnv = getArgValue("--public-key-env");
+    const publicKeyPem = publicKeyEnv !== undefined ? process.env[publicKeyEnv] : undefined;
+    const result = await verifyBundle(runDir, manifest, publicKeyPem);
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.ok) {
+      process.exitCode = 1;
+    }
     return;
   }
 
