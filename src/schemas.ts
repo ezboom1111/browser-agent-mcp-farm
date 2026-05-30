@@ -449,6 +449,29 @@ export const ReadArtifactInputSchema = z.object({
   message: "provide artifactId or path"
 });
 
+// Agent claim-authoring (master-plan flagship slice 2). Lets ANY agent register
+// the bytes it saw and author its OWN substantive, cite-or-fail grounded claim,
+// so the gate covers the agent's answer — not just runner boilerplate.
+export const RegisterEvidenceInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory to register the artifact into (a fresh dir for a new bundle, or an existing runDir)."),
+  text: z.string().min(1).describe("The evidence content to register (e.g. the exact text you will cite)."),
+  evidenceKind: EvidenceKindSchema.default("page_text").describe("Typed kind of this evidence (default page_text)."),
+  sourceUrl: z.url().describe("The source the evidence came from (recorded as provenance)."),
+  captureId: z.string().min(1).optional().describe("Optional id for the artifact filename.")
+});
+
+export const AddClaimInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory containing the cited artifact's ledger."),
+  claim: z.string().min(1).describe("The substantive claim text you are asserting."),
+  claimType: ClaimTypeSchema.describe("visual | text | metadata | audio | inference."),
+  artifactId: z.string().min(1).describe("artifact_id of the registered evidence this claim cites (from farm_register_evidence / farm_list_artifacts)."),
+  evidenceKind: EvidenceKindSchema.describe("The cited artifact's evidence kind."),
+  anchor: ClaimAnchorSchema.optional().describe("WHERE in the cited artifact the claim is grounded; verified against the bytes."),
+  claimTaxonomy: ClaimTaxonomySchema.optional().describe("quote (default) | derived | aggregated."),
+  verificationLevel: VerificationLevelSchema.default("grounded").describe("Verification level recorded on the claim."),
+  timestampSec: z.number().nonnegative().max(86_400).optional().describe("Required for visual claims citing a frame screenshot.")
+});
+
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
 export type HeartbeatInput = z.input<typeof HeartbeatInputSchema>;
 export type OpenPageInput = z.input<typeof OpenPageInputSchema>;
@@ -479,5 +502,7 @@ export type ReadReportInput = z.input<typeof ReadReportInputSchema>;
 export type ListArtifactsInput = z.input<typeof ListArtifactsInputSchema>;
 export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
 export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
+export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
+export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
 export type ClaimAnchor = z.infer<typeof ClaimAnchorSchema>;
 export type ClaimTaxonomy = z.infer<typeof ClaimTaxonomySchema>;

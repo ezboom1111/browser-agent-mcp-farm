@@ -1,6 +1,7 @@
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { appendFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ArtifactWriter, type CaptureBundleInput } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
@@ -27,6 +28,8 @@ import {
   ListArtifactsInputSchema,
   RunClaimGateInputSchema,
   ReadArtifactInputSchema,
+  RegisterEvidenceInputSchema,
+  AddClaimInputSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
   type CaptureInput,
@@ -46,7 +49,9 @@ import {
   type ReadReportInput,
   type ListArtifactsInput,
   type RunClaimGateInput,
-  type ReadArtifactInput
+  type ReadArtifactInput,
+  type RegisterEvidenceInput,
+  type AddClaimInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -251,6 +256,92 @@ export class FarmService {
       truncated: bytes.byteLength > slice.byteLength,
       content: asText ? slice.toString("utf8") : slice.toString("base64")
     };
+  }
+
+  // Register a piece of evidence (the bytes the agent saw) as a hash-verified
+  // artifact the agent can then cite. Part of the cite-or-fail authoring loop.
+  async registerEvidence(input: RegisterEvidenceInput) {
+    const parsed = RegisterEvidenceInputSchema.parse(input);
+    const writer = new ArtifactWriter();
+    const bundleInput: CaptureBundleInput = {
+      runDir: parsed.runDir,
+      sourceUrl: parsed.sourceUrl,
+      contextToken: "agent-authored",
+      pageId: "agent",
+      text: parsed.text,
+      evidenceKind: parsed.evidenceKind,
+      captureMethod: "agent-authored"
+    };
+    if (parsed.captureId !== undefined) {
+      bundleInput.captureId = parsed.captureId;
+    }
+    const records = await writer.writeCaptureBundle(bundleInput);
+    // Select the raw text artifact (the one whose bytes hold the registered
+    // text), not the sibling metadata.json that writeCaptureBundle also emits.
+    const record = records.find((item) => item.kind === "text") ?? records[0];
+    if (record === undefined) {
+      return { ok: false as const, registered: false as const };
+    }
+    return {
+      ok: true as const,
+      registered: true as const,
+      artifactId: record.artifact_id,
+      path: record.path,
+      sha256: record.sha256,
+      evidenceKind: record.evidence_kind
+    };
+  }
+
+  // Author a substantive claim that cites a registered artifact, then run the
+  // gate so the agent gets immediate cite-or-fail feedback (a claim whose anchor
+  // is not grounded in the cited bytes makes gate.ok false).
+  async addClaim(input: AddClaimInput) {
+    const parsed = AddClaimInputSchema.parse(input);
+    const artifactText = await readFile(join(parsed.runDir, "artifacts.jsonl"), "utf8").catch(() => "");
+    const registered = artifactText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .some((line) => {
+        try {
+          return (JSON.parse(line) as { artifact_id?: string }).artifact_id === parsed.artifactId;
+        } catch {
+          return false;
+        }
+      });
+    if (!registered) {
+      return { ok: false as const, appended: false as const, error: `cited artifact not registered: ${parsed.artifactId}` };
+    }
+    const claimId = `claim-${randomUUID()}`;
+    const claimRow: Record<string, unknown> = {
+      schema_version: "1.0",
+      claim_id: claimId,
+      claim_type: parsed.claimType,
+      claim: parsed.claim,
+      evidence: parsed.artifactId,
+      artifact_id: parsed.artifactId,
+      evidence_kind: parsed.evidenceKind,
+      verification_level: parsed.verificationLevel
+    };
+    if (parsed.anchor !== undefined) {
+      claimRow.anchor = parsed.anchor;
+    }
+    if (parsed.claimTaxonomy !== undefined) {
+      claimRow.claim_taxonomy = parsed.claimTaxonomy;
+    }
+    if (parsed.timestampSec !== undefined) {
+      claimRow.timestampSec = parsed.timestampSec;
+    }
+    const citationRow = {
+      claim_id: claimId,
+      evidence: parsed.artifactId,
+      artifact_id: parsed.artifactId,
+      evidence_kind: parsed.evidenceKind
+    };
+    await appendFile(join(parsed.runDir, "claims.jsonl"), `${JSON.stringify(claimRow)}\n`);
+    await appendFile(join(parsed.runDir, "citations.jsonl"), `${JSON.stringify(citationRow)}\n`);
+    const gate = await runClaimGate(parsed.runDir, { mode: "final", minClaims: 0 });
+    return { ok: gate.ok, appended: true as const, claimId, gate };
   }
 
   async evidenceRun(input: EvidenceRunInput) {

@@ -208,6 +208,46 @@ describe("createMcpServer", () => {
     expect(tampered.tampered).toBe(true);
     expect(tamperedResult.isError).toBe(true);
   });
+
+  it("farm_register_evidence + farm_add_claim author a cite-or-fail grounded claim", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-mcp-author-"));
+    dirs.push(dir);
+    const tools = registeredTools(createMcpServer());
+
+    const reg = JSON.parse((await tools.farm_register_evidence.handler({
+      runDir: dir,
+      text: "The store is open now and rated 4.6.",
+      evidenceKind: "page_text",
+      sourceUrl: "https://example.com/"
+    })).content[0].text) as { registered: boolean; artifactId: string };
+    expect(reg.registered).toBe(true);
+
+    // A grounded claim passes the gate.
+    const good = await tools.farm_add_claim.handler({
+      runDir: dir,
+      claim: "The store is rated 4.6",
+      claimType: "metadata",
+      artifactId: reg.artifactId,
+      evidenceKind: "page_text",
+      anchor: { type: "text_span", quote: "rated 4.6" }
+    });
+    const goodParsed = JSON.parse(good.content[0].text) as { ok: boolean; appended: boolean };
+    expect(good.isError).toBeUndefined();
+    expect(goodParsed.ok).toBe(true);
+    expect(goodParsed.appended).toBe(true);
+
+    // An ungrounded claim fails the gate (cite-or-fail).
+    const bad = await tools.farm_add_claim.handler({
+      runDir: dir,
+      claim: "The store is permanently closed",
+      claimType: "metadata",
+      artifactId: reg.artifactId,
+      evidenceKind: "page_text",
+      anchor: { type: "text_span", quote: "permanently closed" }
+    });
+    expect(bad.isError).toBe(true);
+    expect(bad.content[0].text).toContain("claim text not found in cited artifact");
+  });
 });
 
 function registeredTools(server: unknown): Record<string, { description?: string; handler: (input: unknown) => Promise<{ isError?: boolean; content: Array<{ text: string }> }> }> {
