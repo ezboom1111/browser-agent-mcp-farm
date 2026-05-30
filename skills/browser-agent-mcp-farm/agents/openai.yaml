@@ -1,0 +1,4 @@
+interface:
+  display_name: "Browser-Agent MCP Farm"
+  short_description: "Hash-verified, claim-gated browser evidence (cite-or-fail)"
+  default_prompt: "Capture re-verifiable, tamper-evident evidence of this page (screenshots, page text/HTML, sampled video frames, OCR) where every cited claim must reference a SHA-256-registered artifact and the run fails on uncited claims."
