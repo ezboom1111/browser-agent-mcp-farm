@@ -48,8 +48,15 @@ describe("runEvidenceWorkflow", () => {
       const structured = rows.find((row) => row.evidence_kind === "structured_data" && row.kind === "text");
       expect(structured).toBeDefined();
       if (structured?.path !== undefined) {
-        const parsed = JSON.parse(await readFile(join(runDir, structured.path), "utf8")) as { summary?: { price?: { value?: string } } };
+        const parsed = JSON.parse(await readFile(join(runDir, structured.path), "utf8")) as {
+          summary?: { price?: { value?: string } };
+          crossCheck?: Array<{ field?: string; corroborated?: boolean }>;
+        };
         expect(parsed.summary?.price?.value).toBe("4500");
+        // The runner cross-checks the site-claim price against the captured visible
+        // text; the fixture body has no visible price, so it must flag uncorroborated.
+        const priceCheck = parsed.crossCheck?.find((entry) => entry.field === "price.value");
+        expect(priceCheck?.corroborated).toBe(false);
       }
     } finally {
       await fixture.close();

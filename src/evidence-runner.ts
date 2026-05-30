@@ -1,6 +1,6 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { extractStructuredData } from "./structured-extractor.js";
+import { crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
@@ -867,6 +867,16 @@ async function captureBrowserEvidence(input: {
       if (htmlRecord?.path !== undefined) {
         const html = await readFile(join(input.options.runDir, htmlRecord.path), "utf8");
         const structured = extractStructuredData(html);
+        // Cross-check the site-claim typed facts against the page's visible text so
+        // a JSON-LD price that disagrees with the rendered DOM is surfaced, not trusted.
+        const textRecord = capture.records.find((record) => record.kind === "text" && record.evidence_kind === "page_text" && typeof record.path === "string");
+        if (textRecord?.path !== undefined) {
+          const visibleText = await readFile(join(input.options.runDir, textRecord.path), "utf8");
+          const crossCheck = crossCheckStructured(structured, visibleText);
+          if (crossCheck.length > 0) {
+            structured.crossCheck = crossCheck;
+          }
+        }
         const hasStructured = structured.jsonLd.length > 0
           || Object.keys(structured.openGraph).length > 0
           || structured.summary.name !== undefined;

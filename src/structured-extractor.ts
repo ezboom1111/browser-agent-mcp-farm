@@ -10,6 +10,12 @@ export interface StructuredSummary {
   rating?: { value: string; scale?: string; count?: string };
 }
 
+export interface StructuredCrossCheck {
+  field: "name" | "price.value" | "rating.value";
+  claimed: string;
+  corroborated: boolean;
+}
+
 export interface StructuredData {
   jsonLd: unknown[];
   openGraph: Record<string, string>;
@@ -17,6 +23,9 @@ export interface StructuredData {
   canonical?: string;
   title?: string;
   summary: StructuredSummary;
+  // Set only by callers that have the page's visible text (see crossCheckStructured);
+  // NOT produced by extractStructuredData, which stays byte-reproducible from HTML.
+  crossCheck?: StructuredCrossCheck[];
 }
 
 export function extractStructuredData(html: string): StructuredData {
@@ -36,6 +45,32 @@ export function extractStructuredData(html: string): StructuredData {
     data.title = title;
   }
   return data;
+}
+
+// Heuristic, deterministic cross-check of the publisher's SITE CLAIM (the JSON-LD
+// summary) against the page's visible text. Markup is marketing-controlled and can
+// disagree with what a human actually sees (a stale or pre-sale price), so a typed
+// fact that does NOT appear in the rendered text is flagged uncorroborated. This is a
+// disagreement SIGNAL, not proof that either value is correct. Number formatting
+// (commas / spaces) is normalized away, so "4500" corroborates a visible "4,500".
+export function crossCheckStructured(data: StructuredData, visibleText: string): StructuredCrossCheck[] {
+  const haystack = normalizeForCorroboration(visibleText);
+  const checks: StructuredCrossCheck[] = [];
+  const consider = (field: StructuredCrossCheck["field"], claimed: string | undefined): void => {
+    if (claimed === undefined) {
+      return;
+    }
+    const needle = normalizeForCorroboration(claimed);
+    checks.push({ field, claimed, corroborated: needle.length > 0 && haystack.includes(needle) });
+  };
+  consider("name", data.summary.name);
+  consider("price.value", data.summary.price?.value);
+  consider("rating.value", data.summary.rating?.value);
+  return checks;
+}
+
+function normalizeForCorroboration(value: string): string {
+  return value.toLowerCase().replace(/[\s,]+/g, "");
 }
 
 // Pull a few common typed facts out of JSON-LD (Product/Offer/Place/Review nodes)
