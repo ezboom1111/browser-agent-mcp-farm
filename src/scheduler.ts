@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isAbortError } from "./abort.js";
+import { FarmError } from "./farm-error.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow, type EvidenceWorkflowResult, type EvidenceWorkflowStageTiming } from "./evidence-runner.js";
 import type { EvidenceRunInput } from "./schemas.js";
@@ -22,6 +23,7 @@ export interface ScheduledEvidenceRun {
   input: EvidenceRunInput;
   result?: EvidenceWorkflowResultSummary;
   error?: string;
+  errorCode?: string;
   cancelReason?: string;
   cancelRequestedAt?: string;
   startedAt?: string;
@@ -203,6 +205,9 @@ export class EvidenceRunScheduler {
         updateJob(job, "canceled");
       } else {
         job.error = error instanceof Error ? error.message : String(error);
+        if (error instanceof FarmError) {
+          job.errorCode = error.code;
+        }
         updateJob(job, "failed");
       }
     } finally {

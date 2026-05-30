@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { FarmError } from "./farm-error.js";
 import { EvidenceRunScheduler, type PruneTerminalJobsOptions, type ScheduledEvidenceRunStatus } from "./scheduler.js";
 import type { EvidenceRunInput } from "./schemas.js";
 
@@ -16,10 +17,16 @@ export function createHttpServer(options: HttpServerOptions = {}): Server {
       await routeRequest(request, response, scheduler);
     } catch (error) {
       const statusCode = error instanceof HttpRequestError ? error.statusCode : 500;
-      writeJson(response, statusCode, {
+      const payload: { ok: false; error: string; code?: string } = {
         ok: false,
         error: error instanceof Error ? error.message : String(error)
-      });
+      };
+      if (error instanceof FarmError) {
+        // Preserve the typed code so HTTP callers can distinguish retryable
+        // (lease_expired) from fatal (capability_denied) failures.
+        payload.code = error.code;
+      }
+      writeJson(response, statusCode, payload);
     }
   });
 }

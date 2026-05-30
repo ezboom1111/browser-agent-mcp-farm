@@ -19,18 +19,28 @@ export interface RegistrationResult {
   stderr?: string;
 }
 
-export async function registerCodex(configPath = join(homedir(), ".codex", "config.toml")): Promise<RegistrationResult> {
-  await mkdir(dirname(configPath), { recursive: true });
-  const cliPath = distCliPath();
-  const block = [
+export function codexServerBlock(cliPath: string, platform: NodeJS.Platform = process.platform): string {
+  // On Windows the MCP launcher resolves `node` more reliably through cmd; on
+  // POSIX `cmd` does not exist, so invoke node directly. Using cmd on macOS or
+  // Linux would make the registered Codex server fail to start.
+  const onWindows = platform === "win32";
+  const command = onWindows ? "cmd" : "node";
+  const args = onWindows ? ["/c", "node", cliPath, "serve"] : [cliPath, "serve"];
+  return [
     CODEX_BEGIN,
     `[mcp_servers.${SERVER_NAME}]`,
-    `command = "cmd"`,
-    `args = ["/c", "node", ${JSON.stringify(cliPath)}, "serve"]`,
+    `command = ${JSON.stringify(command)}`,
+    `args = ${JSON.stringify(args)}`,
     `startup_timeout_sec = 20.0`,
     CODEX_END,
     ""
   ].join("\n");
+}
+
+export async function registerCodex(configPath = join(homedir(), ".codex", "config.toml")): Promise<RegistrationResult> {
+  await mkdir(dirname(configPath), { recursive: true });
+  const cliPath = distCliPath();
+  const block = codexServerBlock(cliPath);
 
   const existing = existsSync(configPath) ? await readFile(configPath, "utf8") : "";
   const backupPath = existsSync(configPath) ? await backupFile(configPath) : undefined;
