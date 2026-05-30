@@ -43,21 +43,24 @@ cooperating second agent can independently verify.
 ## Progress (live)
 
 **P0–P2 landed** (flagship non-tautological gate, agent-authored cite-or-fail claims,
-dual-agent parity, full `.describe()`, capabilities/list-runs). **P3 in progress —
-landed so far:**
+dual-agent parity, full `.describe()`, capabilities/list-runs). **P3 essentially
+complete; opportunistic P4/P6 slices pulled early.** Landed so far (all verify-green):
 - ✅ deterministic structured extractor (JSON-LD / OpenGraph / Twitter / canonical /
-  title / typed price+rating summary) wired into the evidence-run pipeline, registered
-  as a `structured_data` artifact on every run that exposes structure.
+  title / typed price+rating summary / **HTML tables** / **h1–h6 outline**) wired into
+  the evidence-run pipeline, registered as a `structured_data` artifact.
 - ✅ claims groundable against `structured_data` (cite-or-fail on typed values).
 - ✅ **evidence-quality golden corpus + precision/recall/exact-match benchmark** wired
   into CI against named thresholds — the previously-unowned 1/10 domain now measured.
 - ✅ structured-vs-DOM **disagreement cross-check** (site-claim price vs rendered text).
-- ✅ **HTML-table** extraction (semi-structured / 반정형 coverage) — bounded, byte-reproducible.
-- ✅ `audio_transcription` **phantom resolved**: formalized as lawful provider/operator-
-  supplied only (no farm-side speech-to-text; captured captions are `transcript_cue`),
-  documented at the schema + gate, with a behavioral guard proving non-fabrication.
-- ⬜ remaining P3: microdata/RDFa + headings extraction; OCR text-profile → typed values
-  with provenance; capture-provenance attestation (HAR / response digests).
+- ✅ `audio_transcription` **phantom resolved** (lawful provider-supplied only; no ASR;
+  behavioral non-fabrication guard).
+- ✅ (P6) **`src/util/`** consolidation of 10 duplicated url/text/collection helpers.
+- ✅ (P6/security) **secret-at-rest scanner** + `scan-secrets` CLI guard (security domain 2.5→).
+- ✅ (P4/legal) per-source **`legalBasis`** posture field, surfaced + documented.
+- ⬜ remaining P3: microdata/RDFa (needs a real parser, deferred honestly); OCR
+  text-profile → typed values with provenance; capture-provenance attestation (HAR).
+- ⬜ next: P4 recipe canary + coverage-report; P6 NDJSON logger + metrics.json,
+  retention/purge lifecycle, evidence-runner split, 80% coverage; P7 SCORECARD + publish.
 
 ## How 10/10 is measured (falsifiable exit gates)
 

@@ -18,6 +18,7 @@ import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { runClaimGate } from "./claim-gate.js";
 import { buildBundleManifest, signManifest, verifyBundle, type BundleManifest } from "./evidence-bundle.js";
 import { scanRunArtifacts } from "./secret-scan.js";
+import { purgeRun, pruneRuns } from "./run-lifecycle.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
@@ -124,6 +125,16 @@ async function main(): Promise<void> {
 
   if (command === "scan-secrets") {
     await runScanSecretsCommand();
+    return;
+  }
+
+  if (command === "purge-run") {
+    await runPurgeRunCommand();
+    return;
+  }
+
+  if (command === "prune-runs") {
+    await runPruneRunsCommand();
     return;
   }
 
@@ -534,6 +545,37 @@ async function runScanSecretsCommand(): Promise<void> {
   if (findings.length > 0) {
     process.exitCode = 1;
   }
+}
+
+// Data-lifecycle: delete a single evidence run (refuses non-run dirs unless --force).
+async function runPurgeRunCommand(): Promise<void> {
+  const runDir = getArgValue("--run-dir");
+  if (!runDir) {
+    throw new Error("purge-run requires --run-dir <evidence-run-dir>");
+  }
+
+  const result = await purgeRun(runDir, hasFlag("--force") ? { force: true } : {});
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.removed) {
+    process.exitCode = 1;
+  }
+}
+
+// Data-lifecycle: sweep a runs root, removing runs older than --max-age-days
+// (default 30). --dry-run reports candidates without deleting.
+async function runPruneRunsCommand(): Promise<void> {
+  const root = getArgValue("--run-root");
+  if (!root) {
+    throw new Error("prune-runs requires --run-root <dir>");
+  }
+
+  const days = Number(getArgValue("--max-age-days") ?? "30");
+  if (!Number.isFinite(days) || days < 0) {
+    throw new Error("prune-runs --max-age-days must be a non-negative number");
+  }
+  const maxAgeMs = days * 24 * 60 * 60 * 1000;
+  const result = await pruneRuns(root, hasFlag("--dry-run") ? { maxAgeMs, dryRun: true } : { maxAgeMs });
+  console.log(JSON.stringify(result, null, 2));
 }
 
 async function runCritiqueNextCommand(): Promise<void> {
@@ -2020,6 +2062,10 @@ Commands:
           Generate html/farm-evidence-preview.html
   scan-secrets --run-dir <evidence-run-dir>
           Scan a finished run's artifacts/ledgers/reports for secrets-at-rest (exit 1 if any)
+  purge-run --run-dir <evidence-run-dir> [--force]
+          Delete one evidence run (refuses a non-run directory unless --force)
+  prune-runs --run-root <dir> [--max-age-days 30] [--dry-run]
+          Sweep a runs root, removing runs older than the max age (--dry-run to preview)
   critique-next [--queue <path>]
           Print exactly one next media critical review task without mutating the queue
   critique-complete [--queue <path>] [--task-id <id>]
