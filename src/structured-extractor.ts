@@ -3,19 +3,29 @@
 // results are byte-reproducible. Publisher markup (JSON-LD / Open Graph) is a SITE
 // CLAIM, not ground truth — callers should cross-check it against DOM/OCR.
 
+export interface StructuredSummary {
+  type?: string;
+  name?: string;
+  price?: { value: string; currency?: string };
+  rating?: { value: string; scale?: string; count?: string };
+}
+
 export interface StructuredData {
   jsonLd: unknown[];
   openGraph: Record<string, string>;
   twitter: Record<string, string>;
   canonical?: string;
   title?: string;
+  summary: StructuredSummary;
 }
 
 export function extractStructuredData(html: string): StructuredData {
+  const jsonLd = extractJsonLd(html);
   const data: StructuredData = {
-    jsonLd: extractJsonLd(html),
+    jsonLd,
     openGraph: extractMeta(html, "property", "og:"),
-    twitter: extractMeta(html, "name", "twitter:")
+    twitter: extractMeta(html, "name", "twitter:"),
+    summary: summarizeJsonLd(jsonLd)
   };
   const canonical = extractCanonical(html);
   if (canonical !== undefined) {
@@ -26,6 +36,50 @@ export function extractStructuredData(html: string): StructuredData {
     data.title = title;
   }
   return data;
+}
+
+// Pull a few common typed facts out of JSON-LD (Product/Offer/Place/Review nodes)
+// so a price/rating becomes a typed value, not a fuzzy regex hit. A SITE CLAIM.
+function summarizeJsonLd(jsonLd: unknown[]): StructuredSummary {
+  const summary: StructuredSummary = {};
+  for (const node of jsonLd) {
+    if (typeof node !== "object" || node === null) {
+      continue;
+    }
+    const record = node as Record<string, unknown>;
+    if (summary.type === undefined && typeof record["@type"] === "string") {
+      summary.type = record["@type"];
+    }
+    if (summary.name === undefined && typeof record.name === "string") {
+      summary.name = record.name;
+    }
+    if (summary.price === undefined) {
+      const offer = Array.isArray(record.offers) ? record.offers[0] : record.offers;
+      if (offer !== null && typeof offer === "object") {
+        const offerRecord = offer as Record<string, unknown>;
+        const price = offerRecord.price ?? offerRecord.lowPrice;
+        if (price !== undefined) {
+          summary.price = { value: String(price) };
+          if (typeof offerRecord.priceCurrency === "string") {
+            summary.price.currency = offerRecord.priceCurrency;
+          }
+        }
+      }
+    }
+    if (summary.rating === undefined && record.aggregateRating !== null && typeof record.aggregateRating === "object") {
+      const ratingRecord = record.aggregateRating as Record<string, unknown>;
+      if (ratingRecord.ratingValue !== undefined) {
+        summary.rating = { value: String(ratingRecord.ratingValue) };
+        if (ratingRecord.bestRating !== undefined) {
+          summary.rating.scale = String(ratingRecord.bestRating);
+        }
+        if (ratingRecord.ratingCount !== undefined) {
+          summary.rating.count = String(ratingRecord.ratingCount);
+        }
+      }
+    }
+  }
+  return summary;
 }
 
 function extractJsonLd(html: string): unknown[] {

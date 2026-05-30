@@ -37,7 +37,17 @@ describe("extractStructuredData", () => {
     expect(data.jsonLd).toEqual([]);
     expect(data.openGraph).toEqual({});
     expect(data.twitter).toEqual({});
+    expect(data.summary).toEqual({});
     expect(data.canonical).toBeUndefined();
     expect(data.title).toBeUndefined();
+  });
+
+  it("summarizes typed price and rating from JSON-LD", () => {
+    const html = '<script type="application/ld+json">{"@type":"Product","name":"Latte","offers":{"@type":"Offer","price":"4500","priceCurrency":"KRW"},"aggregateRating":{"ratingValue":"4.6","bestRating":"5","ratingCount":"1200"}}</script>';
+    const data = extractStructuredData(html);
+    expect(data.summary.type).toBe("Product");
+    expect(data.summary.name).toBe("Latte");
+    expect(data.summary.price).toEqual({ value: "4500", currency: "KRW" });
+    expect(data.summary.rating).toEqual({ value: "4.6", scale: "5", count: "1200" });
   });
 });
