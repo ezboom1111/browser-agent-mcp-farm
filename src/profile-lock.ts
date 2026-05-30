@@ -129,3 +129,24 @@ export function releaseProfileLock(handle: ProfileLockHandle | undefined): void 
     }
   }
 }
+
+/**
+ * Re-stamp a held lock's acquiredAt so an actively-used (heartbeated) lease is
+ * never reaped as stale by the TTL. Only refreshes a lock this process owns.
+ * Returns true if the lock was refreshed.
+ */
+export function refreshProfileLock(handle: ProfileLockHandle | undefined, now: number = Date.now()): boolean {
+  if (handle === undefined) {
+    return false;
+  }
+  const existing = readLockRecord(handle.lockPath);
+  if (existing === undefined || existing.pid !== process.pid || existing.owner !== handle.owner) {
+    return false;
+  }
+  try {
+    writeFileSync(handle.lockPath, JSON.stringify({ ...existing, acquiredAt: now }));
+    return true;
+  } catch {
+    return false;
+  }
+}

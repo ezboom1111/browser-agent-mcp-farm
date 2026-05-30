@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   acquireProfileLock,
   profileLockPath,
+  refreshProfileLock,
   releaseProfileLock,
   PROFILE_LOCK_TTL_MS,
   type ProfileLockHandle
@@ -93,5 +94,34 @@ describe("profile-lock", () => {
     expect(existsSync(real.lockPath)).toBe(true); // still held by lease-a
     releaseProfileLock(real);
     expect(existsSync(real.lockPath)).toBe(false);
+  });
+
+  it("refresh keeps a held lock from being reaped as stale", async () => {
+    const key = lockKey("refresh");
+    const real = acquireProfileLock(key, "lease-a");
+    // Artificially age the lock past the TTL.
+    await writeFile(
+      real.lockPath,
+      JSON.stringify({ pid: process.pid, owner: "lease-a", lockKey: key, acquiredAt: Date.now() - PROFILE_LOCK_TTL_MS - 1000 })
+    );
+    // Refresh re-stamps acquiredAt to now (we own it).
+    expect(refreshProfileLock(real)).toBe(true);
+    // A second acquire must NOT steal the now-fresh lock.
+    let thrown: unknown;
+    try {
+      acquireProfileLock(key, "lease-b");
+    } catch (error) {
+      thrown = error;
+    }
+    expect((thrown as FarmError | undefined)?.code).toBe("profile_in_use");
+    releaseProfileLock(real);
+  });
+
+  it("refresh does not touch a lock owned by someone else", () => {
+    const key = lockKey("refresh-foreign");
+    const real = acquireProfileLock(key, "lease-a");
+    const foreign: ProfileLockHandle = { lockPath: real.lockPath, lockKey: key, owner: "someone-else" };
+    expect(refreshProfileLock(foreign)).toBe(false);
+    releaseProfileLock(real);
   });
 });

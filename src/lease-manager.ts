@@ -240,3 +240,47 @@ function cloneLease(lease: Lease): Lease {
   }
   return cloned;
 }
+
+/**
+ * Redact secrets and absolute profile paths from a lease before it is returned
+ * in a tool result. Internal code keeps the real lease (the proxy password is
+ * used to authenticate the upstream proxy); only the OUTBOUND copy is scrubbed.
+ */
+export function redactLease(lease: Lease): Lease {
+  const redacted = cloneLease(lease);
+  if (redacted.proxy !== undefined) {
+    redacted.proxy = redactProxy(redacted.proxy);
+  }
+  if (redacted.storageStatePath !== undefined) {
+    redacted.storageStatePath = "[redacted path]";
+  }
+  if (redacted.userDataDir !== undefined) {
+    redacted.userDataDir = "[redacted path]";
+  }
+  return redacted;
+}
+
+export function redactProxy(proxy: ProxyConfig): ProxyConfig {
+  const redacted: ProxyConfig = { server: redactProxyServer(proxy.server) };
+  if (proxy.username !== undefined) {
+    redacted.username = "***";
+  }
+  if (proxy.password !== undefined) {
+    redacted.password = "***";
+  }
+  return redacted;
+}
+
+function redactProxyServer(server: string): string {
+  try {
+    const url = new URL(server);
+    if (url.username !== "" || url.password !== "") {
+      url.username = "";
+      url.password = "";
+      return url.toString();
+    }
+    return server;
+  } catch {
+    return server;
+  }
+}

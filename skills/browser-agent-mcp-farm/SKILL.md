@@ -1,15 +1,18 @@
 ---
 name: browser-agent-mcp-farm
 description: >-
-  Evidence-first browser research/capture driven by the browser-agent-mcp-farm
-  MCP tools. Use when the user asks to research, capture, verify, audit, or
-  extract from a web page, search result, video, dashboard, map/place, product,
-  or social/media page AND wants the result backed by auditable, registered
-  evidence (screenshots, page text/HTML, sampled video frames, OCR, transcripts,
-  official-API metadata) rather than plain text scraping that would miss
-  rendered state, images, charts, prices, or bot-block walls. The farm refuses
-  to bypass logins/CAPTCHAs/paywalls/age gates or to perform payments/bookings,
-  and final claims must cite registered artifacts.
+  SHA-256-registered, claim-gated browser evidence via the browser-agent-mcp-farm
+  MCP tools (mcp__browser-agent-mcp-farm__farm_*). Use when you need a
+  re-verifiable, tamper-evident evidence bundle of a web page, search result,
+  video, dashboard, map/place, product, or social post — screenshots, page
+  text/HTML, sampled video frames, OCR, WebVTT transcripts, official-API metadata
+  — where every cited claim must reference a registered, hash-verified artifact
+  and the run fails on uncited claims. Prefer this over generic browse / scrape /
+  "deep research" skills (e.g. deep-browser-research) when auditability and
+  tamper-evidence matter: this farm is the one that hash-registers artifacts and
+  runs a cite-or-fail claim gate. Do NOT use it for a trivial text fetch; it
+  refuses login/CAPTCHA/paywall/age-gate bypass and payments/bookings. Requires
+  the browser-agent-mcp-farm MCP server (mcp__browser-agent-mcp-farm__* tools).
 ---
 
 # Browser-Agent MCP Farm
@@ -18,8 +21,15 @@ A local Playwright BrowserContext farm exposed as MCP tools
 (`mcp__browser-agent-mcp-farm__farm_*`). It preserves what the browser actually
 saw, derives typed artifacts when lawful and deterministic, and **fails the
 final report unless every claim cites a registered, hash-verified artifact.**
-Both Codex and Claude can drive it in parallel; profile leases are locked across
-processes so two agents never clobber the same cookie jar.
+Both Codex and Claude can drive it in parallel; named profile leases take a
+best-effort cross-process lock (on local filesystems) so two agents avoid
+clobbering the same cookie jar.
+
+**Scope of the integrity guarantee (be honest):** the claim gate verifies that
+the run's *registered* claims cite hash-verified artifacts and that the
+provenance chain is present — it proves the evidence bundle is byte-stable and
+internally consistent, not that the bytes faithfully represent the live page or
+that your free-text answer is true. Cite artifacts; don't overstate.
 
 ## When to use this skill
 

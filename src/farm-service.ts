@@ -4,7 +4,7 @@ import { BrowserPool } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
-import { LeaseManager } from "./lease-manager.js";
+import { LeaseManager, redactLease } from "./lease-manager.js";
 import {
   AcquireContextInputSchema,
   CaptureAfterIdleInputSchema,
@@ -56,12 +56,16 @@ export class FarmService {
   }
 
   acquireContext(input: AcquireContextInput) {
-    return { ok: true as const, lease: this.leaseManager.acquire(AcquireContextInputSchema.parse(input)) };
+    return { ok: true as const, lease: redactLease(this.leaseManager.acquire(AcquireContextInputSchema.parse(input))) };
   }
 
   heartbeat(input: HeartbeatInput) {
     const parsed = HeartbeatInputSchema.parse(input);
-    return { ok: true as const, lease: this.leaseManager.heartbeat(parsed.contextToken, parsed.agentId) };
+    const lease = redactLease(this.leaseManager.heartbeat(parsed.contextToken, parsed.agentId));
+    // Keep the cross-process profile lock fresh for the duration of an active
+    // lease, so a long (heartbeated) run is never reaped+stolen by the TTL.
+    this.browserPool.touchProfileLock(parsed.contextToken);
+    return { ok: true as const, lease };
   }
 
   async openPage(input: OpenPageInput) {
@@ -147,11 +151,11 @@ export class FarmService {
     for (const lease of expired) {
       await this.browserPool.closeContext(lease.contextToken);
     }
-    return { ok: true as const, expired };
+    return { ok: true as const, expired: expired.map(redactLease) };
   }
 
   listLeases() {
-    return { ok: true as const, leases: this.leaseManager.list() };
+    return { ok: true as const, leases: this.leaseManager.list().map(redactLease) };
   }
 
   // Read-only evidence-loop tools: let a pure-MCP agent read back what a prior

@@ -345,7 +345,23 @@ async function runHttpServerCommand(): Promise<void> {
   const maxTerminalJobs = parseNonNegativeIntegerArg("--max-terminal-jobs", 500);
   const scheduler = new EvidenceRunScheduler({ concurrency, maxTerminalJobs });
   const server = createHttpServer({ scheduler });
-  await new Promise<void>((resolvePromise) => server.listen(port, host, resolvePromise));
+  try {
+    await new Promise<void>((resolvePromise, rejectPromise) => {
+      const onError = (error: NodeJS.ErrnoException): void => rejectPromise(error);
+      server.once("error", onError);
+      server.listen(port, host, () => {
+        server.removeListener("error", onError);
+        resolvePromise();
+      });
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      console.error(`Port ${port} on ${host} is already in use. Use --port <n>, or reuse the farm already running there.`);
+      process.exitCode = 1;
+      return;
+    }
+    throw error;
+  }
   console.error(`browser-agent-mcp-farm HTTP server listening on http://${host}:${port} concurrency=${concurrency} maxTerminalJobs=${maxTerminalJobs}`);
 }
 

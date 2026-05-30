@@ -18,7 +18,7 @@ import {
 } from "./frame-sampler.js";
 import { type Lease, LeaseManager } from "./lease-manager.js";
 import { profilePaths, profileRoot } from "./profile-store.js";
-import { acquireProfileLock, releaseProfileLock, type ProfileLockHandle } from "./profile-lock.js";
+import { acquireProfileLock, refreshProfileLock, releaseProfileLock, type ProfileLockHandle } from "./profile-lock.js";
 
 const MAX_MEDIA_ARTIFACTS_PER_PAGE = 40;
 const MAX_SINGLE_MEDIA_BYTES = 10 * 1024 * 1024;
@@ -1129,6 +1129,14 @@ export class BrowserPool {
       }
       releaseProfileLock(state.profileLock);
       this.contexts.delete(contextToken);
+    }
+  }
+
+  /** Re-stamp the on-disk profile lock for a context so an actively-heartbeated lease is not reaped as stale. */
+  touchProfileLock(contextToken: string): void {
+    const state = this.contexts.get(contextToken);
+    if (state?.profileLock !== undefined) {
+      refreshProfileLock(state.profileLock);
     }
   }
 
