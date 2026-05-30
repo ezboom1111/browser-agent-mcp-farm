@@ -12,8 +12,15 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    // Several test files launch real Chromium. With unbounded file parallelism
+    // (workers = CPU cores) many browsers spawn at once and contend, so heavy
+    // navigation tests time out under load — a flaky failure that vanishes in
+    // isolation. Cap worker concurrency so fewer browsers run simultaneously, and
+    // give browser-backed tests enough headroom to finish when the box is busy.
+    maxWorkers: "50%",
+    minWorkers: 1,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary"],
