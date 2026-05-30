@@ -18,6 +18,12 @@ adheres to semantic versioning. Build/test status is tracked in
   record. Bytes from ANY external capturer — Firecrawl, an operator agent, a human paste, a
   mobile mitmproxy session — are hash-registered with recorded (self-asserted) provenance and
   still pass the same cite-or-fail gate. The farm verifies; it need not capture.
+- **Verifiable generic-extraction loop** (`FarmService.groundExtractedClaims`): deterministically
+  extracts typed values (name / price / rating) from a captured HTML artifact and authors a
+  `text_span`-anchored claim, citing the VISIBLE-TEXT artifact, for each value that literally
+  appears on the rendered page. The gate re-verifies every quote against the bytes, so a value the
+  extractor invented — or a publisher (JSON-LD) value that disagrees with the page — is never
+  grounded: extraction proposes, the gate decides. Sector-agnostic, no per-site selectors, no LLM.
 
 ### Changed
 
