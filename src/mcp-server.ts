@@ -29,7 +29,8 @@ import {
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
   CapabilitiesInputSchema,
-  ListRunsInputSchema
+  ListRunsInputSchema,
+  ExtractStructuredInputSchema
 } from "./schemas.js";
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
@@ -58,7 +59,8 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_list_leases: "List active leases (agent, capability, domains, page count, TTL). Read-only diagnostics.",
   farm_reap_expired: "Reap expired leases and close their contexts. Maintenance/cleanup.",
   farm_capabilities: "Identify THIS server (name, version, evidence kinds, non-goals, optional deps). Call to confirm you reached browser-agent-mcp-farm and not a similarly-named browse skill.",
-  farm_list_runs: "List prior evidence-run directories under a root (default: the temp dir) with artifact/claim counts, so you can find a runDir to read or verify. Read-only."
+  farm_list_runs: "List prior evidence-run directories under a root (default: the temp dir) with artifact/claim counts, so you can find a runDir to read or verify. Read-only.",
+  farm_extract_structured: "Deterministically parse captured HTML for structured data (JSON-LD, Open Graph, Twitter cards, canonical, title). Byte-reproducible, no network. Publisher markup is a SITE CLAIM, not ground truth — cross-check against DOM/OCR. Pair with farm_read_artifact on a page_html artifact."
 };
 
 export function createMcpServer(service = new FarmService()): McpServer {
@@ -93,6 +95,7 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_reap_expired", ReapExpiredInputSchema, () => service.reapExpired());
   registerJsonTool(server, "farm_capabilities", CapabilitiesInputSchema, () => service.capabilities());
   registerJsonTool(server, "farm_list_runs", ListRunsInputSchema, (input) => service.listRuns(input));
+  registerJsonTool(server, "farm_extract_structured", ExtractStructuredInputSchema, (input) => service.extractStructured(input));
 
   return server;
 }

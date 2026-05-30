@@ -9,6 +9,7 @@ import { BrowserPool } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
+import { extractStructuredData } from "./structured-extractor.js";
 import { LeaseManager, redactLease } from "./lease-manager.js";
 import {
   AcquireContextInputSchema,
@@ -34,6 +35,7 @@ import {
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
   ListRunsInputSchema,
+  ExtractStructuredInputSchema,
   EvidenceKindSchema,
   type AcquireContextInput,
   type CaptureAfterIdleInput,
@@ -57,7 +59,8 @@ import {
   type ReadArtifactInput,
   type RegisterEvidenceInput,
   type AddClaimInput,
-  type ListRunsInput
+  type ListRunsInput,
+  type ExtractStructuredInput
 } from "./schemas.js";
 
 export class FarmService {
@@ -394,6 +397,17 @@ export class FarmService {
       // unreadable root -> empty list
     }
     return { ok: true as const, runRoot: root, runs: runs.slice(0, parsed.limit) };
+  }
+
+  // Deterministic structured-data extraction over captured HTML (JSON-LD, Open
+  // Graph, Twitter cards, canonical, title). Publisher markup is a site claim.
+  extractStructured(input: ExtractStructuredInput) {
+    const parsed = ExtractStructuredInputSchema.parse(input);
+    return {
+      ok: true as const,
+      ...extractStructuredData(parsed.html),
+      note: "Publisher markup (JSON-LD / Open Graph) is a site claim, not ground truth; cross-check against DOM/OCR."
+    };
   }
 
   async evidenceRun(input: EvidenceRunInput) {

@@ -276,6 +276,15 @@ describe("createMcpServer", () => {
     expect(listed.runs[0].artifactCount).toBe(1);
     expect(listed.runs[0].claimCount).toBe(1);
   });
+
+  it("farm_extract_structured parses JSON-LD and Open Graph from captured HTML", async () => {
+    const tools = registeredTools(createMcpServer());
+    const res = JSON.parse((await tools.farm_extract_structured.handler({
+      html: '<script type="application/ld+json">{"@type":"Place","name":"Acme"}</script><meta property="og:title" content="Acme">'
+    })).content[0].text) as { openGraph: Record<string, string>; jsonLd: unknown[] };
+    expect(res.openGraph["og:title"]).toBe("Acme");
+    expect(res.jsonLd.length).toBe(1);
+  });
 });
 
 function registeredTools(server: unknown): Record<string, { description?: string; handler: (input: unknown) => Promise<{ isError?: boolean; content: Array<{ text: string }> }> }> {

@@ -479,6 +479,10 @@ export const ListRunsInputSchema = z.object({
   limit: z.number().int().positive().max(500).default(50).describe("Maximum number of runs to return.")
 });
 
+export const ExtractStructuredInputSchema = z.object({
+  html: z.string().min(1).describe("Captured HTML to parse for deterministic structured derivatives (JSON-LD, Open Graph, Twitter cards, canonical, title). Get it from farm_read_artifact on a page_html artifact.")
+});
+
 export type AcquireContextInput = z.input<typeof AcquireContextInputSchema>;
 export type HeartbeatInput = z.input<typeof HeartbeatInputSchema>;
 export type OpenPageInput = z.input<typeof OpenPageInputSchema>;
@@ -512,5 +516,6 @@ export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
 export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
 export type ListRunsInput = z.input<typeof ListRunsInputSchema>;
+export type ExtractStructuredInput = z.input<typeof ExtractStructuredInputSchema>;
 export type ClaimAnchor = z.infer<typeof ClaimAnchorSchema>;
 export type ClaimTaxonomy = z.infer<typeof ClaimTaxonomySchema>;
