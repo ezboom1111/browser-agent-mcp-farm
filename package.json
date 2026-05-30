@@ -4,6 +4,20 @@
   "private": false,
   "type": "module",
   "description": "Playwright BrowserContext farm exposed through MCP tools.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "playwright",
+    "browser-automation",
+    "evidence",
+    "web-research",
+    "anti-hallucination",
+    "claim-gate",
+    "agent"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "bin": {
     "browser-agent-mcp-farm": "./dist/cli.js"
   },
@@ -11,6 +25,7 @@
     "dist",
     "skills",
     "README.md",
+    "CHANGELOG.md",
     "HOST-ADAPTERS.md",
     "AGENTS.md",
     "docs/PRODUCT_DEVELOPMENT_PLAN.md",
@@ -26,6 +41,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "boundaries": "node scripts/check-boundaries.mjs",
     "prepack": "npm run build",
+    "prepublishOnly": "npm run verify",
     "test": "vitest run",
     "test:ci": "vitest run --coverage --reporter=default --reporter=json --outputFile=.status/vitest-result.json",
     "test:coverage": "vitest run --coverage",
