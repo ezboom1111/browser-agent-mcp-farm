@@ -6,10 +6,18 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
-> Not yet published. Before a first publish, set `license`, `repository`, and `author`
-> in `package.json` and add a `LICENSE` file — these are intentionally left unset
-> (legal/identity decisions for the maintainer). `prepublishOnly` runs the full verify
-> gate, so a publish requires a green build.
+> Not yet published. Licensed **Apache-2.0** (`LICENSE` + `package.json` set). Before a
+> first publish, set `repository` in `package.json` to the real remote. `prepublishOnly`
+> runs the full verify gate, so a publish requires a green build.
+
+### Added — release readiness
+
+- **Apache-2.0 license** + `author`, and a `LICENSE` file shipped in the package.
+- **Packaged-artifact gate** (`test:tarball`, wired into `verify`): asserts the published
+  tarball ships the bin + `LICENSE` + skill, and that the packed `dist/cli.js` runs
+  end-to-end with real deps.
+- **Product line coverage ≥ 80%** (80.06%), closing the last SCORECARD gate
+  (build-completeness **10/10**); coverage floor ratcheted to 80.
 
 ### Added — evidence-first trust & data-coverage workstream
 
