@@ -860,9 +860,32 @@ Portable attestation and structured derivatives:
 
 - `farm_export_bundle` / `farm_verify_bundle` — a Merkle-rooted (optionally
   Ed25519-signed) manifest a second agent can re-verify offline; also available as
-  the `export-bundle` / `verify-bundle` CLI commands.
+  the `export-bundle` / `verify-bundle` CLI commands. Add `--archive-file <bundle.evb>`
+  to produce/verify a **self-contained `.evb`** that embeds the artifact bytes and
+  verifies with no access to the original run directory.
 - `farm_extract_structured` — deterministic JSON-LD / Open Graph / typed
   price+rating extraction from captured HTML (a *site claim* — cross-check it).
+
+### Worked agent-to-agent verifiable exchange
+
+The `.evb` archive lets one agent trust another's evidence by trusting hashes, not the
+producer:
+
+```sh
+# Agent A (captured the evidence, holds a private signing key)
+node dist/cli.js export-bundle --run-dir <A-run> --archive-file bundle.evb \
+  --private-key-env A_SIGNING_KEY
+
+# Agent B receives only bundle.evb + A's PUBLIC key — no run dir, no browser
+node dist/cli.js verify-bundle --archive-file bundle.evb --public-key-env A_PUBLIC_KEY
+# -> { ok: true, complete: true, merkleMatches: true, signatureValid: true }
+```
+
+B re-hashes the embedded bytes, recomputes the Merkle root, and checks A's signature
+**fully offline**. It rejects a bundle whose bytes were altered in transit
+(`tamperedArtifacts`), and a bundle signed by an impostor key (`signatureValid: false`).
+The success criterion is "one cooperating second agent can verify", not "the world
+converges" — see `tests/evidence-exchange.test.ts` for the worked A→B example.
 
 See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for exactly what the claim gate
 and the bundle prove and do not prove.
