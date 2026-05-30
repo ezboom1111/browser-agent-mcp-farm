@@ -19,6 +19,7 @@ import { runClaimGate } from "./claim-gate.js";
 import { buildBundleManifest, signManifest, verifyBundle, type BundleManifest } from "./evidence-bundle.js";
 import { scanRunArtifacts } from "./secret-scan.js";
 import { purgeRun, pruneRuns } from "./run-lifecycle.js";
+import { appendDecision, verifyDecisionLog } from "./decision-log.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
@@ -135,6 +136,11 @@ async function main(): Promise<void> {
 
   if (command === "prune-runs") {
     await runPruneRunsCommand();
+    return;
+  }
+
+  if (command === "verify-decision-log") {
+    await runVerifyDecisionLogCommand();
     return;
   }
 
@@ -576,6 +582,20 @@ async function runPruneRunsCommand(): Promise<void> {
   const maxAgeMs = days * 24 * 60 * 60 * 1000;
   const result = await pruneRuns(root, hasFlag("--dry-run") ? { maxAgeMs, dryRun: true } : { maxAgeMs });
   console.log(JSON.stringify(result, null, 2));
+}
+
+// Verify a hash-chained gate-verdict decision log (exit 1 if the chain is broken).
+async function runVerifyDecisionLogCommand(): Promise<void> {
+  const logFile = getArgValue("--log-file");
+  if (!logFile) {
+    throw new Error("verify-decision-log requires --log-file <decisions.jsonl>");
+  }
+
+  const result = await verifyDecisionLog(logFile);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
 }
 
 async function runCritiqueNextCommand(): Promise<void> {
@@ -1784,6 +1804,20 @@ async function runClaimGateCommand(): Promise<void> {
   }
 
   const result = await runClaimGate(runDir, minClaims === undefined ? { mode } : { mode, minClaims });
+
+  // Opt-in: append this verdict to a tamper-evident, hash-chained decision log.
+  const decisionLog = getArgValue("--decision-log");
+  if (decisionLog !== undefined) {
+    await appendDecision(decisionLog, {
+      runDir,
+      ok: result.ok,
+      claimCount: result.counts.claims,
+      errorCount: result.errors.length,
+      at: new Date().toISOString(),
+      mode
+    });
+  }
+
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) {
     process.exitCode = 1;
@@ -2056,8 +2090,11 @@ Commands:
           Verify first-class media artifact capture with a local fixture
   smoke-proxy
           Verify lease-level proxy routing through a local proxy fixture
-  claim-gate --run-dir <path> [--mode smoke|final] [--min-claims <n>]
-          Fail when claims cite missing or unregistered artifacts
+  claim-gate --run-dir <path> [--mode smoke|final] [--min-claims <n>] [--decision-log <path>]
+          Fail when claims cite missing or unregistered artifacts; optionally append the
+          verdict to a tamper-evident hash-chained decision log
+  verify-decision-log --log-file <decisions.jsonl>
+          Verify the hash chain of a gate-verdict decision log (exit 1 if broken/tampered)
   html-preview --run-dir <path>
           Generate html/farm-evidence-preview.html
   scan-secrets --run-dir <evidence-run-dir>
