@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
+import { httpTier0Capture } from "./http-tier0-capture.js";
 import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
@@ -328,7 +329,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     officialApiRecords: officialApi.records,
     obstructionRecords: obstructionResult.records,
     assessmentRecords,
-    frameSampling
+    frameSampling,
+    ...(browserResult.capturedViaHttp === true ? { capturedViaHttp: true } : {})
   });
   await runStage("claims_citations", () => withAbort(appendClaims(options.runDir, claims), options.abortSignal));
 
@@ -391,6 +393,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
 }
 
 async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner; sourceNavigationPlan: SourceNavigationPlan; sourceNavigationRecipePlan: SourceNavigationRecipePlan }): Promise<{
+  /** True when the page bytes were captured by the tier-0 browserless HTTP fetch (A1), not a browser. */
+  capturedViaHttp?: boolean;
   pageCaptureRecords: ArtifactRecord[];
   sourceNavigationCalibrationRecords: ArtifactRecord[];
   sourceNavigationCalibrationReport?: SourceNavigationCalibrationReport;
@@ -436,6 +440,45 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
 
   try {
     throwIfAborted(input.options.abortSignal);
+
+    // Tier-0 browserless capture (A1): when opted in, try a plain HTTP GET first. On success we
+    // skip the browser entirely and early-return with the tier-0 page records (no frames/OCR/
+    // source-navigation — those need a browser). On decline we fall through to the browser path
+    // (escalation). The lease/pool below are never touched on the tier-0 success path.
+    if (input.options.httpFetch === true) {
+      const tier0 = await input.runStage("http_tier0_capture", () =>
+        httpTier0Capture({
+          runDir: input.options.runDir,
+          url: input.options.url,
+          allowedDomains: [input.parsedUrl.hostname],
+          writer: input.writer,
+          captureId: `${input.baseCaptureId}-page-capture`,
+          contextToken: `${input.baseCaptureId}-http`,
+          pageId: "http-fetch",
+          ...(input.options.navigationTimeoutMs === undefined ? {} : { timeoutMs: input.options.navigationTimeoutMs }),
+          ...(input.options.abortSignal === undefined ? {} : { signal: input.options.abortSignal })
+        })
+      );
+      if (tier0.ok) {
+        return {
+          capturedViaHttp: true,
+          pageCaptureRecords: tier0.records,
+          sourceNavigationCalibrationRecords,
+          sourceNavigationActionRecords,
+          sourceNavigationFollowUpRecords,
+          destinationCandidateRecords,
+          destinationTriageRecords,
+          destinationDeepeningProposalRecords,
+          destinationDeepeningRunRecords,
+          frameFailureRecords,
+          ocrRecords: [],
+          overlayDismissal: skippedOverlayDismissalReport("tier-0 http_fetch capture: no browser, overlay dismissal not applicable"),
+          overlayDismissalRecords: []
+        };
+      }
+      // tier-0 declined (non-HTML / off-domain / bot-blocked) -> escalate to the browser path.
+    }
+
     const lease = await input.runStage("browser_acquire_context", async () =>
       leaseManager.acquire({
         agentId,
@@ -2475,6 +2518,9 @@ function buildClaims(input: {
   obstructionRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   frameSampling: FrameSamplingAssessment;
+  /** When true, the page capture came from the tier-0 browserless HTTP fetch — the page-capture
+   * claim must be labelled http_fetch (not browser_visible), since no browser rendered the bytes. */
+  capturedViaHttp?: boolean;
 }): EvidenceWorkflowClaim[] {
   const capabilityEvidence = selectEvidenceRecord(input.capabilityRecords);
   const pageEvidence = selectEvidenceRecord(input.pageCaptureRecords, "screenshot") ?? selectEvidenceRecord(input.pageCaptureRecords);
@@ -2498,9 +2544,9 @@ function buildClaims(input: {
       baseCaptureId: input.baseCaptureId,
       ordinal: 2,
       claimType: "metadata",
-      claim: "A browser-visible page capture was attempted and registered in the artifact ledger.",
+      claim: input.capturedViaHttp === true ? "A page capture was registered in the artifact ledger via a browserless HTTP fetch (tier-0; not browser-rendered)." : "A browser-visible page capture was attempted and registered in the artifact ledger.",
       record: pageEvidence,
-      verificationLevel: "browser_visible"
+      verificationLevel: input.capturedViaHttp === true ? "http_fetch" : "browser_visible"
     }),
     input.frameSampling.status === "ok"
       ? claimFromRecord({

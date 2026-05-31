@@ -37,6 +37,8 @@ export interface EvidenceWorkflowOptions {
   storagePolicy?: StoragePolicy | undefined;
   headed?: boolean | undefined;
   browserChannel?: string | undefined;
+  /** Tier-0 browserless capture: attempt a plain HTTP GET before the browser (A1). No frames. */
+  httpFetch?: boolean | undefined;
   overlayDismissal?:
     | {
         enabled: boolean;

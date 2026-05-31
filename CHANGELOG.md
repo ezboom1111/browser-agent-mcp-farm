@@ -37,7 +37,14 @@ adheres to semantic versioning. Build/test status is tracked in
   `text/html` content-type guard + byte cap, and **declines** (`ok:false`, so the caller escalates
   to the browser) on non-HTML / off-domain / bot-blocked responses. Determinism is improved over a
   rendered DOM (no JS, ads, or timing). The `http_fetch` tier sits after `feed` and before any
-  browser tier in the acquisition router. (Opt-in wiring into the evidence-run pipeline follows.)
+  browser tier in the acquisition router.
+- **Tier-0 wired into the evidence run** (opt-in `httpFetch`, CLI `--http-fetch`): when enabled, the
+  evidence run attempts the browserless capture first and, on success, skips the browser entirely
+  (no lease, no Chromium, no frames) and authors claims from the fetched bytes; on decline it
+  escalates to the full browser path. The page-capture claim is labelled with a new `http_fetch`
+  verification level (never `browser_visible`) so provenance tracks reality — the claim gate does
+  not trust the label, but a reader sees the bytes were not browser-rendered. No engine sidecar is
+  written for a tier-0 run (no engine was used).
 - **SSR hydration extraction**: `extractStructuredData` now parses inline `application/json`
   hydration payloads (Next.js `__NEXT_DATA__`, Nuxt `__NUXT_DATA__`, and other framework SSR
   state) into `StructuredData.hydration`, and a page that exposes only hydration (no JSON-LD)
