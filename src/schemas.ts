@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export const CapabilitySchema = z.enum(["read-only", "read-write"]);
 export const StoragePolicySchema = z.enum(["ephemeral", "storage-state", "persistent-profile"]);
+// Validated browser-engine channel (C2). "chromium" = the bundled default engine; the others are
+// branded local builds Playwright can launch. A closed enum (vs a free string) blocks unsupported
+// values like "firefox"/"webkit"/"msedge-canary" at the input boundary, and the resolved channel is
+// recorded into run metadata for reproducibility.
+export const BrowserChannelSchema = z.enum(["chromium", "chrome", "msedge", "msedge-beta", "msedge-dev"]);
+export type BrowserChannel = z.infer<typeof BrowserChannelSchema>;
 export const ClaimTypeSchema = z.enum(["visual", "text", "metadata", "audio", "inference"]);
 export const EvidenceKindSchema = z.enum([
   "page_text",
@@ -414,7 +420,7 @@ export const EvidenceRunInputSchema = z.object({
   profileName: z.string().min(1).optional().describe("Named saved profile to drive this run (for authenticated or anti-bot-sensitive pages)."),
   storagePolicy: StoragePolicySchema.optional(),
   headed: z.boolean().default(false).describe("Run with a visible browser window. NOT supported over MCP (use the CLI); MCP evidence-run is headless."),
-  browserChannel: z.string().min(1).optional(),
+  browserChannel: BrowserChannelSchema.optional(),
   overlayDismissal: z
     .object({
       enabled: z.boolean().default(true),

@@ -83,7 +83,7 @@ import {
   parseSourceNavigationDestinationSelectorHintsAsLines,
   type SourceNavigationDestinationSelectorHintLine
 } from "./source-navigation-recipe-catalog.js";
-import { SourceNavigationExecutableActionSchema, type SourceNavigationExecutableActionInput } from "./schemas.js";
+import { SourceNavigationExecutableActionSchema, type SourceNavigationExecutableActionInput, BrowserChannelSchema, type BrowserChannel } from "./schemas.js";
 
 export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
@@ -2653,10 +2653,19 @@ function hasFlag(name: string): boolean {
   return process.argv.includes(name);
 }
 
-function browserChannelFromArgs(): string | undefined {
+function browserChannelFromArgs(): BrowserChannel | undefined {
   const channel = getArgValue("--browser-channel") ?? (hasFlag("--chrome") ? "chrome" : undefined);
   const trimmed = channel?.trim();
-  return trimmed === undefined || trimmed.length === 0 || trimmed === "chromium" ? undefined : trimmed;
+  if (trimmed === undefined || trimmed.length === 0 || trimmed === "chromium") {
+    return undefined; // bundled default Chromium engine
+  }
+  // Validate against the closed channel enum BEFORE any browser launch, so an unsupported value
+  // (e.g. "firefox", "msedge-canary") fails fast with a clear message instead of deep inside Playwright.
+  const parsed = BrowserChannelSchema.safeParse(trimmed);
+  if (!parsed.success) {
+    throw new Error(`Invalid --browser-channel '${trimmed}'. Allowed: ${BrowserChannelSchema.options.join(", ")} (or omit for the bundled Chromium engine).`);
+  }
+  return parsed.data;
 }
 
 function parseNumberList(value: string): number[] {
