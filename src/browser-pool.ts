@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Frame, type Page, type Request, type Response } from "playwright";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord, type CaptureBundleInput, type MediaArtifactInput } from "./artifact-writer.js";
+import { shouldBlockRequest } from "./resource-blocking.js";
 import { FarmError } from "./farm-error.js";
 import { buildTimestampPlan, frameCaptureId, type FrameSample, type FrameSampleRunResult, type FrameVisualFingerprint, type MediaElementSnapshot, type SeekResult, type SerializedCue } from "./frame-sampler.js";
 import type { Lease, LeaseManager } from "./lease-manager.js";
@@ -49,6 +50,8 @@ interface ContextState {
   storageStatePath?: string;
   profileLockKey?: string;
   profileLock?: ProfileLockHandle;
+  /** Count of subrequests aborted by the text-profile resource blocker (A3). */
+  blockedResourceCount: number;
 }
 
 interface PageState {
@@ -101,11 +104,17 @@ export const FORBIDDEN_LAUNCH_ARG_PREFIXES: readonly string[] = Object.freeze(["
 
 export type LaunchArgsProfile = "default" | "minimal";
 
+// Capture profile (A3). "full" (default) captures html + text + screenshot with all subresources.
+// "text" aborts image/media/font + ad-host subrequests and skips the page screenshot — for
+// text/structure-only runs where no visual evidence is requested.
+export type CaptureProfile = "text" | "full";
+
 export interface BrowserPoolOptions {
   navigationTimeoutMs?: number;
   launchHeadless?: boolean;
   browserChannel?: string;
   launchArgsProfile?: LaunchArgsProfile;
+  captureProfile?: CaptureProfile;
   artifactWriter?: ArtifactWriter;
 }
 
@@ -214,6 +223,7 @@ export class BrowserPool {
   private readonly launchHeadless: boolean;
   private readonly browserChannel: string | undefined;
   private readonly launchArgsProfile: LaunchArgsProfile;
+  private readonly captureProfile: CaptureProfile;
   private readonly artifactWriter: ArtifactWriter;
   private readonly activeProfileLeases = new Map<string, string>();
   private browser: Browser | undefined;
@@ -226,6 +236,7 @@ export class BrowserPool {
     this.launchHeadless = options.launchHeadless ?? true;
     this.browserChannel = normalizeBrowserChannel(options.browserChannel);
     this.launchArgsProfile = options.launchArgsProfile ?? "default";
+    this.captureProfile = options.captureProfile ?? "full";
     this.artifactWriter = options.artifactWriter ?? new ArtifactWriter();
   }
 
@@ -269,7 +280,10 @@ export class BrowserPool {
     try {
       await drainMediaCaptures(pageState, signal);
       throwIfAborted(signal);
-      const [html, visibleText, title, screenshot, visibleLinks] = await withAbort(Promise.all([page.content(), collectVisibleFrameText(page, sourceUrl), page.title().catch(() => ""), page.screenshot({ fullPage: true, timeout: 10_000 }), collectVisibleLinks(page, sourceUrl)]), signal);
+      // The text capture profile skips the page screenshot (resource-blocking aborts images, which
+      // would corrupt a screenshot anyway). page_html / page_text are unaffected.
+      const wantsScreenshot = this.captureProfile !== "text";
+      const [html, visibleText, title, screenshot, visibleLinks] = await withAbort(Promise.all([page.content(), collectVisibleFrameText(page, sourceUrl), page.title().catch(() => ""), wantsScreenshot ? page.screenshot({ fullPage: true, timeout: 10_000 }) : Promise.resolve(undefined), collectVisibleLinks(page, sourceUrl)]), signal);
 
       const bundleInput: CaptureBundleInput = {
         runDir: lease.artifactRunDir,
@@ -278,7 +292,6 @@ export class BrowserPool {
         pageId,
         html,
         text: visibleText.text,
-        screenshot,
         metadata: {
           title,
           finalUrl: sourceUrl,
@@ -290,6 +303,9 @@ export class BrowserPool {
         networkEvents: pageState.networkEvents,
         consoleEvents: pageState.consoleEvents
       };
+      if (screenshot !== undefined) {
+        bundleInput.screenshot = screenshot;
+      }
       if (pageState.mediaEvents.length > 0) {
         bundleInput.mediaIndex = pageState.mediaEvents.map(toMediaIndexRow);
       }
@@ -1161,7 +1177,21 @@ export class BrowserPool {
         context = await browser.newContext(options);
       }
 
-      const state: ContextState = { context, pages: new Map(), lease, persistent };
+      const state: ContextState = { context, pages: new Map(), lease, persistent, blockedResourceCount: 0 };
+      if (this.captureProfile === "text") {
+        // Abort image/media/font + ad-host subrequests before they are fetched. Installed at the
+        // context level so it covers every navigation. Never touches the document/script bytes that
+        // page_html/page_text are derived from, so cite-or-fail is unaffected.
+        await context.route("**/*", (route) => {
+          const request = route.request();
+          if (shouldBlockRequest(request.resourceType(), request.url())) {
+            state.blockedResourceCount += 1;
+            void route.abort().catch(() => undefined);
+          } else {
+            void route.continue().catch(() => undefined);
+          }
+        });
+      }
       if (storageStatePath !== undefined) {
         state.storageStatePath = storageStatePath;
       }

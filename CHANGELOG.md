@@ -28,6 +28,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Resource-blocking text capture profile** (`resource-blocking.ts`, evidence-run `captureProfile`,
+  CLI `--text-only`): on a `text` profile the BrowserPool aborts image/media/font subrequests and
+  known ad/tracker hosts (via `context.route`) before they are fetched, and skips the page
+  screenshot. This never touches the document/script bytes `page_html`/`page_text` are derived from
+  — so cite-or-fail is unaffected and captures become more reproducible (fewer third-party requests)
+  — and the aborted-request count is tracked per context. `full` (default) is unchanged. Use it for
+  text/structure-only browser runs (JS-rendered pages that tier-0 can't fetch but that need no
+  visual evidence).
 - **Tier-0 browserless capture** (`http-tier0-capture.ts`, acquisition tier `http_fetch`): for a
   source whose needed bytes are server-rendered, `httpTier0Capture` performs a plain HTTP GET and
   registers the SAME artifact contract as the browser path — `page_html`, `page_text` (derived
