@@ -28,6 +28,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **SSR hydration extraction**: `extractStructuredData` now parses inline `application/json`
+  hydration payloads (Next.js `__NEXT_DATA__`, Nuxt `__NUXT_DATA__`, and other framework SSR
+  state) into `StructuredData.hydration`, and a page that exposes only hydration (no JSON-LD)
+  now registers a `structured_data` artifact. This is the structured data a client-rendered page
+  commits to the HTML before JS runs — often readable without a browser. Pure `JSON.parse` (no
+  eval, the `window.__NUXT__ = {…}` JS-assignment form is deliberately not executed),
+  byte-reproducible, and `application/ld+json` is excluded (it stays in `jsonLd`). Like JSON-LD, a
+  hydration value is a site claim that only grounds a claim when it also appears in the visible text.
 - **Engine provenance in the bundle manifest**: each evidence run records the resolved capture
   engine (channel + browser version) into a `run-meta.json` sidecar, and `buildBundleManifest`
   attaches it as `manifest.engine`. It is recorded **beside** the bytes — deliberately **outside**

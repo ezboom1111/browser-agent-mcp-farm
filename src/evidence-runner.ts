@@ -746,7 +746,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
             structured.crossCheck = crossCheck;
           }
         }
-        const hasStructured = structured.jsonLd.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
+        const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
         if (hasStructured) {
           await input.runStage("structured_extraction", () =>
             withAbort(

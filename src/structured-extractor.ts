@@ -30,6 +30,11 @@ export interface StructuredHeading {
 
 export interface StructuredData {
   jsonLd: unknown[];
+  // SSR hydration payloads (Next.js __NEXT_DATA__, Nuxt __NUXT_DATA__, and any other inline
+  // `application/json` script). These carry the structured data a client-rendered page commits
+  // to the HTML BEFORE JS runs — often readable without a browser. Like jsonLd, a hydration value
+  // is a SITE CLAIM; it only becomes a grounded claim when it also appears in the visible text.
+  hydration: unknown[];
   openGraph: Record<string, string>;
   twitter: Record<string, string>;
   canonical?: string;
@@ -46,6 +51,7 @@ export function extractStructuredData(html: string): StructuredData {
   const jsonLd = extractJsonLd(html);
   const data: StructuredData = {
     jsonLd,
+    hydration: extractHydration(html),
     openGraph: extractMeta(html, "property", "og:"),
     twitter: extractMeta(html, "name", "twitter:"),
     summary: summarizeJsonLd(jsonLd),
@@ -137,6 +143,28 @@ function summarizeJsonLd(jsonLd: unknown[]): StructuredSummary {
     }
   }
   return summary;
+}
+
+// Parse inline `application/json` script payloads (SSR hydration: __NEXT_DATA__, __NUXT_DATA__,
+// framework state). The `application/json\1` closing-quote anchor excludes `application/ld+json`
+// (handled by extractJsonLd). Pure JSON.parse — never eval — so it stays byte-reproducible and
+// the `window.__NUXT__ = {...}` JS-assignment form is deliberately NOT executed.
+function extractHydration(html: string): unknown[] {
+  const out: unknown[] = [];
+  const blockRe = /<script\b[^>]*type\s*=\s*("|')application\/json\1[^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = blockRe.exec(html)) !== null) {
+    const raw = (match[2] ?? "").trim();
+    if (raw.length === 0) {
+      continue;
+    }
+    try {
+      out.push(JSON.parse(raw) as unknown);
+    } catch {
+      // skip malformed hydration payloads rather than failing the whole extraction
+    }
+  }
+  return out;
 }
 
 function extractJsonLd(html: string): unknown[] {
