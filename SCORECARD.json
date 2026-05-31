@@ -1,8 +1,8 @@
 {
   "package": "browser-agent-mcp-farm",
   "version": "0.5.0",
-  "commit": "d1db0d9",
-  "generatedAt": "2026-05-31T00:27:01.481Z",
+  "commit": "82039b4",
+  "generatedAt": "2026-05-31T01:02:46.074Z",
   "overallScore": 10,
   "weakestDomain": {
     "key": "trust",
@@ -10,7 +10,7 @@
   },
   "measured": {
     "coverageLines": 80.56,
-    "coverageBranches": 74.22,
+    "coverageBranches": 74.21,
     "testsGreen": true
   },
   "domains": [

@@ -4,7 +4,7 @@ import { literalQuoteIn, proposeGroundedClaims } from "../src/grounded-extractio
 import type { StructuredData, StructuredSummary } from "../src/structured-extractor.js";
 
 function structured(summary: StructuredSummary): StructuredData {
-  return { jsonLd: [], openGraph: {}, twitter: {}, summary, headings: [], tables: [] };
+  return { jsonLd: [], hydration: [], openGraph: {}, twitter: {}, summary, headings: [], tables: [] };
 }
 
 describe("literalQuoteIn", () => {
