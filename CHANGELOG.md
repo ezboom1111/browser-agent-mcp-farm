@@ -10,6 +10,19 @@ adheres to semantic versioning. Build/test status is tracked in
 
 > Accumulates the v0.5.0 capture-tier / security / engine work. Entries land incrementally.
 
+### Security
+
+- **Owner-only profile/credential directories** (B1b): the profile directory that holds a saved
+  session — the persistent-profile `userDataDir` (Chromium's cookie/login DBs) and
+  `storage-state.json` — is now created owner-only. POSIX: `chmod 0700`. Windows: it already lives
+  under `%USERPROFILE%\.gstack` (inherited owner-only ACL), and a best-effort `icacls` grant (current
+  user) followed by inheritance removal is applied grant-first so a failure can never lock the
+  directory. Hardening is best-effort and never breaks login/capture. This is directory-level
+  protection sufficient for a single-user machine; per-file encryption (e.g. DPAPI) was deliberately
+  not added — the PowerShell bridge would put a plaintext key in transit and DPAPI CurrentUser is
+  same-user-decryptable, so the marginal benefit did not justify that secret-handling path (tracked
+  as a follow-up). Complements the B1a credentialed-lease domain fence.
+
 ### Changed
 
 - **Refusal codification + version-drift fix** (B2): the live browser-extension / attach-and-drive of

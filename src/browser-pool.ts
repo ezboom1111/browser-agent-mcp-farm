@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Frame, type Page, type Request, type Response } from "playwright";
@@ -9,7 +8,7 @@ import { shouldBlockRequest } from "./resource-blocking.js";
 import { FarmError } from "./farm-error.js";
 import { buildTimestampPlan, frameCaptureId, type FrameSample, type FrameSampleRunResult, type FrameVisualFingerprint, type MediaElementSnapshot, type SeekResult, type SerializedCue } from "./frame-sampler.js";
 import type { Lease, LeaseManager } from "./lease-manager.js";
-import { profilePaths, profileRoot } from "./profile-store.js";
+import { ensureHardenedDir, profilePaths, profileRoot } from "./profile-store.js";
 import { acquireProfileLock, refreshProfileLock, releaseProfileLock, type ProfileLockHandle } from "./profile-lock.js";
 
 const MAX_MEDIA_ARTIFACTS_PER_PAGE = 40;
@@ -1111,7 +1110,7 @@ export class BrowserPool {
     }
     try {
       if (state.storageStatePath) {
-        await mkdir(dirname(state.storageStatePath), { recursive: true });
+        await ensureHardenedDir(dirname(state.storageStatePath));
         await state.context.storageState({ path: state.storageStatePath, indexedDB: true }).catch(() => undefined);
       }
       await state.context.close().catch(() => undefined);
@@ -1170,7 +1169,10 @@ export class BrowserPool {
     try {
       if (lease.storagePolicy === "persistent-profile") {
         persistent = true;
-        context = await chromium.launchPersistentContext(resolveUserDataDir(lease), {
+        const userDataDir = resolveUserDataDir(lease);
+        // Harden the profile dir (owner-only) BEFORE Chromium writes its cookie/login store there (B1b).
+        await ensureHardenedDir(dirname(userDataDir));
+        context = await chromium.launchPersistentContext(userDataDir, {
           ...options,
           ...this.launchOptions()
         });

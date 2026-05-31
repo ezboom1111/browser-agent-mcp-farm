@@ -35,7 +35,7 @@ import { buildOfficialApiReadiness } from "./official-api.js";
 import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, DEFAULT_API_BACKED_PLATFORMS, DEFAULT_CANARY_MAINTENANCE_SET, type CoverageReportSource } from "./coverage-report.js";
 import { formatAcquisitionRoutesAsLines, routeCoverageReport } from "./acquisition-router.js";
 import { appendRecipeCanaryResult, evaluateRecipeCanary, loadRecipeCanaryLedger, runRecipeCanary, type RecipeCanaryGolden, type RecipeCanaryObservation, type RecipeCanaryResult } from "./recipe-canary.js";
-import { listProfiles, profilePaths, removeProfile } from "./profile-store.js";
+import { ensureHardenedDir, listProfiles, profilePaths, removeProfile } from "./profile-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
 import { registerAll, registerClaude, registerCodex } from "./registration.js";
@@ -449,7 +449,7 @@ async function runAuthCdpImport(): Promise<void> {
     if (!hasFlag("--save-now") && waitMs > 0) {
       await waitForEnterOrTimeout(waitMs);
     }
-    await mkdir(dirname(paths.storageStatePath), { recursive: true });
+    await ensureHardenedDir(dirname(paths.storageStatePath));
     const storageState = await context.storageState({ indexedDB: true });
     const filteredStorageState = filterStorageState(storageState, cookieDomains);
     await writeFile(paths.storageStatePath, `${JSON.stringify(filteredStorageState, null, 2)}\n`, "utf8");
