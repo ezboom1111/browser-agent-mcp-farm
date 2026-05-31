@@ -1927,6 +1927,7 @@ async function runEvidenceRunCommand(): Promise<void> {
     storagePolicy: hasFlag("--persistent-profile") ? "persistent-profile" : undefined,
     headed: hasFlag("--headed"),
     browserChannel: browserChannelFromArgs(),
+    httpFetch: hasFlag("--http-fetch"),
     overlayDismissal: {
       enabled: !hasFlag("--no-overlay-dismissal"),
       maxActions: overlayMaxActionsArg === undefined ? 3 : Number(overlayMaxActionsArg)
@@ -2436,6 +2437,8 @@ Options:
           use an installed Playwright browser channel such as chrome or msedge for headed login/calibration/evidence runs
   --chrome
           shorthand for --browser-channel chrome
+  --http-fetch
+          tier-0 browserless capture: try a plain HTTP GET first (no Chromium) for server-rendered pages; falls back to the browser if it declines (no frames on the tier-0 path)
   --no-overlay-dismissal
           Disable cautious pre-capture overlay dismissal
   --overlay-dismissal-max-actions <0-10>
