@@ -35,6 +35,15 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Browser pre-warm + cost metrics** (C3): the evidence run pre-launches the shared Browser as a
+  measured `browser_prewarm` stage so the launch cost is visible in `metrics.json` and the first
+  `openPage` does not pay it synchronously. `metrics.json` now also carries `blockedResourceCount`
+  (subrequests aborted by the text profile), making the A3 win measurable per run. A shared
+  `isBareEphemeralLease` predicate (storagePolicy ephemeral with no proxy/fingerprint/storage-state/
+  profile/user-data — not "options object empty") is added for warm-eligibility and reused by the
+  capture cache. (A context-reuse ring was deliberately not added: a warmed context is safe to use
+  at most once, so reuse would risk cross-lease state bleed for no real gain — the Browser, not the
+  context, is the expensive resource.)
 - **Resource-blocking text capture profile** (`resource-blocking.ts`, evidence-run `captureProfile`,
   CLI `--text-only`): on a `text` profile the BrowserPool aborts image/media/font subrequests and
   known ad/tracker hosts (via `context.route`) before they are fetched, and skips the page
