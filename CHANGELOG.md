@@ -48,6 +48,19 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Content-addressed capture-cache core** (C4, `capture-cache.ts`): a deterministic cache keyed by
+  every byte-affecting input (url, capture/launch profile, resolved channel + browser version,
+  sampleFrames, viewport/locale/timezone/userAgent, wait/settle) plus a coarse time bucket, so two
+  runs that would capture identical bytes could replay a prior registered capture (keeping its
+  original sha256). Conservative-by-design for a verification tool, per the adversarial review: an
+  **unresolved engine is non-cacheable** (the key is `null` when `browserVersion` is `"unknown"`, so
+  two binaries never collide on one key); freshness is **clamped to ≤ 1 hour** (a longer TTL is
+  ignored) with numeric staleness recorded; the cache directory is **per-run-root** (not a global
+  dir), so one agent never serves another's bytes as first-party; and only a bare ephemeral lease is
+  eligible (the gate lives at the call site). The hot-path replay wiring (re-register a fresh hit and
+  label the page claim `cached_capture` with its staleness age) is intentionally a separate,
+  opt-in follow-up — for a verification tool, serving cached bytes as current evidence is the most
+  freshness-sensitive change and is kept off the default path.
 - **External-bridge caged tier** (B3, `storagePolicy: "external-bridge"`, `docs/EXTERNAL_BRIDGE.md`):
   an off-by-default lease tier for a powerful-but-untrusted external capturer, so that capability can
   be used without weakening the trust model — its bytes flow through `register_evidence`
