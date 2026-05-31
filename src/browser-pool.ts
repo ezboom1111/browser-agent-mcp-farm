@@ -74,10 +74,38 @@ interface MediaCaptureEvent {
   bytes?: Uint8Array;
 }
 
+// Curated, reproducibility-focused Chromium launch flags (C1). Deliberately conservative:
+// process-stability + deterministic-scheduling flags only. NO stealth / anti-detection / sandbox /
+// web-security-downgrading flags — those would violate the farm's no-evasion + isolation posture
+// (enforced by FORBIDDEN_LAUNCH_ARG_PREFIXES + test). None of these alter DOM/page_text bytes; they
+// affect process and timing, not rendering. Applied ONLY to the default bundled Chromium engine,
+// never to a named chrome/msedge channel (whose branded build is itself the reproducibility signal).
+export const CURATED_LAUNCH_ARGS: readonly string[] = Object.freeze([
+  "--disable-dev-shm-usage", // avoid /dev/shm exhaustion under containers (stability)
+  "--no-first-run", // suppress first-run state (determinism)
+  "--no-default-browser-check", // no default-browser prompt (determinism)
+  "--disable-background-timer-throttling", // consistent headless timer scheduling (no background throttle)
+  "--disable-backgrounding-occluded-windows", // deterministic background behaviour
+  "--disable-renderer-backgrounding", // deterministic renderer scheduling
+  "--mute-audio" // mute the OS audio sink (stability); does not touch media-stream/network capture
+]);
+
+// A strict subset for callers wanting only the single highest-value, lowest-risk flag.
+export const MINIMAL_LAUNCH_ARGS: readonly string[] = Object.freeze(["--disable-dev-shm-usage"]);
+
+// Flags that must NEVER appear in any launch profile: stealth/anti-bot evasion and
+// sandbox/web-security downgrades. Documents the boundary; asserted by test.
+// `--disable-features` is included because `--disable-features=AutomationControlled` is the
+// canonical headless-evasion flag; the whole family stays out of any launch profile.
+export const FORBIDDEN_LAUNCH_ARG_PREFIXES: readonly string[] = Object.freeze(["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security", "--disable-blink-features", "--disable-features", "--user-agent"]);
+
+export type LaunchArgsProfile = "default" | "minimal";
+
 export interface BrowserPoolOptions {
   navigationTimeoutMs?: number;
   launchHeadless?: boolean;
   browserChannel?: string;
+  launchArgsProfile?: LaunchArgsProfile;
   artifactWriter?: ArtifactWriter;
 }
 
@@ -185,6 +213,7 @@ export class BrowserPool {
   private readonly navigationTimeoutMs: number;
   private readonly launchHeadless: boolean;
   private readonly browserChannel: string | undefined;
+  private readonly launchArgsProfile: LaunchArgsProfile;
   private readonly artifactWriter: ArtifactWriter;
   private readonly activeProfileLeases = new Map<string, string>();
   private browser: Browser | undefined;
@@ -195,6 +224,7 @@ export class BrowserPool {
     this.navigationTimeoutMs = options.navigationTimeoutMs ?? 20_000;
     this.launchHeadless = options.launchHeadless ?? true;
     this.browserChannel = normalizeBrowserChannel(options.browserChannel);
+    this.launchArgsProfile = options.launchArgsProfile ?? "default";
     this.artifactWriter = options.artifactWriter ?? new ArtifactWriter();
   }
 
@@ -1162,10 +1192,16 @@ export class BrowserPool {
     return this.browserLaunch;
   }
 
-  private launchOptions(): { headless: boolean; channel?: string } {
+  private launchOptions(): { headless: boolean; channel?: string; args?: string[] } {
+    // Curated args apply ONLY to the default bundled Chromium engine. A named channel
+    // (chrome/msedge) is launched with headless+channel only, so the branded build's own
+    // behaviour stays the reproducible signal and we avoid known channel+args interactions.
+    const useArgs = this.browserChannel === undefined;
+    const profileArgs = this.launchArgsProfile === "minimal" ? MINIMAL_LAUNCH_ARGS : CURATED_LAUNCH_ARGS;
     return {
       headless: this.launchHeadless,
-      ...(this.browserChannel === undefined ? {} : { channel: this.browserChannel })
+      ...(this.browserChannel === undefined ? {} : { channel: this.browserChannel }),
+      ...(useArgs ? { args: [...profileArgs] } : {})
     };
   }
 
