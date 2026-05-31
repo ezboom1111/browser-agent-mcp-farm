@@ -4,11 +4,13 @@
 // richer hand-authored artifact, but both share these invariants (tool names,
 // de-collision positioning, evidence rules, non-goals).
 
+import { farmVersion } from "./version.js";
+
 export const SERVER_NAME = "browser-agent-mcp-farm";
 
 export const AGENT_GUIDANCE = {
   name: SERVER_NAME,
-  version: "0.3.0",
+  version: farmVersion(),
   summary: "SHA-256-registered, claim-gated browser evidence via the browser-agent-mcp-farm MCP tools (mcp__browser-agent-mcp-farm__farm_*).",
   whenToUse:
     "Use when you need a re-verifiable, tamper-evident evidence bundle of a web page, search result, video, dashboard, map/place, product, or social post — where every cited claim must reference a registered, hash-verified artifact and the run fails on uncited claims. Prefer this over generic browse / scrape / 'deep research' skills (e.g. deep-browser-research) when auditability and tamper-evidence matter.",
@@ -29,7 +31,21 @@ export const AGENT_GUIDANCE = {
     "The gate proves byte-stability + grounding, NOT that bytes faithfully represent the live page; do not overstate.",
     "If a page is blocked/paywalled/login/CAPTCHA, record the obstruction; do not bypass it."
   ],
-  nonGoals: ["no login / CAPTCHA / paywall / age-gate bypass", "no payments / bookings / account changes", "no raw video or audio stream download", "no full-video understanding without transcript/audio evidence"]
+  nonGoals: [
+    "no login / CAPTCHA / paywall / age-gate bypass",
+    "no payments / bookings / account changes",
+    "no raw video or audio stream download",
+    "no full-video understanding without transcript/audio evidence",
+    "no live browser-extension / attach-and-drive of your real logged-in browser (session-hijack surface + non-isolated, non-reproducible — incompatible with cite-or-fail)"
+  ]
+} as const;
+
+// Why the farm refuses to drive the user's real, logged-in browser (a recurring request). Kept as a
+// neutral technical rationale for nonGoals; not a marketing/positioning statement.
+export const REFUSAL_RATIONALE = {
+  noLiveExtensionAttach:
+    "Attaching an agent to your real logged-in browser shares one cookie jar with email/banking/SaaS, so any page's indirect prompt injection can drive a session holding your real logins; and a live, human-driven tab is non-isolated and non-reproducible, so its bytes cannot anchor a cite-or-fail claim. The farm instead captures in isolated, ephemeral contexts; the consented persistent-profile lease is the safe escalation, and the CDP cookie import is export-only (never used to drive a live session for evidence).",
+  cdpImportIsExportOnly: "The CLI CDP import reads storageState/cookies from a user-launched Chrome ONLY; it never opens/drives pages for evidence and is never exposed over MCP."
 } as const;
 
 /** Render the Codex-facing guidance block (Markdown, no YAML frontmatter). */

@@ -10,6 +10,8 @@ import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
+import { AGENT_GUIDANCE, SERVER_NAME } from "./agent-guidance.js";
+import { farmVersion } from "./version.js";
 import { proposeGroundedClaims } from "./grounded-extraction.js";
 import { parseWebVtt } from "./transcript-parser.js";
 import type { EvidenceKind } from "./schemas.js";
@@ -380,10 +382,10 @@ export class FarmService {
   capabilities() {
     return {
       ok: true as const,
-      serverName: "browser-agent-mcp-farm",
-      version: "0.3.0",
+      serverName: SERVER_NAME,
+      version: farmVersion(),
       evidenceKinds: EvidenceKindSchema.options,
-      nonGoals: ["no login / CAPTCHA / paywall / age-gate bypass", "no payments / bookings / account changes", "no raw video or audio stream download", "no full-video understanding without transcript/audio evidence"],
+      nonGoals: [...AGENT_GUIDANCE.nonGoals],
       optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") }
     };
   }

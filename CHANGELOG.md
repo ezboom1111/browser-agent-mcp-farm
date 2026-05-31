@@ -12,6 +12,13 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Changed
 
+- **Refusal codification + version-drift fix** (B2): the live browser-extension / attach-and-drive of
+  the user's real logged-in browser is now an explicit `nonGoal` with a neutral technical
+  `REFUSAL_RATIONALE` (session-hijack surface + non-isolated/non-reproducible — incompatible with
+  cite-or-fail; the CDP cookie import stays export-only and is never exposed over MCP). `capabilities()`
+  now reads the real package version (a new `version.ts`, fixing the stale `0.3.0`) and shares the
+  single `AGENT_GUIDANCE.nonGoals` instead of a drifting duplicate. A new `registeredToolNames()` lets
+  a test assert the MCP negative surface — no `cdp` / `auth-login` / `attach` tool is ever registered.
 - **`browserChannel` is a closed enum** (`chromium` | `chrome` | `msedge` | `msedge-beta` |
   `msedge-dev`), replacing the previous free string. Unsupported engines (`firefox`, `webkit`,
   `msedge-canary`, …) are now rejected at the evidence-run input boundary, and the CLI

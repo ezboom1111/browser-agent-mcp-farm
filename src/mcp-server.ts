@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { z } from "zod";
 import { toToolError } from "./farm-error.js";
 import { FarmService } from "./farm-service.js";
+import { SERVER_NAME } from "./agent-guidance.js";
+import { farmVersion } from "./version.js";
 import {
   AcquireContextInputSchema,
   CaptureAfterIdleInputSchema,
@@ -69,10 +71,16 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_verify_bundle: "Re-verify a bundle manifest against a run's artifacts IN PLACE: re-hashes each file (detects tampered bytes), recomputes the Merkle root (detects a tampered manifest), and optionally checks the signature. No network. isError if anything fails."
 };
 
+// Names of the tools the server registers, captured during the last createMcpServer() build.
+// Exported via registeredToolNames() so a test can assert the negative surface: NO tool that
+// attaches to / drives a real browser (cdp / auth-login / attach) is ever exposed over MCP.
+const registeredToolNameList: string[] = [];
+
 export function createMcpServer(service = new FarmService()): McpServer {
+  registeredToolNameList.length = 0;
   const server = new McpServer({
-    name: "browser-agent-mcp-farm",
-    version: "0.3.0"
+    name: SERVER_NAME,
+    version: farmVersion()
   });
 
   registerJsonTool(server, "farm_acquire_context", AcquireContextInputSchema, (input) => service.acquireContext(input));
@@ -144,7 +152,15 @@ export async function runStdioServer(service = new FarmService()): Promise<void>
   await server.connect(transport);
 }
 
+/** The tool names the MCP server registers. Use to assert the negative surface (no cdp/auth/attach
+ * tool is exposed). Rebuilds a throwaway server to capture the current registration. */
+export function registeredToolNames(service: FarmService = new FarmService()): string[] {
+  createMcpServer(service);
+  return [...registeredToolNameList];
+}
+
 function registerJsonTool<T extends z.ZodRawShape>(server: McpServer, name: string, schema: z.ZodObject<T>, handler: (input: z.infer<z.ZodObject<T>>) => unknown | Promise<unknown>, isErrorResult?: (result: unknown) => boolean): void {
+  registeredToolNameList.push(name);
   server.registerTool(
     name,
     {
