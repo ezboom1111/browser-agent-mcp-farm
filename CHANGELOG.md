@@ -6,6 +6,29 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.5.0] — validated engine + provenance (in progress)
+
+> Accumulates the v0.5.0 capture-tier / security / engine work. Entries land incrementally.
+
+### Changed
+
+- **`browserChannel` is a closed enum** (`chromium` | `chrome` | `msedge` | `msedge-beta` |
+  `msedge-dev`), replacing the previous free string. Unsupported engines (`firefox`, `webkit`,
+  `msedge-canary`, …) are now rejected at the evidence-run input boundary, and the CLI
+  `--browser-channel` / `--chrome` flag validates and **fails fast before any browser launch**.
+  `chromium` remains valid and maps to the bundled default engine. **Breaking (minor)** for any
+  caller that passed an out-of-enum channel; all in-tree callers already use chrome/chromium/msedge.
+
+### Added
+
+- **Engine provenance in the bundle manifest**: each evidence run records the resolved capture
+  engine (channel + browser version) into a `run-meta.json` sidecar, and `buildBundleManifest`
+  attaches it as `manifest.engine`. It is recorded **beside** the bytes — deliberately **outside**
+  the Merkle root and signature — so a verifier can see which engine produced the bytes while the
+  engine label never affects the hash verdict. `browserVersion` is `"unknown"` until a browser has
+  launched (e.g. a persistent-profile context that does not expose its Browser), a non-authoritative
+  marker rather than a pinned version.
+
 ## [0.4.1] — reproducibility launch hardening
 
 ### Changed

@@ -218,6 +218,7 @@ export class BrowserPool {
   private readonly activeProfileLeases = new Map<string, string>();
   private browser: Browser | undefined;
   private browserLaunch: Promise<Browser> | undefined;
+  private resolvedBrowserVersion: string | undefined;
 
   constructor(leaseManager: LeaseManager, options: BrowserPoolOptions = {}) {
     this.leaseManager = leaseManager;
@@ -1153,6 +1154,8 @@ export class BrowserPool {
           ...options,
           ...this.launchOptions()
         });
+        // Best-effort: a persistent context may not expose its Browser; version stays "unknown".
+        this.resolvedBrowserVersion ??= context.browser()?.version();
       } else {
         const browser = await this.ensureBrowser();
         context = await browser.newContext(options);
@@ -1186,6 +1189,7 @@ export class BrowserPool {
     if (!this.browserLaunch) {
       this.browserLaunch = chromium.launch(this.launchOptions()).then((browser) => {
         this.browser = browser;
+        this.resolvedBrowserVersion = browser.version();
         return browser;
       });
     }
@@ -1202,6 +1206,18 @@ export class BrowserPool {
       headless: this.launchHeadless,
       ...(this.browserChannel === undefined ? {} : { channel: this.browserChannel }),
       ...(useArgs ? { args: [...profileArgs] } : {})
+    };
+  }
+
+  // Resolved engine for this pool, recorded into run-meta.json for reproducibility (the bundle
+  // manifest carries it OUTSIDE the Merkle root, so it is provenance-beside-the-bytes, never trusted
+  // as part of the hash). browserVersion is "unknown" until a browser has been launched, or for a
+  // persistent context that does not expose its Browser — a non-authoritative marker, not a pinned
+  // version a verifier may rely on.
+  engineProvenance(): { channel: string; browserVersion: string } {
+    return {
+      channel: this.browserChannel ?? "chromium",
+      browserVersion: this.resolvedBrowserVersion ?? "unknown"
     };
   }
 
