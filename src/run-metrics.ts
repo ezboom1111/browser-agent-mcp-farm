@@ -19,6 +19,13 @@ export interface RunMetrics {
   p50DurationMs: number;
   p95DurationMs: number;
   slowestStage: { stage: string; durationMs: number } | null;
+  // Cost dimensions (C3). Present when the run produced them; the browser-launch cost is a stage
+  // timing ("browser_prewarm"), so warm-vs-cold and the resource-block win are measurable per run.
+  blockedResourceCount?: number;
+}
+
+export interface RunMetricsExtras {
+  blockedResourceCount?: number;
 }
 
 // Nearest-rank percentile over an ascending-sorted array.
@@ -31,7 +38,7 @@ function percentile(sortedAsc: number[], p: number): number {
   return sortedAsc[index] ?? 0;
 }
 
-export function summarizeStageTimings(timings: readonly StageTimingLike[]): RunMetrics {
+export function summarizeStageTimings(timings: readonly StageTimingLike[], extras: RunMetricsExtras = {}): RunMetrics {
   const sorted = timings.map((timing) => Math.max(0, timing.durationMs)).sort((a, b) => a - b);
   let okCount = 0;
   let totalDurationMs = 0;
@@ -56,6 +63,7 @@ export function summarizeStageTimings(timings: readonly StageTimingLike[]): RunM
     maxDurationMs: sorted.at(-1) ?? 0,
     p50DurationMs: percentile(sorted, 50),
     p95DurationMs: percentile(sorted, 95),
-    slowestStage
+    slowestStage,
+    ...(extras.blockedResourceCount === undefined ? {} : { blockedResourceCount: extras.blockedResourceCount })
   };
 }

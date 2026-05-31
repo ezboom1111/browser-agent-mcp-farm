@@ -254,6 +254,14 @@ export function isCredentialedStoragePolicy(storagePolicy: StoragePolicy): boole
   return storagePolicy === "storage-state" || storagePolicy === "persistent-profile";
 }
 
+/** True for a plain ephemeral lease with NO proxy/fingerprint/storage-state/profile/user-data. Such
+ * a lease needs no per-lease context options, so it (and only it) may be served by a pre-warmed bare
+ * context and is eligible for the content-addressed capture cache. The correct predicate is the
+ * absence of every byte/identity-affecting field — NOT "the options object is empty". */
+export function isBareEphemeralLease(lease: Pick<Lease, "storagePolicy" | "proxy" | "fingerprint" | "storageStatePath" | "profileName" | "userDataDir">): boolean {
+  return lease.storagePolicy === "ephemeral" && lease.proxy === undefined && lease.fingerprint === undefined && lease.storageStatePath === undefined && lease.profileName === undefined && lease.userDataDir === undefined;
+}
+
 /** Enforce a lease's domain allow-list at navigation time (B1). Exported so other capture paths
  * (e.g. a browserless HTTP fetch following redirects) can reuse the IDENTICAL allow-list logic.
  * An empty allow-list means allow-all for an ephemeral lease, but FAIL-CLOSED for a credentialed

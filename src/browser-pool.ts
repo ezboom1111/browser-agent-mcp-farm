@@ -229,6 +229,7 @@ export class BrowserPool {
   private browser: Browser | undefined;
   private browserLaunch: Promise<Browser> | undefined;
   private resolvedBrowserVersion: string | undefined;
+  private totalBlockedResourceCount = 0;
 
   constructor(leaseManager: LeaseManager, options: BrowserPoolOptions = {}) {
     this.leaseManager = leaseManager;
@@ -283,7 +284,10 @@ export class BrowserPool {
       // The text capture profile skips the page screenshot (resource-blocking aborts images, which
       // would corrupt a screenshot anyway). page_html / page_text are unaffected.
       const wantsScreenshot = this.captureProfile !== "text";
-      const [html, visibleText, title, screenshot, visibleLinks] = await withAbort(Promise.all([page.content(), collectVisibleFrameText(page, sourceUrl), page.title().catch(() => ""), wantsScreenshot ? page.screenshot({ fullPage: true, timeout: 10_000 }) : Promise.resolve(undefined), collectVisibleLinks(page, sourceUrl)]), signal);
+      const [html, visibleText, title, screenshot, visibleLinks] = await withAbort(
+        Promise.all([page.content(), collectVisibleFrameText(page, sourceUrl), page.title().catch(() => ""), wantsScreenshot ? page.screenshot({ fullPage: true, timeout: 10_000 }) : Promise.resolve(undefined), collectVisibleLinks(page, sourceUrl)]),
+        signal
+      );
 
       const bundleInput: CaptureBundleInput = {
         runDir: lease.artifactRunDir,
@@ -1186,6 +1190,7 @@ export class BrowserPool {
           const request = route.request();
           if (shouldBlockRequest(request.resourceType(), request.url())) {
             state.blockedResourceCount += 1;
+            this.totalBlockedResourceCount += 1;
             void route.abort().catch(() => undefined);
           } else {
             void route.continue().catch(() => undefined);
@@ -1249,6 +1254,17 @@ export class BrowserPool {
       channel: this.browserChannel ?? "chromium",
       browserVersion: this.resolvedBrowserVersion ?? "unknown"
     };
+  }
+
+  // Pre-launch the shared Browser ahead of demand (C3) so the first lease does not pay the launch
+  // cost synchronously. The Browser is the expensive resource; contexts are created per lease.
+  async prewarm(): Promise<void> {
+    await this.ensureBrowser();
+  }
+
+  /** Total subrequests aborted by the text-profile resource blocker across this pool's lifetime (C3). */
+  blockedResourceCount(): number {
+    return this.totalBlockedResourceCount;
   }
 
   private getPageState(contextToken: string, pageId: string): PageState {

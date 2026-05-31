@@ -352,7 +352,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
 
   // Persist per-run stage metrics (observability / SLO input) as an operational
   // sidecar — deliberately OUTSIDE the artifact ledger/bundle, since it is not evidence.
-  await withAbort(writeFile(join(options.runDir, "metrics.json"), `${JSON.stringify(summarizeStageTimings(stageTimings), null, 2)}\n`, "utf8"), options.abortSignal).catch(() => undefined);
+  await withAbort(writeFile(join(options.runDir, "metrics.json"), `${JSON.stringify(summarizeStageTimings(stageTimings, browserResult.blockedResourceCount === undefined ? {} : { blockedResourceCount: browserResult.blockedResourceCount }), null, 2)}\n`, "utf8"), options.abortSignal).catch(() => undefined);
 
   return {
     ok: claimGate?.ok ?? true,
@@ -395,6 +395,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
 async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner; sourceNavigationPlan: SourceNavigationPlan; sourceNavigationRecipePlan: SourceNavigationRecipePlan }): Promise<{
   /** True when the page bytes were captured by the tier-0 browserless HTTP fetch (A1), not a browser. */
   capturedViaHttp?: boolean;
+  /** Subrequests aborted by the text-profile resource blocker on this run (C3). */
+  blockedResourceCount?: number;
   pageCaptureRecords: ArtifactRecord[];
   sourceNavigationCalibrationRecords: ArtifactRecord[];
   sourceNavigationCalibrationReport?: SourceNavigationCalibrationReport;
@@ -480,6 +482,9 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       // tier-0 declined (non-HTML / off-domain / bot-blocked) -> escalate to the browser path.
     }
 
+    // Pre-launch the shared Browser as a measured stage (C3) so the launch cost is visible in
+    // metrics.json and the subsequent openPage does not pay it synchronously.
+    await input.runStage("browser_prewarm", () => pool.prewarm());
     const lease = await input.runStage("browser_acquire_context", async () =>
       leaseManager.acquire({
         agentId,
@@ -815,6 +820,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
     await pool.releaseContext(agentId, lease.contextToken).catch(() => undefined);
     released = true;
     return {
+      blockedResourceCount: pool.blockedResourceCount(),
       pageCaptureRecords: capture.records,
       sourceNavigationCalibrationRecords,
       ...(sourceNavigationCalibrationReport === undefined ? {} : { sourceNavigationCalibrationReport }),
