@@ -6,6 +6,23 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.4.1] — reproducibility launch hardening
+
+### Changed
+
+- **Curated Chromium launch args**: the BrowserPool now launches the default bundled Chromium
+  engine with a small, frozen set of stability + deterministic-scheduling flags
+  (`--disable-dev-shm-usage`, `--no-first-run`, `--no-default-browser-check`,
+  `--disable-background-timer-throttling`, `--disable-backgrounding-occluded-windows`,
+  `--disable-renderer-backgrounding`, `--mute-audio`). The set is deliberately conservative —
+  **no stealth / anti-detection / sandbox / web-security-downgrading flags** (the absence is
+  asserted by test) — and none of the flags alter DOM/page-text bytes (they affect process and
+  timing, not rendering). Args are applied **only** to the default engine, never to a named
+  `chrome`/`msedge` channel, whose branded build is itself the reproducibility signal. A new
+  optional `launchArgsProfile: "default" | "minimal"` selects the full curated set or the single
+  highest-value flag. `launchOptions()` now returns `{ headless, channel?, args? }`, establishing
+  the launch-options shape that later engine-provenance and capture-cache work build on.
+
 ## [0.4.0] — flexible acquisition
 
 > Not yet published. Licensed **Apache-2.0** (`LICENSE` + `package.json` set, `repository`
