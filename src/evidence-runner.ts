@@ -420,6 +420,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       navigationTimeoutMs: input.options.navigationTimeoutMs ?? 30_000,
       launchHeadless: !(input.options.headed ?? false),
       ...(input.options.browserChannel === undefined ? {} : { browserChannel: input.options.browserChannel }),
+      ...(input.options.captureProfile === undefined ? {} : { captureProfile: input.options.captureProfile }),
       artifactWriter: input.writer
     });
   const ownsPool = input.deps.browserPool === undefined;

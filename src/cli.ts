@@ -1928,6 +1928,7 @@ async function runEvidenceRunCommand(): Promise<void> {
     headed: hasFlag("--headed"),
     browserChannel: browserChannelFromArgs(),
     httpFetch: hasFlag("--http-fetch"),
+    captureProfile: hasFlag("--text-only") ? "text" : "full",
     overlayDismissal: {
       enabled: !hasFlag("--no-overlay-dismissal"),
       maxActions: overlayMaxActionsArg === undefined ? 3 : Number(overlayMaxActionsArg)
@@ -2439,6 +2440,8 @@ Options:
           shorthand for --browser-channel chrome
   --http-fetch
           tier-0 browserless capture: try a plain HTTP GET first (no Chromium) for server-rendered pages; falls back to the browser if it declines (no frames on the tier-0 path)
+  --text-only
+          text capture profile: block image/media/font + ad-host subrequests and skip the page screenshot (faster text/structure-only browser runs)
   --no-overlay-dismissal
           Disable cautious pre-capture overlay dismissal
   --overlay-dismissal-max-actions <0-10>
