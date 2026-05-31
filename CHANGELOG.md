@@ -48,6 +48,16 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **External-bridge caged tier** (B3, `storagePolicy: "external-bridge"`, `docs/EXTERNAL_BRIDGE.md`):
+  an off-by-default lease tier for a powerful-but-untrusted external capturer, so that capability can
+  be used without weakening the trust model — its bytes flow through `register_evidence`
+  (`captureMethod: "byo-bridge"`) and are re-verified by the same deterministic claim gate. The cage
+  is enforced at `acquire()`: enabled only when `FARM_ENABLE_EXTERNAL_BRIDGE` is exactly `"1"`
+  (default-off is the failure mode), forced `read-only`, a non-empty `allowedDomains` allow-list
+  required, every credential/identity field rejected (`proxy`/`profileName`/`storageStatePath`/
+  `userDataDir`/`fingerprint`), TTL clamped to ≤ 5 min, and no profile lock (disposable, isolated
+  ephemeral context). `farm_capabilities` reports `externalBridgeEnabled`. It never attaches to or
+  drives the user's real browser — the security boundary remains the deterministic gate, not an AI.
 - **Browser pre-warm + cost metrics** (C3): the evidence run pre-launches the shared Browser as a
   measured `browser_prewarm` stage so the launch cost is visible in `metrics.json` and the first
   `openPage` does not pay it synchronously. `metrics.json` now also carries `blockedResourceCount`

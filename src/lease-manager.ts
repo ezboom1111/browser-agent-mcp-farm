@@ -6,7 +6,7 @@ import type { z } from "zod";
 
 export type LeaseStatus = "active" | "released" | "expired" | "crashed";
 export type Capability = "read-only" | "read-write";
-export type StoragePolicy = "ephemeral" | "storage-state" | "persistent-profile";
+export type StoragePolicy = "ephemeral" | "storage-state" | "persistent-profile" | "external-bridge";
 export type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
 export type Fingerprint = z.infer<typeof FingerprintSchema>;
 
@@ -95,7 +95,27 @@ export class LeaseManager {
         throw new FarmError("capacity_exhausted", `Lease capacity exhausted: ${active}/${this.maxContexts} active contexts — release or wait for expiry`);
       }
     }
-    const ttlMs = input.ttlMs ?? this.defaultTtlMs;
+    const storagePolicy = input.storagePolicy ?? "ephemeral";
+    const allowedDomains = normalizeDomains(input.allowedDomains ?? []);
+    let capability = input.capability ?? "read-only";
+    let ttlMs = input.ttlMs ?? this.defaultTtlMs;
+    // External-bridge tier (B3): a disposable, ZERO-credential, hard-fenced context for an external/
+    // aggressive capturer ("caged executor"). OFF by default; forced read-only; non-empty domain
+    // allow-list required; no persistence of any kind; short ttl. The deterministic gate — not this
+    // tier — remains the trust boundary, so its captured bytes are provenance-tagged, never trusted.
+    if (storagePolicy === "external-bridge") {
+      if (!externalBridgeEnabled()) {
+        throw new FarmError("external_bridge_disabled", "The external-bridge tier is disabled. Set FARM_ENABLE_EXTERNAL_BRIDGE=1 to enable it (off by default).");
+      }
+      if (allowedDomains.length === 0) {
+        throw new FarmError("external_bridge_requires_domains", "An external-bridge lease requires a non-empty allowedDomains allow-list.");
+      }
+      if (input.proxy !== undefined || input.profileName !== undefined || input.storageStatePath !== undefined || input.userDataDir !== undefined || input.fingerprint !== undefined) {
+        throw new FarmError("external_bridge_no_persistence", "An external-bridge lease must carry zero credentials/identity: no proxy, profileName, storageStatePath, userDataDir, or fingerprint.");
+      }
+      capability = "read-only"; // forced — the caged tier is never read-write
+      ttlMs = Math.min(ttlMs, 300_000); // clamp to <= 5 minutes
+    }
     const token = `ctx_${randomUUID()}`;
     const lease: Lease = {
       contextToken: token,
@@ -106,10 +126,10 @@ export class LeaseManager {
       expiresAt: new Date(now.getTime() + ttlMs).toISOString(),
       lastHeartbeatAt: now.toISOString(),
       ttlMs,
-      capability: input.capability ?? "read-only",
-      allowedDomains: normalizeDomains(input.allowedDomains ?? []),
+      capability,
+      allowedDomains,
       maxPages: input.maxPages ?? this.defaultMaxPages,
-      storagePolicy: input.storagePolicy ?? "ephemeral",
+      storagePolicy,
       status: "active",
       pages: []
     };
@@ -260,6 +280,12 @@ export function isCredentialedStoragePolicy(storagePolicy: StoragePolicy): boole
  * absence of every byte/identity-affecting field — NOT "the options object is empty". */
 export function isBareEphemeralLease(lease: Pick<Lease, "storagePolicy" | "proxy" | "fingerprint" | "storageStatePath" | "profileName" | "userDataDir">): boolean {
   return lease.storagePolicy === "ephemeral" && lease.proxy === undefined && lease.fingerprint === undefined && lease.storageStatePath === undefined && lease.profileName === undefined && lease.userDataDir === undefined;
+}
+
+/** The external-bridge tier (B3) is OFF unless FARM_ENABLE_EXTERNAL_BRIDGE is EXACTLY "1". Any other
+ * value (unset, "0", "true", malformed) leaves it disabled — default-off is the failure mode. */
+export function externalBridgeEnabled(): boolean {
+  return process.env.FARM_ENABLE_EXTERNAL_BRIDGE === "1";
 }
 
 /** Enforce a lease's domain allow-list at navigation time (B1). Exported so other capture paths

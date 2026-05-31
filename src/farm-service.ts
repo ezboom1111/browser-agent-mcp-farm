@@ -16,7 +16,7 @@ import { proposeGroundedClaims } from "./grounded-extraction.js";
 import { parseWebVtt } from "./transcript-parser.js";
 import type { EvidenceKind } from "./schemas.js";
 import { buildBundleManifest, signManifest, verifyBundle as verifyEvidenceBundle, type BundleManifest } from "./evidence-bundle.js";
-import { LeaseManager, leaseManagerOptionsFromEnv, redactLease } from "./lease-manager.js";
+import { LeaseManager, leaseManagerOptionsFromEnv, redactLease, externalBridgeEnabled } from "./lease-manager.js";
 import {
   AcquireContextInputSchema,
   CaptureAfterIdleInputSchema,
@@ -386,6 +386,9 @@ export class FarmService {
       version: farmVersion(),
       evidenceKinds: EvidenceKindSchema.options,
       nonGoals: [...AGENT_GUIDANCE.nonGoals],
+      // The caged external-capture tier (B3) is OFF by default; reported so an agent can see it is
+      // not available unless an operator explicitly enabled it.
+      externalBridgeEnabled: externalBridgeEnabled(),
       optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") }
     };
   }

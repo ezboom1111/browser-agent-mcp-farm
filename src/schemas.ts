@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const CapabilitySchema = z.enum(["read-only", "read-write"]);
-export const StoragePolicySchema = z.enum(["ephemeral", "storage-state", "persistent-profile"]);
+export const StoragePolicySchema = z.enum(["ephemeral", "storage-state", "persistent-profile", "external-bridge"]);
 // Validated browser-engine channel (C2). "chromium" = the bundled default engine; the others are
 // branded local builds Playwright can launch. A closed enum (vs a free string) blocks unsupported
 // values like "firefox"/"webkit"/"msedge-canary" at the input boundary, and the resolved channel is
