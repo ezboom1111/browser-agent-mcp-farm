@@ -12,13 +12,15 @@ import type { CoverageClass, CoverageReport, CoverageReportEntry } from "./cover
 export type AcquisitionTier =
   | "official_api" // lawful, credential-gated API connector (no browser, no anti-bot)
   | "feed" // sitemap / RSS / JSON-LD / canonical (cheapest, robust to redesigns)
+  | "http_fetch" // tier-0 browserless GET: server-rendered HTML/hydration captured without Chromium
   | "model_extract" // generic deterministic/model extraction from already-captured bytes (no per-site selectors)
   | "profile" // the user's consented, lease-scoped persistent profile
   | "headed" // headed human-in-the-loop capture
   | "byo_capture"; // bring-your-own-capture: any external tool/agent/human feeds bytes; the farm verifies
 
-// Cost/robustness order, cheapest first.
-export const ACQUISITION_TIERS: AcquisitionTier[] = ["official_api", "feed", "model_extract", "profile", "headed", "byo_capture"];
+// Cost/robustness order, cheapest first. http_fetch sits after feed (a feed is more redesign-robust)
+// and before any browser tier (it needs no Chromium), so a server-rendered page is captured cheaply.
+export const ACQUISITION_TIERS: AcquisitionTier[] = ["official_api", "feed", "http_fetch", "model_extract", "profile", "headed", "byo_capture"];
 
 export interface AcquisitionRoute {
   platform: string;
@@ -35,10 +37,10 @@ export interface AcquisitionRoute {
 // universal verifier-fallback, so the router never implies the farm can autonomously capture
 // everything — the honest answer for a hard source is "an external capture can still feed the gate".
 const TIERS_BY_CLASS: Record<CoverageClass, AcquisitionTier[]> = {
-  api_backed: ["official_api", "feed", "model_extract", "byo_capture"],
-  autonomous_ready: ["feed", "model_extract", "byo_capture"],
-  headed_only: ["profile", "headed", "byo_capture"],
-  unmaintained: ["feed", "model_extract", "byo_capture"],
+  api_backed: ["official_api", "feed", "http_fetch", "model_extract", "byo_capture"],
+  autonomous_ready: ["feed", "http_fetch", "model_extract", "byo_capture"],
+  headed_only: ["profile", "headed", "byo_capture"], // auth/anti-bot sensitive: a browserless GET won't pass
+  unmaintained: ["feed", "http_fetch", "model_extract", "byo_capture"],
   blocked: ["byo_capture"]
 };
 

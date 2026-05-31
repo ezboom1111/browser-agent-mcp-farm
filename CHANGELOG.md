@@ -28,6 +28,16 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Tier-0 browserless capture** (`http-tier0-capture.ts`, acquisition tier `http_fetch`): for a
+  source whose needed bytes are server-rendered, `httpTier0Capture` performs a plain HTTP GET and
+  registers the SAME artifact contract as the browser path — `page_html`, `page_text` (derived
+  deterministically from the HTML), and a `structured_data` derivative — without launching Chromium.
+  It is read-only and credential-free, fences **every redirect hop** against the lease domain
+  allow-list (the exported `assertDomainAllowed`, an SSRF guard), enforces an http(s)-only +
+  `text/html` content-type guard + byte cap, and **declines** (`ok:false`, so the caller escalates
+  to the browser) on non-HTML / off-domain / bot-blocked responses. Determinism is improved over a
+  rendered DOM (no JS, ads, or timing). The `http_fetch` tier sits after `feed` and before any
+  browser tier in the acquisition router. (Opt-in wiring into the evidence-run pipeline follows.)
 - **SSR hydration extraction**: `extractStructuredData` now parses inline `application/json`
   hydration payloads (Next.js `__NEXT_DATA__`, Nuxt `__NUXT_DATA__`, and other framework SSR
   state) into `StructuredData.hydration`, and a page that exposes only hydration (no JSON-LD)
