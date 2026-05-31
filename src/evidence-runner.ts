@@ -519,6 +519,10 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       destinationDeepeningRunRecords.push(...sourceNavigationFollowUpResult.destinationDeepeningRunRecords);
     }
     const capture = await input.runStage("browser_page_capture", () => pool.capturePage(agentId, lease.contextToken, page.pageId, `${input.baseCaptureId}-page-capture`, input.options.abortSignal));
+    // Record the resolved engine (channel + browser version) as a sidecar for reproducibility. Like
+    // metrics.json this is OUTSIDE the artifact ledger/Merkle root; buildBundleManifest attaches it to
+    // the manifest beside (not inside) the hashed bytes. Non-fatal.
+    await withAbort(writeFile(join(input.options.runDir, "run-meta.json"), `${JSON.stringify({ engine: pool.engineProvenance() }, null, 2)}\n`, "utf8"), input.options.abortSignal).catch(() => undefined);
     if (input.options.sourceNavigation?.calibrate) {
       const calibrationReport = await input.runStage("source_navigation_calibration", () =>
         calibrateSourceNavigationRecipePlan({

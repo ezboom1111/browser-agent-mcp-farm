@@ -23,6 +23,10 @@ export interface BundleManifest {
   merkleRoot: string;
   claimCount: number;
   citationCount: number;
+  // Resolved capture engine (channel + browser version), provenance-beside-the-bytes. Recorded for
+  // reproducibility but deliberately NOT folded into merkleRoot/signature, so a verifier can read which
+  // engine produced the bytes without the engine label ever affecting the hash verdict.
+  engine?: { channel: string; browserVersion: string };
   signature?: string;
 }
 
@@ -111,14 +115,40 @@ export async function buildBundleManifest(runDir: string): Promise<BundleManifes
   const claimCount = (await readJsonlRows(join(runDir, "claims.jsonl"))).length;
   const citationCount = (await readJsonlRows(join(runDir, "citations.jsonl"))).length;
 
-  return {
+  const manifest: BundleManifest = {
     version: 1,
     artifactCount: artifacts.length,
     artifacts,
+    // Merkle root is over artifact hashes ONLY — engine/provenance is attached below, outside the tree.
     merkleRoot: merkleRoot(artifacts.map((artifact) => artifact.sha256)),
     claimCount,
     citationCount
   };
+  const engine = await readEngineProvenance(runDir);
+  if (engine !== undefined) {
+    manifest.engine = engine;
+  }
+  return manifest;
+}
+
+// Read the resolved capture engine from the run-meta.json sidecar, if present and well-formed.
+// Returns undefined when absent/malformed (a run with no recorded engine simply omits the field).
+async function readEngineProvenance(runDir: string): Promise<{ channel: string; browserVersion: string } | undefined> {
+  const text = await readFile(join(runDir, "run-meta.json"), "utf8").catch(() => "");
+  if (text.length === 0) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(text) as { engine?: { channel?: unknown; browserVersion?: unknown } };
+    const channel = parsed.engine?.channel;
+    const browserVersion = parsed.engine?.browserVersion;
+    if (typeof channel === "string" && typeof browserVersion === "string") {
+      return { channel, browserVersion };
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 // Build a self-contained archive: manifest + embedded artifact bytes (base64), signed
