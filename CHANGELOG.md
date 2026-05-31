@@ -18,6 +18,13 @@ adheres to semantic versioning. Build/test status is tracked in
   `--browser-channel` / `--chrome` flag validates and **fails fast before any browser launch**.
   `chromium` remains valid and maps to the bundled default engine. **Breaking (minor)** for any
   caller that passed an out-of-enum channel; all in-tree callers already use chrome/chromium/msedge.
+- **Credentialed leases fail closed on an empty domain allow-list**: a `storage-state` or
+  `persistent-profile` lease (which carries a real cookie jar / saved session) may no longer
+  navigate with an empty `allowedDomains` — an empty allow-list on a credentialed session is an
+  exfiltration path, so it now throws `domain_not_allowed` at navigation. An `ephemeral` lease is
+  unchanged (empty = allow-all). `assertDomainAllowed` is exported so other capture paths reuse the
+  identical allow-list logic. **Breaking (minor)** for any credentialed lease that relied on
+  empty = allow-all; in-tree navigating credentialed leases already pass a domain allow-list.
 
 ### Added
 

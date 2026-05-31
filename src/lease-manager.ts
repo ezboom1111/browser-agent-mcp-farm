@@ -175,7 +175,7 @@ export class LeaseManager {
     if (lease.pages.length >= lease.maxPages) {
       throw new FarmError("page_limit_exceeded", `Lease page limit exceeded: ${contextToken}`);
     }
-    assertDomainAllowed(lease.allowedDomains, url);
+    assertDomainAllowed(lease.allowedDomains, url, lease.storagePolicy);
     return lease;
   }
 
@@ -248,8 +248,21 @@ function normalizeDomains(domains: string[]): string[] {
   return domains.map((domain) => domain.trim().toLowerCase()).filter(Boolean);
 }
 
-function assertDomainAllowed(allowedDomains: string[], url: string): void {
+/** A credentialed lease carries a real cookie jar / saved session (storage-state or a persistent
+ * on-disk profile). Such a lease must never be steered to an arbitrary origin. */
+export function isCredentialedStoragePolicy(storagePolicy: StoragePolicy): boolean {
+  return storagePolicy === "storage-state" || storagePolicy === "persistent-profile";
+}
+
+/** Enforce a lease's domain allow-list at navigation time (B1). Exported so other capture paths
+ * (e.g. a browserless HTTP fetch following redirects) can reuse the IDENTICAL allow-list logic.
+ * An empty allow-list means allow-all for an ephemeral lease, but FAIL-CLOSED for a credentialed
+ * one — an empty allow-list on a session that holds real cookies is the 2026 exfil path. */
+export function assertDomainAllowed(allowedDomains: string[], url: string, storagePolicy: StoragePolicy = "ephemeral"): void {
   if (allowedDomains.length === 0) {
+    if (isCredentialedStoragePolicy(storagePolicy)) {
+      throw new FarmError("domain_not_allowed", "A credentialed lease (storage-state/persistent-profile) requires a non-empty allowedDomains allow-list before it may navigate");
+    }
     return;
   }
 
