@@ -3,8 +3,9 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { codexServerBlock, registerClaudeSkill, registerCodex, registerCodexSkill } from "../src/registration.js";
+import { claudeServerArgv, codexNpxServerBlock, codexServerBlock, refreshStaleSkillSnapshot, registerClaudeSkill, registerCodex, registerCodexSkill } from "../src/registration.js";
 import { renderCodexGuidanceBlock } from "../src/agent-guidance.js";
+import { farmVersion } from "../src/version.js";
 
 let dirs: string[] = [];
 
@@ -27,6 +28,70 @@ describe("codexServerBlock", () => {
     expect(block).toContain('"/c"');
     expect(block).toContain('"node"');
     expect(block).toContain('"serve"');
+  });
+});
+
+describe("npx registration (portable, package-manager-upgradable)", () => {
+  it("codexNpxServerBlock invokes npx directly on POSIX and via cmd on win32, carrying the spec not a build path", () => {
+    const posix = codexNpxServerBlock("browser-agent-mcp-farm@latest", "linux");
+    expect(posix).toContain('command = "npx"');
+    expect(posix).toContain('args = ["-y","browser-agent-mcp-farm@latest","serve"]');
+    expect(posix).not.toContain("dist/cli.js");
+    expect(posix).not.toContain("cmd");
+
+    const win = codexNpxServerBlock("@acme/farm@1.2.3", "win32");
+    expect(win).toContain('command = "cmd"');
+    expect(win).toContain('"/c"');
+    expect(win).toContain('"npx"');
+    expect(win).toContain('"@acme/farm@1.2.3"');
+  });
+
+  it("claudeServerArgv switches between node-path (local) and npx, with the win32 cmd wrapper", () => {
+    expect(claudeServerArgv({ npx: true, packageSpec: "browser-agent-mcp-farm@latest" }, "linux")).toEqual(["npx", "-y", "browser-agent-mcp-farm@latest", "serve"]);
+    expect(claudeServerArgv({ npx: true, packageSpec: "browser-agent-mcp-farm@latest" }, "win32")).toEqual(["cmd", "/c", "npx", "-y", "browser-agent-mcp-farm@latest", "serve"]);
+    // Local mode (default) still launches node directly (unchanged behaviour).
+    expect(claudeServerArgv({}, "linux").slice(0, 1)).toEqual(["node"]);
+  });
+
+  it("registerCodex --npx writes an npx block (no absolute build path)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-reg-npx-"));
+    dirs.push(dir);
+    const configPath = join(dir, "config.toml");
+    const result = await registerCodex(configPath, { npx: true });
+    expect(result.ok).toBe(true);
+    const content = await readFile(configPath, "utf8");
+    expect(content).toContain("npx");
+    expect(content).toContain("browser-agent-mcp-farm@latest");
+    expect(content).not.toContain("dist");
+  });
+});
+
+describe("refreshStaleSkillSnapshot (serve self-heal)", () => {
+  it("is a no-op when no snapshot exists (never creates one)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-heal-none-"));
+    dirs.push(dir);
+    const result = await refreshStaleSkillSnapshot(dir);
+    expect(result.refreshed).toBe(false);
+    expect(existsSync(join(dir, "browser-agent-mcp-farm", "SKILL.md"))).toBe(false);
+  });
+
+  it("refreshes a stale snapshot and re-stamps the version, then is idempotent", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-heal-stale-"));
+    dirs.push(dir);
+    await registerClaudeSkill(dir); // installs SKILL.md + a marker stamped with the current version
+    const markerPath = join(dir, "browser-agent-mcp-farm", ".farm-skill-version");
+
+    // Up to date right after install -> no refresh.
+    expect((await refreshStaleSkillSnapshot(dir)).refreshed).toBe(false);
+
+    // Simulate an upgrade: the on-disk snapshot marker is now an older version.
+    await writeFile(markerPath, "0.0.1\n", "utf8");
+    const healed = await refreshStaleSkillSnapshot(dir);
+    expect(healed.refreshed).toBe(true);
+    expect((await readFile(markerPath, "utf8")).trim()).toBe(farmVersion());
+
+    // Idempotent now that it matches.
+    expect((await refreshStaleSkillSnapshot(dir)).refreshed).toBe(false);
   });
 });
 
