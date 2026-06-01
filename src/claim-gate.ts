@@ -336,7 +336,12 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
   if (corroboration === undefined || corroboration.sources === undefined || corroboration.sources.length === 0) {
     return;
   }
-  const minIndependent = corroboration.minIndependentSources ?? 2;
+  // Clamp the required minimum at the gate READ path: the gate re-verifies untrusted run directories
+  // (e.g. farm_run_claim_gate on a dir written elsewhere), and claims.jsonl is not re-parsed through the
+  // authoring Zod schema — so a hand-written `minIndependentSources: 1` must not be honoured. Corroboration
+  // means at least two independent sources; anything lower is forced back to 2.
+  const requestedMin = corroboration.minIndependentSources;
+  const minIndependent = typeof requestedMin === "number" && Number.isInteger(requestedMin) && requestedMin >= 2 ? requestedMin : 2;
   const sourceUrls: Array<string | undefined> = [];
   const primary = claim.artifact_id === undefined ? undefined : artifactsByRef.get(normalizeEvidenceRef(claim.artifact_id));
   sourceUrls.push(primary?.source_url);
@@ -351,6 +356,11 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
       errors.push(`corroboration source not registered: ${claimLabel} -> ${source.artifactId}`);
       continue;
     }
+    if (artifact.source_url === undefined) {
+      // A registered source with no recorded source_url cannot contribute a domain, so the count would
+      // silently come up short. Surface that as an actionable warning rather than a cryptic shortfall.
+      warnings.push(`corroboration source has no source_url (its domain is not counted): ${claimLabel} -> ${source.artifactId}`);
+    }
     sourceUrls.push(artifact.source_url);
     if (source.quote !== undefined) {
       const content = await readArtifactText(runDir, artifact);
@@ -363,9 +373,10 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
   const independent = independentSourceCount(sourceUrls);
   if (independent < minIndependent) {
     errors.push(`claim corroboration below required independent sources: ${claimLabel} -> ${independent} < ${minIndependent}`);
-  } else {
-    warnings.push(`claim corroborated by ${independent} independent source(s): ${claimLabel}`);
   }
+  // A satisfied corroboration is a SUCCESS, not a warning — it is signalled by the absence of an error
+  // here (the claim row keeps its corroboration sources for a report layer to count), so nothing is
+  // pushed to warnings on the pass path.
 }
 
 function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {

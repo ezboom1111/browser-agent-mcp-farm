@@ -1,7 +1,8 @@
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runClaimGate } from "../src/claim-gate.js";
 import { FarmService } from "../src/farm-service.js";
 import { independentSourceCount, registrableDomain } from "../src/source-independence.js";
 
@@ -110,5 +111,24 @@ describe("claim corroboration (end-to-end through addClaim)", () => {
     expect(result.appended).toBe(false);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/corroboration source\(s\) not registered/);
+  });
+
+  it("clamps a hand-written minIndependentSources below 2 (defends against a manipulated ledger)", async () => {
+    const { service, runDir } = await newRun();
+    const a = await service.registerEvidence({ runDir, sourceUrl: "https://example.com/a", text: "fact", evidenceKind: "page_text" });
+    // Same registrable domain as A, so the genuine independent count is 1.
+    const b = await service.registerEvidence({ runDir, sourceUrl: "https://news.example.com/b", text: "fact too", evidenceKind: "page_text" });
+
+    // Hand-write a claim row with minIndependentSources: 1, bypassing the authoring schema's min(2).
+    const claimId = "claim-handwritten";
+    const claimRow = { schema_version: "1.0", claim_id: claimId, claim_type: "text", claim: "x", evidence: a.artifactId, artifact_id: a.artifactId, evidence_kind: "page_text", verification_level: "grounded", corroboration: { sources: [{ artifactId: b.artifactId }], minIndependentSources: 1 } };
+    await appendFile(join(runDir, "claims.jsonl"), `${JSON.stringify(claimRow)}\n`);
+    await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({ claim_id: claimId, evidence: a.artifactId, artifact_id: a.artifactId, evidence_kind: "page_text" })}\n${JSON.stringify({ claim_id: claimId, evidence: b.artifactId, artifact_id: b.artifactId })}\n`);
+
+    const gate = await runClaimGate(runDir, { mode: "final", minClaims: 0 });
+    // The gate clamps the requested min back to 2, so 1 independent source fails (without the clamp,
+    // 1 < 1 would be false and this would wrongly pass).
+    expect(gate.ok).toBe(false);
+    expect(JSON.stringify(gate.errors)).toMatch(/below required independent sources/);
   });
 });
