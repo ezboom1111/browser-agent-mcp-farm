@@ -15,6 +15,11 @@ npx playwright install --with-deps chromium
 npm run build
 ```
 
+Team onboarding shortcut (from a cloned repo): `./install.ps1` (Windows) or
+`sh install.sh` (macOS/Linux) runs the steps above and `register-all` in one go.
+After registration, `serve` auto-installs Chromium on first run if it is missing
+(opt out with `FARM_SKIP_BROWSER_AUTOINSTALL=1`).
+
 Register the MCP server **and** the Claude skill with Codex and Claude, then
 restart your agent:
 

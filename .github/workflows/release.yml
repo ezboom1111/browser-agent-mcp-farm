@@ -1,0 +1,60 @@
+name: release
+
+# Tag-driven release. Your release loop becomes:
+#   npm version patch|minor|major   # bumps package.json + creates a vX.Y.Z tag
+#   git push --follow-tags          # pushes the commit + tag -> triggers this workflow
+#
+# The workflow ALWAYS runs the full verify gate and creates a GitHub Release with auto-generated notes.
+# It publishes to npm ONLY when an NPM_TOKEN secret is configured, so it is safe to merge before you
+# decide to publish: until then, a tag just produces a verified GitHub Release. To publish, add a repo
+# secret NPM_TOKEN (an npm automation token). For a private package use a scoped name + a private-org
+# token instead; for a scoped public package keep --access public.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: verify + release (Node 24, ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify (full quality gate)
+        run: npm run verify
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "${GITHUB_REF_NAME}"
+
+      - name: Publish to npm (only if NPM_TOKEN is configured)
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
