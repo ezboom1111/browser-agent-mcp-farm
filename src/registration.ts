@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -123,7 +123,7 @@ export async function registerClaude(options: RegisterOptions = {}): Promise<Reg
 }
 
 export async function registerAll(options: RegisterOptions = {}): Promise<RegistrationResult[]> {
-  return [await registerCodex(join(homedir(), ".codex", "config.toml"), options), await registerClaude(options), await registerClaudeSkill(), await registerCodexSkill()];
+  return [await registerCodex(join(homedir(), ".codex", "config.toml"), options), await registerClaude(options), ...(await registerClaudeSkills()), await registerCodexSkill()];
 }
 
 // Install the Codex-facing usage guidance (when-to-use / fast path / authoring /
@@ -213,12 +213,51 @@ export async function refreshStaleSkillSnapshot(skillsRoot = join(homedir(), ".c
   }
 }
 
+// Install EVERY in-repo skill (the main browser-agent-mcp-farm skill plus the lens skills:
+// market-scan, product-planning, …) into the Claude skills root, each version-stamped for serve
+// self-heal. Falls back to the single main skill if the skills directory cannot be scanned.
+export async function registerClaudeSkills(skillsRoot = join(homedir(), ".claude", "skills")): Promise<RegistrationResult[]> {
+  const sourceDir = skillsSourceDir();
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = await readdir(sourceDir, { withFileTypes: true });
+  } catch {
+    return [await registerClaudeSkill(skillsRoot)];
+  }
+  const results: RegistrationResult[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const source = join(sourceDir, entry.name, "SKILL.md");
+    if (!existsSync(source)) {
+      continue;
+    }
+    const destDir = join(skillsRoot, entry.name);
+    const dest = join(destDir, "SKILL.md");
+    const backupPath = existsSync(dest) ? await backupFile(dest) : undefined;
+    await mkdir(destDir, { recursive: true });
+    await copyFile(source, dest);
+    await writeFile(join(destDir, SKILL_VERSION_MARKER), `${farmVersion()}\n`, "utf8").catch(() => undefined);
+    const result: RegistrationResult = { ok: true, target: "claude", configPath: dest, message: `Installed ${entry.name} skill into ${dest}.` };
+    if (backupPath !== undefined) {
+      result.backupPath = backupPath;
+    }
+    results.push(result);
+  }
+  return results.length > 0 ? results : [await registerClaudeSkill(skillsRoot)];
+}
+
 export function distCliPath(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "cli.js");
 }
 
 export function skillSourcePath(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..", "skills", SERVER_NAME, "SKILL.md");
+}
+
+function skillsSourceDir(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "..", "skills");
 }
 
 async function backupFile(path: string): Promise<string> {

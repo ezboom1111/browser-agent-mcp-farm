@@ -8,6 +8,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **`farm_lens` MCP tool + lens skills** (makes the lenses agent-usable): the declarative research
+  lenses (engine #3) are now reachable over MCP — `farm_lens { lensId? }` lists the lenses or describes
+  one (claim templates + report sections + prioritized sources), and `farm_capabilities` already
+  advertises them. Two thin lens skills ship: `skills/market-scan/SKILL.md` (competitor pricing /
+  review sentiment / market sizing, high-stakes numbers corroborated across independent sources) and
+  `skills/product-planning/SKILL.md` (user pains / feature gaps / adoption signals). `register-all` now
+  installs EVERY in-repo skill (the main farm skill plus the lens skills), each version-stamped. So
+  "research the market with cited, corroborated evidence" is a first-class agent flow, not just a CLI.
 - **Typed-fact extraction from visible text** (`typed-facts.ts`): a deterministic, domain-neutral layer
   that extracts prices, ratings, percentages, and dates from the RENDERED visible text — the facts a
   page shows without any structured markup, complementing the JSON-LD/OG summary. Each fact's `raw` is a

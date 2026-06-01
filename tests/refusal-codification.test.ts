@@ -37,5 +37,6 @@ describe("refusal codification (B2)", () => {
     // every registered tool is a farm_* tool
     expect(names.every((n) => n.startsWith("farm_"))).toBe(true);
     expect(names).toContain("farm_capabilities");
+    expect(names).toContain("farm_lens");
   });
 });

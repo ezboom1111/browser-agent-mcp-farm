@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FarmService } from "../src/farm-service.js";
 import { describeLens, getLens, lensSummaries, listLenses, selectLensSources } from "../src/lens.js";
 import { ClaimTypeSchema, EvidenceKindSchema } from "../src/schemas.js";
 
@@ -55,5 +56,32 @@ describe("lens source selection", () => {
       expect(typeof source.displayName).toBe("string");
     }
     expect(describeLens("nope")).toBeUndefined();
+  });
+});
+
+describe("FarmService.lens (MCP farm_lens surface)", () => {
+  it("lists lenses when no id is given", () => {
+    const result = new FarmService().lens({});
+    expect(result.ok).toBe(true);
+    if (result.ok && "lenses" in result) {
+      expect(result.lenses.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("describes a lens by id with its sources", () => {
+    const result = new FarmService().lens({ lensId: "market_scan" });
+    expect(result.ok).toBe(true);
+    if (result.ok && "lens" in result) {
+      expect(result.lens.id).toBe("market_scan");
+      expect(Array.isArray(result.sources)).toBe(true);
+    }
+  });
+
+  it("returns ok:false with the available ids for an unknown lens", () => {
+    const result = new FarmService().lens({ lensId: "nope" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.available).toContain("research");
+    }
   });
 });
