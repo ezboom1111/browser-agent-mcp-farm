@@ -8,6 +8,17 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Multi-vantage capture orchestrator** (`multi-vantage-capture.ts`, opt-in `FARM_ENABLE_MULTI_VANTAGE=1`,
+  capture-binding Tier 2 — the agreement applied): fans the same url across N independent egress points
+  (proxied leases), feeds the per-vantage captures to the agreement core, and writes a hash-registered
+  `multi_vantage_agreement` artifact (new evidence kind) recording the verdict + the divergent/failed
+  vantages. The proxied page render is an injected seam (`VantageCaptureFn`) so the orchestrator stays a
+  testable leaf and the browser work is supplied where the pool already lives. **Secret-safe:** each
+  lease carries the real proxy creds (so the upstream proxy authenticates) but the lease is never
+  persisted — only `redactProxy(...)` reaches the artifact, so no credential is ever written to disk.
+  **Cache-safe:** a proxied lease is not bare-ephemeral, so the C4 capture-cache never replays one
+  vantage's bytes for another. Fail-closed: off by default, ≥2 unique vantages required, and a vantage
+  that throws or errors becomes a failed (quorum-excluded, surfaced) capture rather than aborting the run.
 - **Multi-vantage agreement core** (`multi-vantage-agreement.ts`, capture-binding Tier 2 — the agreement
   primitive, pure): the single-capture evidence model silently assumes the bytes a page served US are
   what it serves EVERYONE — false for geo-fenced, cloaked, A/B-tested, price-discriminated, censored, or
