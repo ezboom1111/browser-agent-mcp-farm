@@ -72,6 +72,7 @@
     "test:tarball": "node scripts/test-tarball.mjs",
     "qa:sectors": "node scripts/qa-sectors.mjs",
     "qa:fuzz": "node scripts/qa-fuzz.mjs",
+    "qa": "node scripts/qa-sectors.mjs && node scripts/qa-fuzz.mjs",
     "critique:next": "node ./dist/cli.js critique-next",
     "critique:complete": "node ./dist/cli.js critique-complete",
     "evidence:run": "node ./dist/cli.js evidence-run",

@@ -8,6 +8,12 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **QA harnesses as enforcing regression gates** (transcendence Tier 4, `npm run qa`,
+  `.github/workflows/qa.yml`): the sector QA and the property-based fuzzer now exit non-zero on ANY
+  failure — a span-mode hallucination leak, a fabrication passing the cite-or-fail gate, a false-reject of
+  a real fact, recall below 99% on the generated formats, or a sector/adversarial failure — and a CI
+  workflow runs them on every push/PR (deterministic + offline, no browser). So the 0-leak
+  anti-hallucination guarantee is regression-proofed: any future change that reintroduces a leak fails CI.
 - **Content-aware source independence** (`source-independence.ts`, transcendence Tier 3): the
   corroboration and caged-judge quorums now collapse a syndicated wire story echoed across domains to ONE
   independent source, closing the fake-independence hole. Two sources are independent only if they have

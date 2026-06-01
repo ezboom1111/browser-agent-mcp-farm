@@ -1,0 +1,39 @@
+name: qa
+
+# Regression gate for the anti-hallucination guarantee (transcendence Tier 4). Runs the deterministic
+# sector QA + the property-based fuzzer as HARD gates: any span-mode hallucination leak, a fabrication
+# that passes the cite-or-fail gate, a false-reject of a real fact, or a sector/adversarial failure
+# exits non-zero and fails the build. Separate from the main verify gate (which it does not slow).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: sector QA + property-based fuzz (Node 24, ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # No browser needed: both harnesses are deterministic + offline (tier-0 capture + the gate).
+      - name: QA (sectors + fuzz, leak==0 enforced)
+        run: npm run qa

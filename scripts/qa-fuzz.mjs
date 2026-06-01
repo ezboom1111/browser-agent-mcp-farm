@@ -160,7 +160,17 @@ async function run() {
   }
   console.log("\n================ VERDICT ================");
   console.log(spanLeaks === 0 ? "SPAN MODE: 0 hallucination leaks across all fabrication/near-miss/recombination trials — the default cite-or-fail boundary held." : `SPAN MODE: ${spanLeaks} LEAK(S) — investigate.`);
-  console.log(`AGGREGATED MODE: ${pct(tally.recombAggPass, tally.recombAggN)} of semantically-false recombinations passed (the documented token-match weakness; quantified).`);
+  console.log(`AGGREGATED MODE: ${pct(tally.recombAggPass, tally.recombAggN)} of semantically-false recombinations passed (the documented token-match weakness; quantified — use farm_judge_claim / text_span for high assurance).`);
+
+  // Tier 4: this is a regression GATE, not just a report. Any span-mode hallucination leak, any
+  // false-reject of a real fact, or recall below 99% on the generated formats exits non-zero.
+  const recallOk = ["price", "rating", "percentage", "date"].every((k) => recall[k].n === 0 || recall[k].hit / recall[k].n >= 0.99);
+  const noFalseReject = tally.groundedPass === tally.groundedN;
+  const pass = spanLeaks === 0 && noFalseReject && recallOk;
+  console.log(`\nGATE: ${pass ? "PASS" : "FAIL"}  (span leaks=${spanLeaks}, grounded ${tally.groundedPass}/${tally.groundedN}, recall>=99%=${recallOk})`);
+  if (!pass) {
+    process.exitCode = 1;
+  }
 }
 
 run().catch((e) => {

@@ -472,6 +472,9 @@ async function run() {
   }
   const allPass = allChecks.every((c) => c.pass);
   console.log("\nVERDICT: " + (allPass ? `USABLE — data collected across all 3 classes & ${results.length} sectors; every fabricated/near-miss/tampered/contradictory claim was blocked or flagged; SSRF/non-HTML/shell declined; Korean + Japanese + entities work.` : "REVIEW NEEDED — see failures above."));
+  if (!allPass) {
+    process.exitCode = 1; // Tier 4: a regression gate, not just a report.
+  }
 }
 
 run().catch((e) => {
