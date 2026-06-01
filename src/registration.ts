@@ -5,8 +5,25 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderCodexGuidanceBlock } from "./agent-guidance.js";
+import { farmVersion } from "./version.js";
 
 const SERVER_NAME = "browser-agent-mcp-farm";
+const SKILL_VERSION_MARKER = ".farm-skill-version";
+
+/** How the MCP server is launched in the host config. */
+export interface RegisterOptions {
+  /**
+   * Register an `npx`-resolved invocation (`npx -y <packageSpec> serve`) instead of an absolute path to
+   * this local build. Use this when the farm is distributed as a published npm package: the config no
+   * longer hard-codes a build directory, so upgrades flow through the package manager and the install
+   * is portable across machines. Default false (absolute local path — correct for a git-clone dev install).
+   */
+  npx?: boolean;
+  /** Package spec for npx mode (e.g. `browser-agent-mcp-farm@latest`, a pinned version, or a private scope). */
+  packageSpec?: string;
+}
+
+export const DEFAULT_PACKAGE_SPEC = `${SERVER_NAME}@latest`;
 const CODEX_BEGIN = "# BEGIN browser-agent-mcp-farm";
 const CODEX_END = "# END browser-agent-mcp-farm";
 const CODEX_GUIDANCE_BEGIN = "<!-- BEGIN browser-agent-mcp-farm guidance -->";
@@ -22,6 +39,10 @@ export interface RegistrationResult {
   stderr?: string;
 }
 
+function renderCodexBlock(command: string, args: string[]): string {
+  return [CODEX_BEGIN, `[mcp_servers.${SERVER_NAME}]`, `command = ${JSON.stringify(command)}`, `args = ${JSON.stringify(args)}`, `startup_timeout_sec = 20.0`, CODEX_END, ""].join("\n");
+}
+
 export function codexServerBlock(cliPath: string, platform: NodeJS.Platform = process.platform): string {
   // On Windows the MCP launcher resolves `node` more reliably through cmd; on
   // POSIX `cmd` does not exist, so invoke node directly. Using cmd on macOS or
@@ -29,13 +50,32 @@ export function codexServerBlock(cliPath: string, platform: NodeJS.Platform = pr
   const onWindows = platform === "win32";
   const command = onWindows ? "cmd" : "node";
   const args = onWindows ? ["/c", "node", cliPath, "serve"] : [cliPath, "serve"];
-  return [CODEX_BEGIN, `[mcp_servers.${SERVER_NAME}]`, `command = ${JSON.stringify(command)}`, `args = ${JSON.stringify(args)}`, `startup_timeout_sec = 20.0`, CODEX_END, ""].join("\n");
+  return renderCodexBlock(command, args);
 }
 
-export async function registerCodex(configPath = join(homedir(), ".codex", "config.toml")): Promise<RegistrationResult> {
+// The npx-resolved Codex block: `npx -y <spec> serve`, with the same Windows `cmd /c` wrapper so the
+// launcher resolves the `npx.cmd` shim. The config carries no build path, so an upgrade is just a new
+// package version — no re-register of a path.
+export function codexNpxServerBlock(packageSpec: string, platform: NodeJS.Platform = process.platform): string {
+  const onWindows = platform === "win32";
+  const command = onWindows ? "cmd" : "npx";
+  const args = onWindows ? ["/c", "npx", "-y", packageSpec, "serve"] : ["-y", packageSpec, "serve"];
+  return renderCodexBlock(command, args);
+}
+
+// The argv passed to `claude mcp add ... --` for either mode. npx uses a Windows `cmd /c` wrapper for
+// the same shim-resolution reason; the local form stays exactly as before (node resolves directly).
+export function claudeServerArgv(options: RegisterOptions, platform: NodeJS.Platform = process.platform): string[] {
+  if (options.npx === true) {
+    const spec = options.packageSpec ?? DEFAULT_PACKAGE_SPEC;
+    return platform === "win32" ? ["cmd", "/c", "npx", "-y", spec, "serve"] : ["npx", "-y", spec, "serve"];
+  }
+  return ["node", distCliPath(), "serve"];
+}
+
+export async function registerCodex(configPath = join(homedir(), ".codex", "config.toml"), options: RegisterOptions = {}): Promise<RegistrationResult> {
   await mkdir(dirname(configPath), { recursive: true });
-  const cliPath = distCliPath();
-  const block = codexServerBlock(cliPath);
+  const block = options.npx === true ? codexNpxServerBlock(options.packageSpec ?? DEFAULT_PACKAGE_SPEC) : codexServerBlock(distCliPath());
 
   const existing = existsSync(configPath) ? await readFile(configPath, "utf8") : "";
   const backupPath = existsSync(configPath) ? await backupFile(configPath) : undefined;
@@ -55,16 +95,15 @@ export async function registerCodex(configPath = join(homedir(), ".codex", "conf
   return registration;
 }
 
-export async function registerClaude(): Promise<RegistrationResult> {
+export async function registerClaude(options: RegisterOptions = {}): Promise<RegistrationResult> {
   const claudeConfig = join(homedir(), ".claude.json");
   const backupPath = existsSync(claudeConfig) ? await backupFile(claudeConfig) : undefined;
-  const cliPath = distCliPath();
   const command = claudeExecutable();
   spawnSync(command, ["mcp", "remove", "--scope", "user", SERVER_NAME], {
     encoding: "utf8",
     stdio: "pipe"
   });
-  const result = spawnSync(command, ["mcp", "add", "--scope", "user", SERVER_NAME, "--", "node", cliPath, "serve"], {
+  const result = spawnSync(command, ["mcp", "add", "--scope", "user", SERVER_NAME, "--", ...claudeServerArgv(options)], {
     encoding: "utf8",
     stdio: "pipe"
   });
@@ -83,8 +122,8 @@ export async function registerClaude(): Promise<RegistrationResult> {
   return registration;
 }
 
-export async function registerAll(): Promise<RegistrationResult[]> {
-  return [await registerCodex(), await registerClaude(), await registerClaudeSkill(), await registerCodexSkill()];
+export async function registerAll(options: RegisterOptions = {}): Promise<RegistrationResult[]> {
+  return [await registerCodex(join(homedir(), ".codex", "config.toml"), options), await registerClaude(options), await registerClaudeSkill(), await registerCodexSkill()];
 }
 
 // Install the Codex-facing usage guidance (when-to-use / fast path / authoring /
@@ -123,6 +162,9 @@ export async function registerClaudeSkill(skillsRoot = join(homedir(), ".claude"
   const backupPath = existsSync(dest) ? await backupFile(dest) : undefined;
   await mkdir(destDir, { recursive: true });
   await copyFile(source, dest);
+  // Stamp the copied snapshot with this package version so `serve` can self-heal a stale copy
+  // after an upgrade (the skill is a COPY, not a path reference, so it would otherwise drift).
+  await writeFile(join(destDir, SKILL_VERSION_MARKER), `${farmVersion()}\n`, "utf8").catch(() => undefined);
 
   const result: RegistrationResult = {
     ok: true,
@@ -134,6 +176,41 @@ export async function registerClaudeSkill(skillsRoot = join(homedir(), ".claude"
     result.backupPath = backupPath;
   }
   return result;
+}
+
+// Self-heal a stale Claude skill snapshot on `serve` startup (best-effort). Because the skill is a
+// COPY (not a path reference), an upgraded server would otherwise keep routing on the OLD skill text
+// until the user re-ran register-all. Here, IF a snapshot already exists (we never create one the user
+// did not ask for) and its version marker != this running package version, we re-copy and re-stamp.
+// Never throws and never blocks serve. Returns whether a refresh happened (for tests/diagnostics).
+export async function refreshStaleSkillSnapshot(skillsRoot = join(homedir(), ".claude", "skills")): Promise<{ refreshed: boolean; reason: string }> {
+  const destDir = join(skillsRoot, SERVER_NAME);
+  const dest = join(destDir, "SKILL.md");
+  if (!existsSync(dest)) {
+    return { refreshed: false, reason: "no installed skill snapshot (skill was never registered)" };
+  }
+  const markerPath = join(destDir, SKILL_VERSION_MARKER);
+  const current = farmVersion();
+  let installed = "";
+  try {
+    installed = existsSync(markerPath) ? (await readFile(markerPath, "utf8")).trim() : "";
+  } catch {
+    installed = "";
+  }
+  if (installed === current) {
+    return { refreshed: false, reason: "skill snapshot is up to date" };
+  }
+  const source = skillSourcePath();
+  if (!existsSync(source)) {
+    return { refreshed: false, reason: "skill source not found in package" };
+  }
+  try {
+    await copyFile(source, dest);
+    await writeFile(markerPath, `${current}\n`, "utf8");
+    return { refreshed: true, reason: `refreshed skill snapshot ${installed || "(unstamped)"} -> ${current}` };
+  } catch {
+    return { refreshed: false, reason: "refresh failed (best-effort)" };
+  }
 }
 
 export function distCliPath(): string {

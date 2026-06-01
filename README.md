@@ -22,6 +22,22 @@ restart your agent:
 node ./dist/cli.js register-all
 ```
 
+This registers an absolute path to your local build (the right choice for a
+git-clone dev install). When the farm is distributed as a published npm package,
+register a portable, package-manager-upgradable invocation instead — the host
+config then carries no build directory and upgrades flow through the package
+manager (no path re-register):
+
+```powershell
+node ./dist/cli.js register-all --npx
+# or pin / use a private scope:  --npx --package-spec @your-org/browser-agent-mcp-farm@1.2.3
+```
+
+Because the Claude skill is installed as a copy, `serve` self-heals a stale skill
+snapshot after an upgrade (re-copies it when the installed version marker differs
+from the running package). Re-run `register-all` after an upgrade to also refresh
+the Codex guidance block.
+
 Run one auditable, claim-gated evidence capture from the CLI:
 
 ```powershell

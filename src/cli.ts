@@ -39,7 +39,7 @@ import { ensureHardenedDir, listProfiles, profilePaths, removeProfile } from "./
 import { encryptStorageStateFileInPlace, storageStateEncryptionEnabled } from "./secret-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
-import { registerAll, registerClaude, registerCodex } from "./registration.js";
+import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, type RegisterOptions } from "./registration.js";
 import { EvidenceRunScheduler } from "./scheduler.js";
 import { isInformationCategory, isLocaleSegment, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryFilter } from "./source-registry.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
@@ -90,6 +90,8 @@ export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
 
   if (command === "serve") {
+    // Self-heal a stale Claude skill snapshot after an upgrade (best-effort, only if already installed).
+    await refreshStaleSkillSnapshot().catch(() => undefined);
     await runStdioServer();
     return;
   }
@@ -358,17 +360,17 @@ export async function main(): Promise<void> {
   }
 
   if (command === "register-codex") {
-    console.log(JSON.stringify(await registerCodex(), null, 2));
+    console.log(JSON.stringify(await registerCodex(undefined, registerOptionsFromArgs()), null, 2));
     return;
   }
 
   if (command === "register-claude") {
-    console.log(JSON.stringify(await registerClaude(), null, 2));
+    console.log(JSON.stringify(await registerClaude(registerOptionsFromArgs()), null, 2));
     return;
   }
 
   if (command === "register-all") {
-    console.log(JSON.stringify({ ok: true, results: await registerAll() }, null, 2));
+    console.log(JSON.stringify({ ok: true, results: await registerAll(registerOptionsFromArgs()) }, null, 2));
     return;
   }
 
@@ -2428,7 +2430,12 @@ Commands:
   profile-remove --profile <name>
           Remove a saved browser farm profile
   register-codex | register-claude | register-all
-          Register this MCP server in local agent configs
+          Register this MCP server in local agent configs.
+          --npx                  register an "npx -y <spec> serve" invocation instead of an absolute
+                                 build path (portable; upgrades flow through the package manager).
+                                 Use this for a published-package install, not a local git clone.
+          --package-spec <spec>  npx package spec (default browser-agent-mcp-farm@latest; e.g. a pinned
+                                 version or a private @scope/name@version).
   upgrade
           Print the installed version + how to upgrade and re-register
 
@@ -2668,6 +2675,18 @@ function getArgValue(name: string): string | undefined {
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(name);
+}
+
+// Build registration options from CLI flags. `--npx` writes an `npx -y <spec> serve` invocation
+// (portable, package-manager-upgradable) instead of an absolute path to this build; `--package-spec`
+// overrides the default `browser-agent-mcp-farm@latest` (e.g. a pinned version or a private scope).
+function registerOptionsFromArgs(): RegisterOptions {
+  const options: RegisterOptions = { npx: hasFlag("--npx") };
+  const spec = getArgValue("--package-spec");
+  if (spec !== undefined) {
+    options.packageSpec = spec;
+  }
+  return options;
 }
 
 function browserChannelFromArgs(): BrowserChannel | undefined {

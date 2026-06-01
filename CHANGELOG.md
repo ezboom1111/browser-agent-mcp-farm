@@ -6,6 +6,19 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+### Added
+
+- **Portable `npx` registration + `serve` skill self-heal**: `register-all` / `register-codex` /
+  `register-claude` now accept `--npx` (and `--package-spec <spec>`) to register an
+  `npx -y <spec> serve` invocation instead of an absolute path to this local build. The host config
+  then carries no build directory, so a published-package install is portable across machines and
+  upgrades flow through the package manager — no path re-register. The default stays the absolute local
+  path (correct for a git-clone dev install). Because the Claude skill is installed as a **copy** (not
+  a path reference), `serve` now **self-heals a stale snapshot**: when an installed skill's version
+  marker differs from the running package version it re-copies the skill on startup (best-effort, only
+  when a snapshot already exists), removing the "server upgraded but the routed skill text is stale"
+  drift. Foundation for distributing the farm to a team via a (private or public) npm package.
+
 ## [0.5.0] — 2026-06-01 — validated engine, browserless capture tiers + at-rest credential encryption
 
 > The v0.5.0 capture-tier / security / engine release: a deterministic engine-provenance and
