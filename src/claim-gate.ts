@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ClaimAnchorSchema, ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
-import { independentSourceCount } from "./source-independence.js";
+import { independentSourceGroups } from "./source-independence.js";
 
 interface ArtifactLedgerRow {
   artifact_id?: string;
@@ -382,9 +382,11 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
   // means at least two independent sources; anything lower is forced back to 2.
   const requestedMin = corroboration.minIndependentSources;
   const minIndependent = typeof requestedMin === "number" && Number.isInteger(requestedMin) && requestedMin >= 2 ? requestedMin : 2;
-  const sourceUrls: Array<string | undefined> = [];
+  // Collect {url, text} per source so independence is content-aware: a syndicated wire story echoed
+  // across domains collapses to one source (Tier 3), not many.
+  const sources: Array<{ url?: string | undefined; text?: string | undefined }> = [];
   const primary = claim.artifact_id === undefined ? undefined : artifactsByRef.get(normalizeEvidenceRef(claim.artifact_id));
-  sourceUrls.push(primary?.source_url);
+  sources.push({ url: primary?.source_url, text: primary === undefined ? undefined : await readArtifactText(runDir, primary) });
 
   for (const source of corroboration.sources) {
     if (source.artifactId === undefined) {
@@ -401,18 +403,16 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
       // silently come up short. Surface that as an actionable warning rather than a cryptic shortfall.
       warnings.push(`corroboration source has no source_url (its domain is not counted): ${claimLabel} -> ${source.artifactId}`);
     }
-    sourceUrls.push(artifact.source_url);
-    if (source.quote !== undefined) {
-      const content = await readArtifactText(runDir, artifact);
-      if (content === undefined || !normalizeForMatch(content).includes(normalizeForMatch(source.quote))) {
-        errors.push(`corroboration quote not found in source: ${claimLabel} -> ${source.artifactId} -> "${source.quote.slice(0, 80)}"`);
-      }
+    const content = await readArtifactText(runDir, artifact);
+    sources.push({ url: artifact.source_url, text: content });
+    if (source.quote !== undefined && (content === undefined || !normalizeForMatch(content).includes(normalizeForMatch(source.quote)))) {
+      errors.push(`corroboration quote not found in source: ${claimLabel} -> ${source.artifactId} -> "${source.quote.slice(0, 80)}"`);
     }
   }
 
-  const independent = independentSourceCount(sourceUrls);
+  const independent = independentSourceGroups(sources);
   if (independent < minIndependent) {
-    errors.push(`claim corroboration below required independent sources: ${claimLabel} -> ${independent} < ${minIndependent}`);
+    errors.push(`claim corroboration below required independent sources: ${claimLabel} -> ${independent} < ${minIndependent} (after collapsing same-domain + near-duplicate echoes)`);
   }
   // A satisfied corroboration is a SUCCESS, not a warning — it is signalled by the absence of an error
   // here (the claim row keeps its corroboration sources for a report layer to count), so nothing is
@@ -435,14 +435,18 @@ async function validateJudgment(runDir: string, judgment: JudgmentLedgerRow, art
     errors.push(`judgment has an invalid verdict: ${label} -> ${String(verdict)}`);
     return;
   }
-  const verifySpans = async (spans: JudgmentSpan[] | undefined, role: string): Promise<Array<string | undefined>> => {
-    const verifiedSourceUrls: Array<string | undefined> = [];
+  // Returns the VERIFIED distinct sources (deduped by artifact) as {url, text}, so independence can be
+  // computed content-aware (a syndicated echo across domains collapses to one source).
+  const verifySpans = async (spans: JudgmentSpan[] | undefined, role: string): Promise<Array<{ url?: string | undefined; text?: string | undefined }>> => {
+    const verified: Array<{ url?: string | undefined; text?: string | undefined }> = [];
+    const seen = new Set<string>();
     for (const span of spans ?? []) {
       if (span.artifactId === undefined || span.quote === undefined) {
         errors.push(`judgment ${role} span missing artifactId/quote: ${label}`);
         continue;
       }
-      const artifact = artifactsByRef.get(normalizeEvidenceRef(span.artifactId));
+      const ref = normalizeEvidenceRef(span.artifactId);
+      const artifact = artifactsByRef.get(ref);
       if (artifact === undefined) {
         errors.push(`judgment ${role} span source not registered: ${label} -> ${span.artifactId}`);
         continue;
@@ -452,36 +456,39 @@ async function validateJudgment(runDir: string, judgment: JudgmentLedgerRow, art
         errors.push(`judgment ${role} span quote not found in source: ${label} -> ${span.artifactId} -> "${span.quote.slice(0, 80)}"`);
         continue;
       }
-      verifiedSourceUrls.push(artifact.source_url);
+      if (!seen.has(ref)) {
+        seen.add(ref);
+        verified.push({ url: artifact.source_url, text: content });
+      }
     }
-    return verifiedSourceUrls;
+    return verified;
   };
 
-  const verifiedSupportUrls = await verifySpans(judgment.support, "support");
-  const verifiedRefuteUrls = await verifySpans(judgment.refute, "refute");
+  const verifiedSupport = await verifySpans(judgment.support, "support");
+  const verifiedRefute = await verifySpans(judgment.refute, "refute");
   // Clamp to >= 1 at the gate READ path (judgments.jsonl is not re-parsed through the authoring schema):
   // a single-source 'supported' verdict is legal but lower-assurance (it is warned below); the default
   // remains 2. A hand-written min of 0 / non-integer is forced back up to the default.
   const rawMin = judgment.min_independent_sources;
   const minIndependent = typeof rawMin === "number" && Number.isInteger(rawMin) && rawMin >= 1 ? rawMin : 2;
-  const independentSupport = independentSourceCount(verifiedSupportUrls);
+  const independentSupport = independentSourceGroups(verifiedSupport);
 
   if (verdict === "supported") {
-    if (verifiedSupportUrls.length === 0) {
+    if (verifiedSupport.length === 0) {
       errors.push(`'supported' judgment has no verified supporting span: ${label}`);
     } else if (independentSupport < minIndependent) {
-      errors.push(`'supported' judgment below required independent supporting sources: ${label} -> ${independentSupport} < ${minIndependent}`);
+      errors.push(`'supported' judgment below required independent supporting sources: ${label} -> ${independentSupport} < ${minIndependent} (after collapsing same-domain + near-duplicate echoes)`);
     } else if (independentSupport < 2) {
       warnings.push(`'supported' judgment rests on a single independent source (lower assurance; prefer >= 2 independent sources): ${label}`);
     }
-    if (verifiedRefuteUrls.length > 0) {
+    if (verifiedRefute.length > 0) {
       errors.push(`'supported' judgment is contradicted by a verified refuting span (inconsistent verdict): ${label}`);
     }
   } else if (verdict === "refuted") {
-    if (verifiedRefuteUrls.length === 0) {
+    if (verifiedRefute.length === 0) {
       errors.push(`'refuted' judgment has no verified refuting span: ${label}`);
     }
-  } else if (verifiedSupportUrls.length === 0 && verifiedRefuteUrls.length === 0) {
+  } else if (verifiedSupport.length === 0 && verifiedRefute.length === 0) {
     warnings.push(`'insufficient' judgment cites no verified spans: ${label}`);
   }
 }
