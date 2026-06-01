@@ -8,6 +8,16 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Same-connection TLS byte-binding** (opt-in `FARM_BIND_TLS_SAMECONN=1`, capture-binding Tier 2 — the
+  strong upgrade): tier-0 capture can now run over a `node:https` transport that reads the certificate
+  from the EXACT socket that delivered the bytes (no second handshake), recorded as `sameConnectionTls`
+  (with `certPresent`, `authorized`/`authorizationError`, `fingerprint256`, issuer/subject/validity,
+  protocol). This kills the separate-handshake's weakness (a second probe could hit a different edge
+  node / rotated cert / be MITM'd independently of the fetch). The transport mirrors the fetch path's
+  fenced-redirect / content-type / byte-cap contract and binds the cert from the FINAL hop; a resumed
+  TLS session (empty cert) is recorded as `certPresent:false`, never a hollow pin. **Default behavior is
+  byte-for-byte unchanged** (the global-fetch path is untouched; the https path is opt-in). Honestly
+  scoped: it is TLS transport provenance, NOT a server signature over the bytes. Node built-ins only.
 - **Server TLS-identity provenance** (`tls-identity.ts`, opt-in `FARM_BIND_TLS=1`, transcendence Tier 2 —
   the self-contained piece): when enabled, a tier-0 capture records the server's TLS identity —
   certificate `fingerprint256`, issuer, subject, validity, negotiated protocol, and whether the chain

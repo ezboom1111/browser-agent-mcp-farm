@@ -94,6 +94,64 @@ export function tlsBindingEnabled(): boolean {
   return process.env.FARM_BIND_TLS === "1";
 }
 
+export function sameConnectionTlsBindingEnabled(): boolean {
+  return process.env.FARM_BIND_TLS_SAMECONN === "1";
+}
+
+export interface SameConnectionTls {
+  host: string;
+  port: number;
+  protocol?: string;
+  /** False when the peer presented no cert (e.g. TLS session resumption returns {}); never a hollow pin. */
+  certPresent: boolean;
+  /** Whether the presented chain validated against the system trust store. */
+  authorized: boolean;
+  authorizationError?: string;
+  fingerprint256?: string;
+  subjectCN?: string;
+  issuerCN?: string;
+  issuerO?: string;
+  validFrom?: string;
+  validTo?: string;
+  binding: string;
+}
+
+const SAME_CONNECTION_NOTE = "Same-socket binding: this certificate was presented on the EXACT TLS connection whose socket also delivered these bytes (no second handshake). TLS transport provenance — NOT a server signature over the bytes; a terminating proxy/CDN holding the session keys is still trusted.";
+
+/**
+ * Shape the TLS identity captured from the SAME socket that delivered the bytes (D1, strong binding).
+ * A resumed TLS session returns an empty cert ({}) — record certPresent:false rather than a hollow pin.
+ */
+export function shapeSameConnectionTls(host: string, port: number, cert: PeerCertLike, options: { authorized: boolean; authorizationError?: string | undefined; protocol?: string | undefined }): SameConnectionTls {
+  const fingerprint = typeof cert.fingerprint256 === "string" && cert.fingerprint256.length > 0 ? cert.fingerprint256 : undefined;
+  const identity: SameConnectionTls = { host, port, certPresent: fingerprint !== undefined, authorized: options.authorized, binding: SAME_CONNECTION_NOTE };
+  if (options.protocol !== undefined) {
+    identity.protocol = options.protocol;
+  }
+  if (options.authorizationError !== undefined) {
+    identity.authorizationError = options.authorizationError;
+  }
+  if (fingerprint !== undefined) {
+    identity.fingerprint256 = fingerprint;
+  }
+  if (cert.subject?.CN !== undefined) {
+    identity.subjectCN = cert.subject.CN;
+  }
+  if (cert.issuer?.CN !== undefined) {
+    identity.issuerCN = cert.issuer.CN;
+  }
+  if (cert.issuer?.O !== undefined) {
+    identity.issuerO = cert.issuer.O;
+  }
+  if (cert.valid_from !== undefined) {
+    identity.validFrom = cert.valid_from;
+  }
+  if (cert.valid_to !== undefined) {
+    identity.validTo = cert.valid_to;
+  }
+  return identity;
+}
+
 /** Probe and shape the server TLS identity for an https URL. undefined for non-https / failure (best-effort). */
 export async function captureTlsIdentity(url: string, connector: TlsConnector = defaultConnector, timeoutMs = 5000): Promise<TlsIdentity | undefined> {
   let parsed: URL;
