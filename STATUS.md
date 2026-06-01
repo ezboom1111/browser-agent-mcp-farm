@@ -6,11 +6,11 @@
 
 | Field | Value |
 | --- | --- |
-| Package | `browser-agent-mcp-farm` v0.5.0 |
+| Package | `browser-agent-mcp-farm` v0.6.0 |
 | Branch | `main` |
-| Commit | `b1f76c9` |
-| Working tree | dirty (5 files) |
-| Generated | 2026-06-01T13:35:06.458Z |
+| Commit | `f4c840f` |
+| Working tree | dirty (3 files) |
+| Generated | 2026-06-01T21:40:39.304Z |
 | Verify gate | **PASS** (build + tests + 4 smokes + npm audit) |
 | Tests | 813 tests in 90 files (812 passed, 0 failed) |
 | Coverage | lines 80.75% · statements 80.55% · functions 86.38% · branches 74.07% (ratcheting floor toward 80%) |
