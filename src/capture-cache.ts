@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
 // Content-addressed capture cache (C4) — the deterministic, correctness-critical core. Keyed by
@@ -112,7 +113,56 @@ export interface CachedCaptureEntry {
   key: string;
   url: string;
   capturedAtMs: number;
+  /** Run-dir name (basename) under the cache root that holds the cached bytes; replay reads from it. */
+  runDirName?: string;
   artifacts: CachedCaptureArtifact[];
+}
+
+// Pre-launch engine resolution (D2 replay wiring). The cache key needs the resolved browser version,
+// which is only known AFTER a launch — so to ever SKIP a launch we persist the engine identity beside
+// the cache after a real capture, STAMPED with the installed Playwright package version (readable with
+// no launch). A later run trusts that persisted browserVersion to compute the key ONLY when the
+// Playwright version still matches; otherwise the bundled Chromium build could differ, so we decline
+// to replay and launch instead. This closes the "stale persisted engine" hole cheaply and safely.
+export interface EngineIdentity {
+  channel: string;
+  browserVersion: string;
+  playwrightVersion: string;
+}
+
+const ENGINE_IDENTITY_FILE = "engine-identity.json";
+
+/** The installed Playwright package version, or undefined if it cannot be read (best-effort). */
+export function playwrightPackageVersion(): string | undefined {
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require("playwright/package.json") as { version?: unknown };
+    return typeof pkg.version === "string" && pkg.version.length > 0 ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function readEngineIdentity(runRoot: string): Promise<EngineIdentity | undefined> {
+  const path = join(captureCacheDir(runRoot), ENGINE_IDENTITY_FILE);
+  if (!existsSync(path)) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<EngineIdentity>;
+    if (typeof parsed.channel === "string" && typeof parsed.browserVersion === "string" && typeof parsed.playwrightVersion === "string" && isEngineResolved(parsed.browserVersion)) {
+      return { channel: parsed.channel, browserVersion: parsed.browserVersion, playwrightVersion: parsed.playwrightVersion };
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function writeEngineIdentity(runRoot: string, identity: EngineIdentity): Promise<void> {
+  const dir = captureCacheDir(runRoot);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, ENGINE_IDENTITY_FILE), `${JSON.stringify(identity, null, 2)}\n`, "utf8");
 }
 
 /** Look up a fresh cached entry for key under runRoot, or undefined (miss/stale/tampered). */

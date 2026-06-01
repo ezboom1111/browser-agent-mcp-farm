@@ -42,6 +42,9 @@ export interface EvidenceWorkflowOptions {
   /** Capture routing (D2). "auto" tries tier-0 first and escalates to the browser on any decline
    * (client-rendered shell / non-HTML / off-domain / error); "browser" (default) always uses Chromium. */
   captureRouting?: "browser" | "auto" | undefined;
+  /** Opt-in capture replay (C4). Replay a fresh (<=1h) prior bare-ephemeral capture by content hash
+   * instead of launching, labelling the page claim "cached_capture". Default false. */
+  captureCache?: boolean | undefined;
   /** Capture profile (A3). "text" blocks image/media/font + ad-host subrequests and skips the page
    * screenshot for text/structure-only browser runs; "full" (default) captures everything. */
   captureProfile?: "text" | "full" | undefined;
