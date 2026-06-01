@@ -31,6 +31,7 @@ import {
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
   CapabilitiesInputSchema,
+  LensInputSchema,
   ListRunsInputSchema,
   ExtractStructuredInputSchema,
   ExportBundleInputSchema,
@@ -64,7 +65,9 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_release_context: "Release a lease and close its browser context. Call when finished to free the profile lock and resources.",
   farm_list_leases: "List active leases (agent, capability, domains, page count, TTL). Read-only diagnostics.",
   farm_reap_expired: "Reap expired leases and close their contexts. Maintenance/cleanup.",
-  farm_capabilities: "Identify THIS server (name, version, evidence kinds, non-goals, optional deps). Call to confirm you reached browser-agent-mcp-farm and not a similarly-named browse skill.",
+  farm_capabilities: "Identify THIS server (name, version, evidence kinds, non-goals, optional deps, lenses). Call to confirm you reached browser-agent-mcp-farm and not a similarly-named browse skill.",
+  farm_lens:
+    "List the declarative research lenses, or describe one (lensId: research | market_scan | product_planning) with its claim templates, report sections, and prioritized source-registry entries. A lens is a domain config (e.g. marketing, product planning) over the same capture + cite-or-fail engine. Read-only, no browser.",
   farm_list_runs: "List prior evidence-run directories under a root (default: the temp dir) with artifact/claim counts, so you can find a runDir to read or verify. Read-only.",
   farm_extract_structured: "Deterministically parse captured HTML for structured data (JSON-LD, Open Graph, Twitter cards, canonical, title). Byte-reproducible, no network. Publisher markup is a SITE CLAIM, not ground truth — cross-check against DOM/OCR. Pair with farm_read_artifact on a page_html artifact.",
   farm_export_bundle: "Export a verifiable bundle manifest for a run: a Merkle root over its artifact SHA-256 hashes, plus an optional Ed25519 signature (privateKeyEnv). A second agent can re-verify it with farm_verify_bundle without trusting you.",
@@ -132,6 +135,7 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_list_leases", ListLeasesInputSchema, () => service.listLeases());
   registerJsonTool(server, "farm_reap_expired", ReapExpiredInputSchema, () => service.reapExpired());
   registerJsonTool(server, "farm_capabilities", CapabilitiesInputSchema, () => service.capabilities());
+  registerJsonTool(server, "farm_lens", LensInputSchema, (input) => service.lens(input));
   registerJsonTool(server, "farm_list_runs", ListRunsInputSchema, (input) => service.listRuns(input));
   registerJsonTool(server, "farm_extract_structured", ExtractStructuredInputSchema, (input) => service.extractStructured(input));
   registerJsonTool(server, "farm_export_bundle", ExportBundleInputSchema, (input) => service.exportBundle(input));

@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { claudeServerArgv, codexNpxServerBlock, codexServerBlock, refreshStaleSkillSnapshot, registerClaudeSkill, registerCodex, registerCodexSkill } from "../src/registration.js";
+import { claudeServerArgv, codexNpxServerBlock, codexServerBlock, refreshStaleSkillSnapshot, registerClaudeSkill, registerClaudeSkills, registerCodex, registerCodexSkill } from "../src/registration.js";
 import { renderCodexGuidanceBlock } from "../src/agent-guidance.js";
 import { farmVersion } from "../src/version.js";
 
@@ -143,6 +143,24 @@ describe("registerClaudeSkill", () => {
     expect(existsSync(installed)).toBe(true);
     const content = await readFile(installed, "utf8");
     expect(content).toContain("name: browser-agent-mcp-farm");
+  });
+});
+
+describe("registerClaudeSkills (installs every in-repo skill)", () => {
+  it("installs the main farm skill plus the lens skills, each version-stamped", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-skills-"));
+    dirs.push(dir);
+
+    const results = await registerClaudeSkills(dir);
+    expect(results.length).toBeGreaterThanOrEqual(3); // browser-agent-mcp-farm + market-scan + product-planning
+    expect(results.every((result) => result.ok)).toBe(true);
+
+    for (const skill of ["browser-agent-mcp-farm", "market-scan", "product-planning"]) {
+      expect(existsSync(join(dir, skill, "SKILL.md"))).toBe(true);
+      expect(existsSync(join(dir, skill, ".farm-skill-version"))).toBe(true);
+    }
+    const marketScan = await readFile(join(dir, "market-scan", "SKILL.md"), "utf8");
+    expect(marketScan).toContain("name: market-scan");
   });
 });
 

@@ -547,6 +547,11 @@ export const AddClaimInputSchema = z.object({
 
 export const CapabilitiesInputSchema = z.object({});
 
+export const LensInputSchema = z.object({
+  lensId: z.string().min(1).optional().describe("Lens id to describe with its claim templates, report sections, and prioritized sources (research | market_scan | product_planning). Omit to list all lenses."),
+  locale: z.string().min(1).optional().describe("Optional locale segment (e.g. ko-KR, en-US, global) to narrow the lens's prioritized source-registry entries.")
+});
+
 export const ListRunsInputSchema = z.object({
   runRoot: z.string().min(1).optional().describe("Directory to scan for run folders. Defaults to the system temp dir, where evidence-run writes."),
   limit: z.number().int().positive().max(500).default(50).describe("Maximum number of runs to return.")
@@ -622,6 +627,7 @@ export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
 export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
 export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
+export type LensInput = z.input<typeof LensInputSchema>;
 export type ListRunsInput = z.input<typeof ListRunsInputSchema>;
 export type ExtractStructuredInput = z.input<typeof ExtractStructuredInputSchema>;
 export type ExportBundleInput = z.input<typeof ExportBundleInputSchema>;

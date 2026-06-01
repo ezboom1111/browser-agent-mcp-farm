@@ -12,7 +12,8 @@ import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
 import { AGENT_GUIDANCE, SERVER_NAME } from "./agent-guidance.js";
 import { farmVersion } from "./version.js";
-import { lensSummaries } from "./lens.js";
+import { describeLens, lensSummaries, listLenses } from "./lens.js";
+import type { LocaleSegment } from "./source-registry.js";
 import { proposeGroundedClaims } from "./grounded-extraction.js";
 import { parseWebVtt } from "./transcript-parser.js";
 import type { EvidenceKind } from "./schemas.js";
@@ -41,6 +42,7 @@ import {
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
+  LensInputSchema,
   ListRunsInputSchema,
   ExtractStructuredInputSchema,
   ExportBundleInputSchema,
@@ -68,6 +70,7 @@ import {
   type ReadArtifactInput,
   type RegisterEvidenceInput,
   type AddClaimInput,
+  type LensInput,
   type ListRunsInput,
   type ExtractStructuredInput,
   type ExportBundleInput,
@@ -406,6 +409,21 @@ export class FarmService {
       // prioritized sources. Marketing/planning/etc. are config, not separate servers.
       lenses: lensSummaries()
     };
+  }
+
+  // Research lenses (engine #3): list the declarative lenses, or describe one (claim templates + report
+  // sections + prioritized source-registry entries) so an agent can pick a domain config over the same
+  // engine + gate. Read-only, no browser.
+  lens(input: LensInput) {
+    const parsed = LensInputSchema.parse(input);
+    if (parsed.lensId === undefined) {
+      return { ok: true as const, lenses: listLenses() };
+    }
+    const described = describeLens(parsed.lensId, parsed.locale as LocaleSegment | undefined);
+    if (described === undefined) {
+      return { ok: false as const, error: `unknown lens: ${parsed.lensId}`, available: listLenses().map((lens) => lens.id) };
+    }
+    return { ok: true as const, ...described };
   }
 
   // Discover prior runs (so a parallel agent can find a runDir to read/verify).
