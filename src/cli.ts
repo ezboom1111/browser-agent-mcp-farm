@@ -40,6 +40,7 @@ import { encryptStorageStateFileInPlace, storageStateEncryptionEnabled } from ".
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
 import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, type RegisterOptions } from "./registration.js";
+import { ensureChromiumInstalled } from "./browser-install.js";
 import { EvidenceRunScheduler } from "./scheduler.js";
 import { isInformationCategory, isLocaleSegment, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryFilter } from "./source-registry.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
@@ -90,7 +91,9 @@ export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
 
   if (command === "serve") {
-    // Self-heal a stale Claude skill snapshot after an upgrade (best-effort, only if already installed).
+    // Provision the Chromium binary on first run (the npm package does not bundle it) and self-heal a
+    // stale Claude skill snapshot after an upgrade. Both best-effort, both log only to stderr.
+    await ensureChromiumInstalled().catch(() => undefined);
     await refreshStaleSkillSnapshot().catch(() => undefined);
     await runStdioServer();
     return;
@@ -904,16 +907,34 @@ async function runCoverageReportCommand(): Promise<void> {
 }
 
 async function runUpgradeCommand(): Promise<void> {
-  const pkgPath = resolve(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
-  const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as { name: string; version: string };
+  const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const pkg = JSON.parse(await readFile(join(pkgRoot, "package.json"), "utf8")) as { name: string; version: string };
+  // A git-clone install (.git at the package root) upgrades by pull+build; a published-package install
+  // upgrades through the package manager (or auto-resolves when registered via npx @latest).
+  const mode = existsSync(join(pkgRoot, ".git")) ? "git-clone" : "installed";
+  const upgrade =
+    mode === "git-clone"
+      ? ["git pull", "npm ci", "npx playwright install chromium", "npm run build", "node ./dist/cli.js register-all"]
+      : [`npm install -g ${pkg.name}@latest   # (or register via 'npx ${pkg.name}@latest serve', which auto-resolves @latest)`, `${pkg.name} register-all      # refresh registration + skill`];
+
+  // `upgrade --run` performs the one always-safe, in-process step: re-register (refresh the MCP config +
+  // self-heal the skill snapshot). It does NOT auto-run git pull / npm — those stay printed, since they
+  // are environment-specific. Pass --npx/--package-spec to re-register in npx mode.
+  if (hasFlag("--run")) {
+    const results = await registerAll(registerOptionsFromArgs());
+    console.log(JSON.stringify({ ok: true, name: pkg.name, version: pkg.version, mode, ran: "register-all", results, afterUpgrade: "restart your agent (Codex/Claude) so the new server + skill load" }, null, 2));
+    return;
+  }
   console.log(
     JSON.stringify(
       {
         ok: true,
         name: pkg.name,
         version: pkg.version,
-        upgrade: [`npm install -g ${pkg.name}@latest   # or 'npm update ${pkg.name}' in your project`, "node ./dist/cli.js register-all      # re-register the MCP server + skill with Codex & Claude"],
-        note: "Self-maintenance: 'recipe-canary' + 'coverage-report' auto-detect source decay; the CI/verify gate guards every release."
+        mode,
+        upgrade,
+        afterUpgrade: "restart your agent (Codex/Claude) so the new server + skill load",
+        note: "Run 'upgrade --run' to re-register in place now; an npx-registered install auto-resolves @latest. Self-maintenance: 'recipe-canary' + 'coverage-report' auto-detect source decay; the CI/verify gate guards every release."
       },
       null,
       2

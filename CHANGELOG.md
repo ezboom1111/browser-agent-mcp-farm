@@ -18,6 +18,19 @@ adheres to semantic versioning. Build/test status is tracked in
   marker differs from the running package version it re-copies the skill on startup (best-effort, only
   when a snapshot already exists), removing the "server upgraded but the routed skill text is stale"
   drift. Foundation for distributing the farm to a team via a (private or public) npm package.
+- **First-run Chromium auto-install**: `serve` provisions the Playwright Chromium binary on first run
+  (`browser-install.ts`) — the npm package does not bundle it — logging only to stderr (safe for the
+  MCP stdio protocol) and opt-out-able via `FARM_SKIP_BROWSER_AUTOINSTALL=1`. Removes the most common
+  first-capture failure for a freshly-installed teammate.
+- **Install-mode-aware `upgrade`**: the `upgrade` command now detects a git-clone vs a published-package
+  install and prints the correct steps (the old hint always assumed a global npm install, which did not
+  exist). `upgrade --run` performs the one always-safe in-process step — re-register (refresh the MCP
+  config + self-heal the skill); git pull / npm update stay printed since they are environment-specific.
+- **Tag-driven release CI + team bootstrap scripts**: `.github/workflows/release.yml` runs the full
+  verify gate on a `v*` tag, creates a GitHub Release with generated notes, and publishes to npm only
+  when an `NPM_TOKEN` secret is configured (safe to merge before deciding to publish). `install.ps1` /
+  `install.sh` are one-command onboarding bootstraps (deps + Chromium + build + register) for a cloned
+  repo. So the maintainer release loop becomes `npm version <bump> && git push --follow-tags`.
 
 ## [0.5.0] — 2026-06-01 — validated engine, browserless capture tiers + at-rest credential encryption
 
