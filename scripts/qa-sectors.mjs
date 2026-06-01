@@ -168,6 +168,67 @@ const FIXTURES = [
     fabricated: "guarantees a $1,000,000 starting salary",
     expectFacts: ["price", "rating", "date"],
     expectStructured: "none"
+  },
+  // ---- additional sectors (breadth) ----
+  {
+    id: "insurance",
+    sector: "Insurance",
+    dataClass: "structured",
+    html: page("Auto policy", `<h1>Auto Policy A1</h1><table><tr><th>Premium</th><td>$1,180/yr</td></tr><tr><th>Deductible</th><td>$500</td></tr></table><p>Annual premium $1,180/yr with a $500 deductible, effective 2026-07-01.</p>`),
+    grounded: "premium $1,180/yr with a $500 deductible",
+    fabricated: "covers damage from meteor strikes for free",
+    expectFacts: ["price", "date"],
+    expectStructured: "tables"
+  },
+  {
+    id: "energy",
+    sector: "Energy / Utilities",
+    dataClass: "semi-structured",
+    html: page("Tariff", `<h1>Grid tariff Q2</h1><p>The residential rate is $0.142 per kWh. Renewables supplied 38% of generation, up from last quarter, as of 2026-04-30.</p>`, `<meta property="og:title" content="Grid tariff Q2"><meta property="og:type" content="article">`),
+    grounded: "residential rate is $0.142 per kWh",
+    fabricated: "electricity is now free for all households",
+    expectFacts: ["price", "percentage", "date"],
+    expectStructured: "openGraph"
+  },
+  {
+    id: "crypto",
+    sector: "Crypto / Web3",
+    dataClass: "structured",
+    html: page("Token stats", `<h1>NOVA token</h1>` + jsonld({ "@context": "https://schema.org", "@type": "Product", name: "NOVA", offers: { "@type": "Offer", price: "3.27", priceCurrency: "USD" } }) + `<p>NOVA trades at $3.27, down 6% on the day, 2026-05-20.</p>`),
+    grounded: "NOVA trades at $3.27, down 6%",
+    fabricated: "NOVA is guaranteed to 100x by Friday",
+    expectFacts: ["price", "percentage", "date"],
+    expectStructured: "jsonLd"
+  },
+  {
+    id: "legal",
+    sector: "Legal / Compliance",
+    dataClass: "unstructured",
+    html: page("Ruling", `<h1>Court ruling summary</h1><p>On 2026-02-14 the court upheld the penalty, setting the fine at $2,400,000 and ordering a 90-day remediation window.</p>`),
+    grounded: "setting the fine at $2,400,000",
+    fabricated: "the company was awarded $5 billion in damages",
+    expectFacts: ["price", "date"],
+    expectStructured: "none"
+  },
+  {
+    id: "sports",
+    sector: "Sports",
+    dataClass: "unstructured",
+    html: page("Match report", `<h1>Final report</h1><p>The home side won, rated 4.8/5 by analysts for the performance, with possession at 63% across the match on 2026-03-30.</p>`),
+    grounded: "possession at 63%",
+    fabricated: "the match ended 99 to nil",
+    expectFacts: ["rating", "percentage", "date"],
+    expectStructured: "none"
+  },
+  {
+    id: "agriculture",
+    sector: "Agriculture",
+    dataClass: "unstructured",
+    html: page("Harvest", `<h1>Harvest outlook</h1><p>Yields are forecast up 9% this season, with wheat priced at $7.85 per bushel as of 2026-08-01.</p>`),
+    grounded: "wheat priced at $7.85 per bushel",
+    fabricated: "the entire crop failed nationwide",
+    expectFacts: ["price", "percentage", "date"],
+    expectStructured: "none"
   }
 ];
 
@@ -203,6 +264,16 @@ async function run() {
     if (id === "adv-korean") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end(page("한국어", `<h1>제품 상세</h1><p>이 제품의 가격은 49,000원이며, 평점은 4.5/5 입니다. 2026년 6월 1일 기준입니다.</p>`));
+      return;
+    }
+    if (id === "adv-jp") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(page("日本語", `<h1>製品詳細</h1><p>この製品の価格は ¥1,980 で、評価は 4.3/5 です。</p>`));
+      return;
+    }
+    if (id === "adv-entities") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(page("Entities", `<h1>Terms &amp; Conditions</h1><p>Use of &lt;Service&gt; requires you to &#39;agree&#39; — the fee is $19.</p>`));
       return;
     }
     const fx = FIXTURES.find((f) => f.id === id);
@@ -348,12 +419,29 @@ async function run() {
   await svcA.registerEvidence({ runDir: zRun, sourceUrl: "https://z.example.com", text: "some bytes", evidenceKind: "page_text" });
   const zGate = await runClaimGate(zRun, { mode: "final", minClaims: 1 });
   adv.checks.push(check("zero-claim final gate FAILS", zGate.ok === false));
+  // I. Japanese / CJK — ¥ price + rating typed facts.
+  const jRun = await advRun();
+  const jcap = await httpTier0Capture({ runDir: jRun, url: `${base}/adv-jp`, allowedDomains: [host], writer: aw, captureId: "j", contextToken: "q", pageId: "p" });
+  const jRec = jcap.records.find((r) => r.evidence_kind === "page_text");
+  const jText = jRec ? await readFile(join(jRun, jRec.path), "utf8") : "";
+  const jFacts = new Set(extractTypedFacts(jText).map((f) => f.kind));
+  adv.checks.push(check("Japanese typed facts (¥ price + rating)", jFacts.has("price") && jFacts.has("rating"), JSON.stringify([...jFacts])));
+  // J. HTML entities decoded into visible text + a grounded claim on the decoded form.
+  const eRun = await advRun();
+  const ecap = await httpTier0Capture({ runDir: eRun, url: `${base}/adv-entities`, allowedDomains: [host], writer: aw, captureId: "e", contextToken: "q", pageId: "p" });
+  const eRec = ecap.records.find((r) => r.evidence_kind === "page_text");
+  const eText = eRec ? await readFile(join(eRun, eRec.path), "utf8") : "";
+  adv.checks.push(check("HTML entities decoded in visible text", eText.includes("Terms & Conditions") && eText.includes("<Service>")));
+  const eDir = await advRun();
+  const eReg = await svcA.registerEvidence({ runDir: eDir, sourceUrl: `${base}/adv-entities`, text: eText, evidenceKind: "page_text" });
+  const eGround = await svcA.addClaim({ runDir: eDir, artifactId: eReg.artifactId, claim: "e", claimType: "text", evidenceKind: "page_text", verificationLevel: "grounded", anchor: { type: "text_span", quote: "Terms & Conditions" } });
+  adv.checks.push(check("grounded claim on decoded entity text PASSES", eGround.ok === true));
 
   await new Promise((r) => server.close(r));
   await Promise.all(tmpRoots.map((d) => rm(d, { recursive: true, force: true })));
 
   // ---- REPORT ----
-  console.log("\n================ FARM QA/QC — 12 sectors x {structured | semi-structured | unstructured} ================\n");
+  console.log(`\n================ FARM QA/QC — ${results.length} sectors x {structured | semi-structured | unstructured} ================\n`);
   const col = (s, n) => String(s).padEnd(n).slice(0, n);
   console.log(col("SECTOR", 30) + col("CLASS", 18) + "RESULT");
   console.log("-".repeat(72));
@@ -383,7 +471,7 @@ async function run() {
     console.log(`  ${col(dc, 16)} ${rs.filter((r) => r.pass).length}/${rs.length} sectors pass`);
   }
   const allPass = allChecks.every((c) => c.pass);
-  console.log("\nVERDICT: " + (allPass ? "USABLE — data collected across all 3 classes & 12 sectors; every fabricated/near-miss/tampered/contradictory claim was blocked or flagged; SSRF/non-HTML/shell declined; Korean works." : "REVIEW NEEDED — see failures above."));
+  console.log("\nVERDICT: " + (allPass ? `USABLE — data collected across all 3 classes & ${results.length} sectors; every fabricated/near-miss/tampered/contradictory claim was blocked or flagged; SSRF/non-HTML/shell declined; Korean + Japanese + entities work.` : "REVIEW NEEDED — see failures above."));
 }
 
 run().catch((e) => {

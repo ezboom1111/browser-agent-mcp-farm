@@ -154,7 +154,7 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       validateTypedClaim(claim, artifact, claimLabel, errors);
       validateDestinationProvenanceClaim(claim, citationsByClaimId.get(claim.claim_id ?? ""), claimLabel, errors);
       if (claim.anchor !== undefined) {
-        await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors);
+        await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors, warnings);
       }
       await validateClaimCorroboration(runDir, claim, artifactsByRef, claimLabel, errors, warnings);
     } else {
@@ -271,7 +271,7 @@ function requiredDestinationProvenanceKinds(evidenceKind: EvidenceKind | undefin
  * citation graph is well-formed. Other anchor types are checked structurally
  * (the cited artifact's kind must match the anchor).
  */
-async function validateClaimGrounding(runDir: string, claim: ClaimLedgerRow, artifact: ArtifactLedgerRow | undefined, claimLabel: string, errors: string[]): Promise<void> {
+async function validateClaimGrounding(runDir: string, claim: ClaimLedgerRow, artifact: ArtifactLedgerRow | undefined, claimLabel: string, errors: string[], warnings: string[]): Promise<void> {
   const parsed = ClaimAnchorSchema.safeParse(claim.anchor);
   if (!parsed.success) {
     errors.push(`claim anchor is malformed: ${claimLabel}`);
@@ -312,9 +312,24 @@ async function validateClaimGrounding(runDir: string, claim: ClaimLedgerRow, art
   const normContent = normalizeForMatch(content);
   if (claim.claim_taxonomy === "derived" || claim.claim_taxonomy === "aggregated") {
     const tokens = anchor.normalizedTokens !== undefined && anchor.normalizedTokens.length > 0 ? anchor.normalizedTokens : tokenizeForMatch(anchor.quote);
-    const missing = tokens.filter((token) => !normContent.includes(normalizeForMatch(token)));
+    const normalizedTokens = tokens.map((token) => normalizeForMatch(token));
+    const missing = normalizedTokens.filter((token) => !normContent.includes(token));
     if (missing.length > 0) {
       errors.push(`claim grounding tokens not found in cited artifact: ${claimLabel} -> ${missing.slice(0, 5).join(", ")}`);
+      return;
+    }
+    // Token-presence grounding (paraphrase/aggregation) is weaker than a contiguous span: every token
+    // is on the page, but their ARRANGEMENT is not verified, so a recombination of real tokens across
+    // unrelated content (e.g. "<EntityA> grew <PctOfEntityB>") can pass. Deterministic NLU is out of
+    // scope, but we can flag SCATTER: if the smallest window covering all tokens is far larger than the
+    // claim, warn (not block — legitimate cross-page synthesis exists). For a high-assurance claim,
+    // prefer a text_span quote (contiguous, 0 leak) or corroboration across independent sources.
+    if (normalizedTokens.length >= 2) {
+      const span = minWindowCoverChars(normContent, normalizedTokens);
+      const threshold = Math.max(160, normalizeForMatch(anchor.quote).length * 6);
+      if (span > threshold) {
+        warnings.push(`aggregated/derived claim tokens are scattered across ~${span} chars of the artifact (token-presence grounding; possible recombination — prefer a text_span quote or corroboration): ${claimLabel}`);
+      }
     }
     return;
   }
@@ -402,6 +417,47 @@ function tokenizeForMatch(value: string): string[] {
   return normalizeForMatch(value)
     .split(" ")
     .filter((token) => token.length >= 2);
+}
+
+// Smallest character window in `content` that contains an occurrence of EVERY token (a classic
+// minimum-window cover). Infinity if any token is absent. Used to measure how scattered an
+// aggregated claim's supporting tokens are (a proxy for likely recombination).
+function minWindowCoverChars(content: string, tokens: string[]): number {
+  const occurrences: Array<{ start: number; end: number; token: number }> = [];
+  tokens.forEach((token, tokenIndex) => {
+    let index = content.indexOf(token);
+    while (index !== -1) {
+      occurrences.push({ start: index, end: index + token.length, token: tokenIndex });
+      index = content.indexOf(token, index + 1);
+    }
+  });
+  if (occurrences.length === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  occurrences.sort((a, b) => a.start - b.start);
+  const need = new Set(tokens.map((_, i) => i)).size;
+  const counts = new Map<number, number>();
+  let have = 0;
+  let best = Number.POSITIVE_INFINITY;
+  let left = 0;
+  for (let right = 0; right < occurrences.length; right += 1) {
+    const tokenIndex = occurrences[right]?.token ?? 0;
+    counts.set(tokenIndex, (counts.get(tokenIndex) ?? 0) + 1);
+    if (counts.get(tokenIndex) === 1) {
+      have += 1;
+    }
+    while (have === need) {
+      const windowStart = occurrences[left]?.start ?? 0;
+      best = Math.min(best, (occurrences[right]?.end ?? 0) - windowStart);
+      const leftToken = occurrences[left]?.token ?? 0;
+      counts.set(leftToken, (counts.get(leftToken) ?? 0) - 1);
+      if (counts.get(leftToken) === 0) {
+        have -= 1;
+      }
+      left += 1;
+    }
+  }
+  return best;
 }
 
 async function readJsonl<T>(path: string): Promise<T[]> {
