@@ -8,6 +8,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Property-based fuzz QA** (`scripts/qa-fuzz.mjs`, `npm run qa:fuzz`): a seed-deterministic fuzzer that
+  generates thousands of randomized pages with KNOWN injected facts and KNOWN fabrications, then measures
+  the gate's hallucination-leak rate and extraction recall — the randomized generator is the oracle, so
+  it has none of the hand-written suite's self-authorship bias. Baseline: **0 hallucination leaks across
+  1,200 fabrication / near-miss / recombination trials in the default text_span (quote) mode**, 100%
+  typed-fact recall on the generated formats. It also quantifies a real weakness: an `aggregated`/`derived`
+  claim grounds on TOKEN PRESENCE (to allow paraphrase), so a recombination of real tokens across
+  unrelated content passes — 100% in the fuzzer. (The default span mode does not have this; see hardening.)
 - **Sector QA/QC harness** (`scripts/qa-sectors.mjs`, `npm run qa:sectors`): a deterministic, offline,
   end-to-end QA run across 12 sectors × {structured, semi-structured, unstructured} local fixtures plus
   an adversarial/edge battery. Per sector it tier-0-captures, checks structured + typed-fact extraction,
@@ -122,6 +130,15 @@ adheres to semantic versioning. Build/test status is tracked in
   failure logging).
 
 ### Changed
+
+- **Aggregated/derived claim grounding now warns on scatter** (fuzzer-motivated hardening): token-presence
+  grounding (which exists to allow paraphrase) can be satisfied by a recombination of real tokens across
+  unrelated content. The gate now computes the smallest window covering all of an aggregated claim's
+  tokens and emits a WARNING (not a block — legitimate cross-page synthesis exists) when it is far larger
+  than the claim, surfacing a likely recombination. The default `quote`/text_span mode is unaffected (it
+  is contiguous-match and had 0 fuzzer leaks). Deterministic distance is only a partial mitigation — the
+  full fix is a semantic check (an LLM judge whose supporting spans are themselves cite-or-fail verified);
+  for a high-assurance claim, prefer a text_span quote or cross-source corroboration.
 
 - **Refusal codification + version-drift fix** (B2): the live browser-extension / attach-and-drive of
   the user's real logged-in browser is now an explicit `nonGoal` with a neutral technical
