@@ -8,6 +8,12 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Content-aware source independence** (`source-independence.ts`, transcendence Tier 3): the
+  corroboration and caged-judge quorums now collapse a syndicated wire story echoed across domains to ONE
+  independent source, closing the fake-independence hole. Two sources are independent only if they have
+  distinct registrable domains AND their content is not a near-duplicate (k-word shingles + Jaccard >
+  0.6, union-find grouped). So a `supported` judgment or a corroborated claim cannot reach its 2-source
+  quorum by citing two outlets running the same AP wire copy.
 - **Caged-judge protocol** (`farm_judge_claim`, `judgments.jsonl`): the deliberate "strong head, caged
   hand" applied to the SEMANTIC layer, and the fix for the aggregated-token recombination weakness the
   fuzzer surfaced. An external judge (an LLM agent) submits a verdict — `supported` | `refuted` |

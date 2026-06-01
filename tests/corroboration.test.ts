@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runClaimGate } from "../src/claim-gate.js";
 import { FarmService } from "../src/farm-service.js";
-import { independentSourceCount, registrableDomain } from "../src/source-independence.js";
+import { contentShingles, independentSourceCount, independentSourceGroups, jaccardSimilarity, registrableDomain } from "../src/source-independence.js";
 
 // Engine #2 (cross-source corroboration). A claim can cite N supporting sources; the gate verifies each
 // is registered, verifies any per-source quote against THAT source's bytes, and counts distinct
@@ -22,6 +22,40 @@ describe("source independence", () => {
     expect(independentSourceCount(["https://a.com/1", "https://b.org/2"])).toBe(2);
     expect(independentSourceCount(["https://a.com/1", "https://news.a.com/2"])).toBe(1);
     expect(independentSourceCount(["https://a.com/1", undefined, "https://a.com/2"])).toBe(1);
+  });
+});
+
+describe("content-overlap independence (Tier 3 — syndication echo)", () => {
+  it("shingles + jaccard detect near-duplicate text", () => {
+    const wire = "the central bank held rates steady citing persistent inflation and a resilient labor market today";
+    expect(jaccardSimilarity(contentShingles(wire), contentShingles(wire))).toBe(1);
+    expect(jaccardSimilarity(contentShingles(wire), contentShingles(`${wire} but analysts disagreed`))).toBeGreaterThan(0.6);
+    expect(jaccardSimilarity(contentShingles(wire), contentShingles("a completely different sentence about sports scores and weather"))).toBeLessThan(0.2);
+  });
+
+  it("collapses different-domain sources that echo the same wire story to ONE independent source", () => {
+    const wire = "the agency announced a sweeping new policy affecting thousands of firms across the region this morning";
+    // Two different domains, near-identical content (syndicated) -> 1 independent, not 2.
+    expect(
+      independentSourceGroups([
+        { url: "https://siteA.com/x", text: wire },
+        { url: "https://siteB.org/y", text: `${wire} reporters said` }
+      ])
+    ).toBe(1);
+    // Two different domains with genuinely different content -> 2 independent.
+    expect(
+      independentSourceGroups([
+        { url: "https://siteA.com/x", text: wire },
+        { url: "https://siteB.org/y", text: "an unrelated article about local sports and a new stadium opening" }
+      ])
+    ).toBe(2);
+    // Same domain -> 1 regardless of content.
+    expect(
+      independentSourceGroups([
+        { url: "https://a.com/1", text: "one" },
+        { url: "https://news.a.com/2", text: "two totally different" }
+      ])
+    ).toBe(1);
   });
 });
 

@@ -131,6 +131,26 @@ describe("farm_judge_claim", () => {
     expect(JSON.stringify(result.gate?.warnings)).toMatch(/single independent source/);
   });
 
+  it("collapses a syndicated cross-domain echo: 2 different-domain near-duplicate sources fail the 2-source quorum (Tier 3)", async () => {
+    const { service, runDir } = await newRun();
+    const wire = "The regulator announced a sweeping new policy affecting thousands of firms across the region this morning, effective immediately.";
+    const a = await service.registerEvidence({ runDir, sourceUrl: "https://siteA.com/x", text: wire, evidenceKind: "page_text" });
+    const b = await service.registerEvidence({ runDir, sourceUrl: "https://siteB.org/y", text: `${wire} Reporters confirmed.`, evidenceKind: "page_text" });
+    const result = await service.judgeClaim({
+      runDir,
+      claim: "a sweeping new policy was announced",
+      verdict: "supported",
+      support: [
+        { artifactId: a.artifactId as string, quote: "sweeping new policy" },
+        { artifactId: b.artifactId as string, quote: "sweeping new policy" }
+      ],
+      minIndependentSources: 2
+    });
+    // Both are the SAME wire story echoed across two domains -> 1 independent source -> below the quorum.
+    expect(result.ok).toBe(false);
+    expect(JSON.stringify(result.gate?.errors)).toMatch(/near-duplicate echoes/);
+  });
+
   it("rejects (before writing) a judgment whose span source is unregistered", async () => {
     const { service, runDir } = await newRun();
     const result = await service.judgeClaim({ runDir, claim: "x", verdict: "supported", support: [{ artifactId: "ghost", quote: "y" }] });
