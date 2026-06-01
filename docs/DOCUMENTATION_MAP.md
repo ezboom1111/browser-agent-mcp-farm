@@ -53,6 +53,14 @@ For a new Codex or Claude session, read these files in this order:
 | `docs/OFFICIAL_API.md` | Credentials-gated official API setup and readiness checks for supported providers. | Read before changing YouTube/Instagram/TikTok official API collection or credential handling. |
 | `docs/QA_QC_PROCESS.md` | Quality gates, smoke tests, opt-in live tests, real-site calibration loop, and current verification caveats. | Read before claiming work is verified or asking another agent to QA. |
 
+## Trust And Provenance Docs
+
+| File | Purpose | How to use |
+| --- | --- | --- |
+| `docs/THREAT_MODEL.md` | Trust model, adversaries, and the deterministic-gate boundary. | Read before changing the claim gate, evidence trust assumptions, or any provenance feature. |
+| `docs/CAPTURE_BINDING.md` | Tier-2 capture-binding: what each opt-in provenance piece (TLS identity, same-connection TLS, transparency log, multi-vantage agreement) proves and does NOT prove, plus the deliberately deferred items and why. | Read before changing or relying on `tls-identity`, `timestamp-anchor`, `multi-vantage-*`; it is the honest map of shipped-vs-deferred and the load-bearing "no theater" scope wording. |
+| `docs/EXTERNAL_BRIDGE.md` | The opt-in, zero-credential external-bridge (caged executor) tier. | Read before changing the external-bridge lease tier or its fences. |
+
 ## History And Release Docs
 
 | File | Purpose | How to use |
