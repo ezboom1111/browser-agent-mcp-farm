@@ -8,6 +8,17 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Multi-vantage agreement core** (`multi-vantage-agreement.ts`, capture-binding Tier 2 — the agreement
+  primitive, pure): the single-capture evidence model silently assumes the bytes a page served US are
+  what it serves EVERYONE — false for geo-fenced, cloaked, A/B-tested, price-discriminated, censored, or
+  selectively-MITM'd pages. `compareVantages()` takes N captures of the same url from independent egress
+  points and decides `agreed` / `split` / `insufficient`: it clusters content by shingle-jaccard (reusing
+  the corroboration engine) AND checks per-kind typed-fact agreement, so a structural divergence OR a
+  single differing price (geo price discrimination) flips the verdict to `split` and names the divergent
+  vantage. Failed vantages (blocked/timeout at one egress — itself a signal) are excluded from the quorum
+  but surfaced. Pure + deterministic (no IO, no clock); the proxied browser fan-out that feeds it is a
+  separate opt-in build. **Honestly scoped:** agreement proves CONSISTENCY across vantages, not truth —
+  N vantages reaching an origin that serves everyone the same content (true or false) still agree.
 - **Bundle transparency log** (`timestamp-anchor.ts`, opt-in `export-bundle --anchor-log <file>`,
   capture-binding Tier 2 — the ordering anchor): a tamper-evident, hash-chained NDJSON log of evidence-
   bundle Merkle roots. Each anchor carries the previous entry's hash, so reordering, removing, or
