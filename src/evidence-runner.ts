@@ -1,10 +1,13 @@
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { computeCaptureCacheKey, isEngineResolved, lookupCachedCapture, playwrightPackageVersion, readEngineIdentity, stalenessAgeMs, storeCachedCapture, writeEngineIdentity, type CachedCaptureArtifact, type CaptureCacheProfile } from "./capture-cache.js";
 import { crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
 import { httpTier0Capture } from "./http-tier0-capture.js";
 import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
-import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
+import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord, type CaptureBundleInput } from "./artifact-writer.js";
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
 import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
@@ -330,7 +333,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     obstructionRecords: obstructionResult.records,
     assessmentRecords,
     frameSampling,
-    ...(browserResult.capturedViaHttp === true ? { capturedViaHttp: true } : {})
+    ...(browserResult.capturedViaHttp === true ? { capturedViaHttp: true } : {}),
+    ...(browserResult.capturedViaCache === true ? { capturedViaCache: true, ...(browserResult.cacheStalenessMs === undefined ? {} : { cacheStalenessMs: browserResult.cacheStalenessMs }) } : {})
   });
   await runStage("claims_citations", () => withAbort(appendClaims(options.runDir, claims), options.abortSignal));
 
@@ -395,6 +399,10 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
 async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner; sourceNavigationPlan: SourceNavigationPlan; sourceNavigationRecipePlan: SourceNavigationRecipePlan }): Promise<{
   /** True when the page bytes were captured by the tier-0 browserless HTTP fetch (A1), not a browser. */
   capturedViaHttp?: boolean;
+  /** True when the page bytes were replayed from a fresh content-addressed cache entry (C4), not re-captured. */
+  capturedViaCache?: boolean;
+  /** Age (ms) of the replayed cache entry, recorded on the cached_capture claim. */
+  cacheStalenessMs?: number;
   /** Subrequests aborted by the text-profile resource blocker on this run (C3). */
   blockedResourceCount?: number;
   pageCaptureRecords: ArtifactRecord[];
@@ -483,6 +491,46 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
         };
       }
       // tier-0 declined (non-HTML / off-domain / bot-blocked) -> escalate to the browser path.
+    }
+
+    // Capture-cache replay (C4, opt-in): a BARE ephemeral run on the bundled Chromium engine may
+    // replay a fresh (<=1h) prior capture by content hash instead of launching. Credentialed,
+    // fingerprinted, named-profile, or branded-channel runs are never eligible (an auto-updating or
+    // identity-bearing capture must not be served from cache). On a hit we early-return like tier-0;
+    // on any miss we fall through to the browser and store this run's capture afterwards.
+    const cacheRoot = dirname(input.options.runDir);
+    const cacheEligible = input.options.captureCache === true && (input.options.storagePolicy ?? "ephemeral") === "ephemeral" && input.options.profileName === undefined && input.options.browserChannel === undefined;
+    if (cacheEligible) {
+      const replay = await input.runStage("capture_cache_replay", () =>
+        tryReplayCachedCapture({
+          cacheRoot,
+          runDir: input.options.runDir,
+          url: input.options.url,
+          options: input.options,
+          writer: input.writer,
+          baseCaptureId: input.baseCaptureId,
+          contextToken: `${input.baseCaptureId}-cache`,
+          ...(input.options.abortSignal === undefined ? {} : { signal: input.options.abortSignal })
+        })
+      );
+      if (replay !== undefined) {
+        return {
+          capturedViaCache: true,
+          cacheStalenessMs: replay.stalenessMs,
+          pageCaptureRecords: replay.records,
+          sourceNavigationCalibrationRecords,
+          sourceNavigationActionRecords,
+          sourceNavigationFollowUpRecords,
+          destinationCandidateRecords,
+          destinationTriageRecords,
+          destinationDeepeningProposalRecords,
+          destinationDeepeningRunRecords,
+          frameFailureRecords,
+          ocrRecords: [],
+          overlayDismissal: skippedOverlayDismissalReport("C4 cached_capture replay: no browser, overlay dismissal not applicable"),
+          overlayDismissalRecords: []
+        };
+      }
     }
 
     // Pre-launch the shared Browser as a measured stage (C3) so the launch cost is visible in
@@ -575,6 +623,11 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
     // metrics.json this is OUTSIDE the artifact ledger/Merkle root; buildBundleManifest attaches it to
     // the manifest beside (not inside) the hashed bytes. Non-fatal.
     await withAbort(writeFile(join(input.options.runDir, "run-meta.json"), `${JSON.stringify({ engine: pool.engineProvenance() }, null, 2)}\n`, "utf8"), input.options.abortSignal).catch(() => undefined);
+    // Persist this run's capture into the per-run-root cache (C4) so a later eligible run can replay it
+    // by content hash. Best-effort, never fails the run; no-op unless the engine resolved.
+    if (cacheEligible) {
+      await input.runStage("capture_cache_store", () => storeCaptureInCache({ cacheRoot, runDir: input.options.runDir, url: input.options.url, options: input.options, engine: pool.engineProvenance(), captureRecords: capture.records })).catch(() => undefined);
+    }
     if (input.options.sourceNavigation?.calibrate) {
       const calibrationReport = await input.runStage("source_navigation_calibration", () =>
         calibrateSourceNavigationRecipePlan({
@@ -882,6 +935,138 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       await pool.shutdown();
     }
   }
+}
+
+// The byte-affecting capture profile for the cache key. EFFECTIVE wait/settle defaults are used (the
+// same values the browser path applies) so a run with an explicit default does not false-miss a run
+// that left it implicit. A bare ephemeral evidence run carries no fingerprint, so viewport/locale/
+// timezone/userAgent stay unset (keyed as "default").
+function captureCacheProfileFor(options: EvidenceWorkflowOptions, channel: string, browserVersion: string): CaptureCacheProfile {
+  return {
+    url: options.url,
+    captureProfile: options.captureProfile ?? "full",
+    launchArgsProfile: "default",
+    resolvedChannel: channel,
+    browserVersion,
+    sampleFrames: options.sampleFrames !== false,
+    waitMs: options.waitMs ?? 3_000,
+    settleMs: options.settleMs ?? 500
+  };
+}
+
+function sha256Hex(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+// Replay a fresh prior capture by content hash instead of launching (C4). Returns undefined (a MISS)
+// whenever anything is not perfectly safe to serve: no persisted engine identity, a changed Playwright
+// version (the bundled Chromium build could differ), a non-cacheable key, no fresh entry, a missing
+// source run dir, or a byte whose re-hash != the stored sha256 (tamper/drift). On a hit it re-registers
+// the IDENTICAL bytes into this run (so the SHA-256 and the claim gate are unaffected) and re-derives
+// the structured_data exactly as the browser/tier-0 path does.
+export async function tryReplayCachedCapture(input: { cacheRoot: string; runDir: string; url: string; options: EvidenceWorkflowOptions; writer: ArtifactWriter; baseCaptureId: string; contextToken: string; signal?: AbortSignal }): Promise<{ records: ArtifactRecord[]; stalenessMs: number } | undefined> {
+  throwIfAborted(input.signal);
+  const identity = await readEngineIdentity(input.cacheRoot);
+  if (identity === undefined) {
+    return undefined;
+  }
+  const playwrightVersion = playwrightPackageVersion();
+  if (playwrightVersion === undefined || playwrightVersion !== identity.playwrightVersion) {
+    return undefined; // the installed engine could differ from the persisted one -> launch instead
+  }
+  const nowMs = Date.now();
+  const key = computeCaptureCacheKey(captureCacheProfileFor(input.options, identity.channel, identity.browserVersion), { nowMs });
+  if (key === null) {
+    return undefined;
+  }
+  const entry = await lookupCachedCapture(input.cacheRoot, key, nowMs);
+  if (entry === undefined || entry.runDirName === undefined) {
+    return undefined;
+  }
+  let html: string | undefined;
+  let text: string | undefined;
+  let screenshot: Uint8Array | undefined;
+  for (const artifact of entry.artifacts) {
+    const abs = join(input.cacheRoot, entry.runDirName, artifact.relPath);
+    if (!existsSync(abs)) {
+      return undefined;
+    }
+    const bytes = await readFile(abs);
+    if (sha256Hex(bytes) !== artifact.sha256) {
+      return undefined; // tamper / drift -> never serve stale-or-altered bytes as evidence
+    }
+    if (artifact.evidenceKind === "page_html") {
+      html = bytes.toString("utf8");
+    } else if (artifact.evidenceKind === "page_text") {
+      text = bytes.toString("utf8");
+    } else if (artifact.evidenceKind === "page_screenshot") {
+      screenshot = bytes;
+    }
+  }
+  if (html === undefined) {
+    return undefined; // need at least the page_html to reconstruct the page bundle
+  }
+  const stalenessMs = stalenessAgeMs(entry.capturedAtMs, nowMs);
+  const pageInput: CaptureBundleInput = {
+    runDir: input.runDir,
+    sourceUrl: input.url,
+    contextToken: input.contextToken,
+    pageId: "cached-capture",
+    captureId: `${input.baseCaptureId}-page-capture`,
+    html,
+    metadata: { captureTier: "cached_capture", replayedFromKey: key, stalenessMs },
+    captureMethod: "cached-capture-replay"
+  };
+  if (text !== undefined) {
+    pageInput.text = text;
+  }
+  if (screenshot !== undefined) {
+    pageInput.screenshot = screenshot;
+  }
+  const records = [...(await input.writer.writeCaptureBundle(pageInput))];
+  const structured = extractStructuredData(html);
+  const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
+  if (hasStructured) {
+    records.push(
+      ...(await input.writer.writeCaptureBundle({
+        runDir: input.runDir,
+        sourceUrl: input.url,
+        contextToken: input.contextToken,
+        pageId: "cached-capture",
+        captureId: `${input.baseCaptureId}-structured`,
+        text: JSON.stringify(structured),
+        evidenceKind: "structured_data",
+        captureMethod: "cached-capture-replay-structured"
+      }))
+    );
+  }
+  return { records, stalenessMs };
+}
+
+// Persist this run's page bundle into the per-run-root cache + the engine identity (C4), so a later
+// eligible run can replay it pre-launch. Best-effort, no-op unless the engine resolved and the
+// Playwright version is readable and a page_html was captured.
+export async function storeCaptureInCache(input: { cacheRoot: string; runDir: string; url: string; options: EvidenceWorkflowOptions; engine: { channel: string; browserVersion: string }; captureRecords: ArtifactRecord[] }): Promise<void> {
+  if (!isEngineResolved(input.engine.browserVersion)) {
+    return;
+  }
+  const playwrightVersion = playwrightPackageVersion();
+  if (playwrightVersion === undefined) {
+    return;
+  }
+  const nowMs = Date.now();
+  const key = computeCaptureCacheKey(captureCacheProfileFor(input.options, input.engine.channel, input.engine.browserVersion), { nowMs });
+  if (key === null) {
+    return;
+  }
+  const artifacts: CachedCaptureArtifact[] = input.captureRecords
+    .filter((record) => typeof record.path === "string" && (record.evidence_kind === "page_html" || record.evidence_kind === "page_text" || record.evidence_kind === "page_screenshot"))
+    .map((record) => ({ relPath: record.path, sha256: record.sha256, evidenceKind: record.evidence_kind ?? "metadata" }));
+  if (!artifacts.some((artifact) => artifact.evidenceKind === "page_html")) {
+    return; // without the html there is nothing to faithfully replay
+  }
+  await writeEngineIdentity(input.cacheRoot, { channel: input.engine.channel, browserVersion: input.engine.browserVersion, playwrightVersion });
+  await storeCachedCapture(input.cacheRoot, { key, url: input.url, capturedAtMs: nowMs, runDirName: basename(input.runDir), artifacts });
 }
 
 interface SourceNavigationFollowUpRunResult {
@@ -2531,6 +2716,10 @@ function buildClaims(input: {
   /** When true, the page capture came from the tier-0 browserless HTTP fetch — the page-capture
    * claim must be labelled http_fetch (not browser_visible), since no browser rendered the bytes. */
   capturedViaHttp?: boolean;
+  /** When true, the page capture was replayed from a fresh cache entry (C4) — the page-capture claim
+   * is labelled cached_capture with its staleness age, never browser_visible. */
+  capturedViaCache?: boolean;
+  cacheStalenessMs?: number;
 }): EvidenceWorkflowClaim[] {
   const capabilityEvidence = selectEvidenceRecord(input.capabilityRecords);
   const pageEvidence = selectEvidenceRecord(input.pageCaptureRecords, "screenshot") ?? selectEvidenceRecord(input.pageCaptureRecords);
@@ -2554,9 +2743,14 @@ function buildClaims(input: {
       baseCaptureId: input.baseCaptureId,
       ordinal: 2,
       claimType: "metadata",
-      claim: input.capturedViaHttp === true ? "A page capture was registered in the artifact ledger via a browserless HTTP fetch (tier-0; not browser-rendered)." : "A browser-visible page capture was attempted and registered in the artifact ledger.",
+      claim:
+        input.capturedViaCache === true
+          ? `A page capture was replayed from a fresh content-addressed cache entry (cached_capture; ~${Math.round((input.cacheStalenessMs ?? 0) / 1000)}s stale; not re-rendered this run).`
+          : input.capturedViaHttp === true
+            ? "A page capture was registered in the artifact ledger via a browserless HTTP fetch (tier-0; not browser-rendered)."
+            : "A browser-visible page capture was attempted and registered in the artifact ledger.",
       record: pageEvidence,
-      verificationLevel: input.capturedViaHttp === true ? "http_fetch" : "browser_visible"
+      verificationLevel: input.capturedViaCache === true ? "cached_capture" : input.capturedViaHttp === true ? "http_fetch" : "browser_visible"
     }),
     input.frameSampling.status === "ok"
       ? claimFromRecord({

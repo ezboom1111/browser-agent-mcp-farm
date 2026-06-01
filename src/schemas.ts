@@ -44,7 +44,7 @@ export const EvidenceKindSchema = z.enum([
   "audio_transcription",
   "failure"
 ]);
-export const VerificationLevelSchema = z.enum(["verified", "grounded", "browser_visible", "http_fetch", "official_api", "transcript_cue", "ocr_extracted", "unverified", "inferred"]);
+export const VerificationLevelSchema = z.enum(["verified", "grounded", "browser_visible", "http_fetch", "cached_capture", "official_api", "transcript_cue", "ocr_extracted", "unverified", "inferred"]);
 
 export const OcrStatusSchema = z.enum(["ok", "unavailable", "no_frames", "empty_text", "low_confidence", "engine_error", "timeout"]);
 export const OcrBoundingBoxSchema = z.object({
@@ -427,6 +427,12 @@ export const EvidenceRunInputSchema = z.object({
     .default("browser")
     .describe(
       "Capture routing. 'auto' tries the tier-0 browserless HTTP GET first and escalates to the browser whenever the page is a client-rendered shell, non-HTML, off-domain, or bot-blocked — so it is never a worse capture than 'browser', but a server-rendered page is captured without launching Chromium (and is labelled http_fetch, with no screenshot). 'browser' (default) always uses Chromium, leaving the default capture method, screenshot, and provenance unchanged."
+    ),
+  captureCache: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Opt-in capture replay (C4). When a bare ephemeral run on the bundled Chromium engine would re-capture bytes identical to a recent run under the same run-root, replay that prior capture (same SHA-256) instead of launching the browser. Conservative for a verification tool: freshness is clamped to <= 1h, the replayed page claim is labelled 'cached_capture' with its staleness age (never 'browser_visible'), and a credentialed/fingerprinted/branded-channel run is never cached. Default false."
     ),
   captureProfile: z.enum(["text", "full"]).default("full").describe("Browser capture profile. 'text' blocks image/media/font + ad-host subrequests and skips the page screenshot (faster text/structure-only runs); 'full' (default) captures everything including the screenshot."),
   overlayDismissal: z

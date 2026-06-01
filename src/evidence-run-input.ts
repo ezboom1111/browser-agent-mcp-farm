@@ -49,6 +49,7 @@ function normalizedInputToWorkflowOptions(input: NormalizedEvidenceRunInput, run
     httpFetch: input.httpFetch,
     captureProfile: input.captureProfile,
     captureRouting: input.captureRouting,
+    captureCache: input.captureCache,
     overlayDismissal: input.overlayDismissal,
     ocr: input.ocr,
     denseSampling: input.denseSampling,

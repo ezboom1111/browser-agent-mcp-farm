@@ -1929,6 +1929,7 @@ async function runEvidenceRunCommand(): Promise<void> {
     browserChannel: browserChannelFromArgs(),
     httpFetch: hasFlag("--http-fetch"),
     captureRouting: hasFlag("--auto-capture") ? "auto" : "browser",
+    captureCache: hasFlag("--capture-cache"),
     captureProfile: hasFlag("--text-only") ? "text" : "full",
     overlayDismissal: {
       enabled: !hasFlag("--no-overlay-dismissal"),
@@ -2443,6 +2444,8 @@ Options:
           tier-0 browserless capture: try a plain HTTP GET first (no Chromium) for server-rendered pages; falls back to the browser if it declines (no frames on the tier-0 path)
   --auto-capture
           auto routing: try tier-0 browserless capture first and escalate to the browser on any decline (client-rendered shell / non-HTML / off-domain / bot-block); never a worse capture than the browser
+  --capture-cache
+          opt-in replay: reuse a fresh (<=1h) prior bare-ephemeral capture by content hash instead of launching the browser; the page claim is labelled cached_capture with its staleness age
   --text-only
           text capture profile: block image/media/font + ad-host subrequests and skip the page screenshot (faster text/structure-only browser runs)
   --no-overlay-dismissal
