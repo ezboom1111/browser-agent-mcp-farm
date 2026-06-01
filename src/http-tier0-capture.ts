@@ -1,7 +1,10 @@
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import type { TLSSocket } from "node:tls";
 import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 import { assertDomainAllowed } from "./lease-manager.js";
 import { attachTypedFacts, extractStructuredData } from "./structured-extractor.js";
-import { captureTlsIdentity, tlsBindingEnabled } from "./tls-identity.js";
+import { captureTlsIdentity, sameConnectionTlsBindingEnabled, shapeSameConnectionTls, tlsBindingEnabled, type SameConnectionTls } from "./tls-identity.js";
 
 // Tier-0 browserless capture (A1). For a source whose needed bytes are server-rendered, a plain
 // HTTP GET produces the SAME artifact contract as the browser path — page_html, page_text, and a
@@ -54,55 +57,27 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
   }
 
   try {
-    let currentUrl = input.url;
-    let response: Response | undefined;
-    for (let hop = 0; hop <= maxRedirects; hop += 1) {
-      if (parseHttpUrl(currentUrl) === undefined) {
-        return { ok: false, records: [], reason: `tier-0 declined: non-http(s) url ${currentUrl}` };
-      }
-      // Fence every hop against the lease allow-list (SSRF / off-domain redirect guard). A
-      // credentialed lease would also fail closed here on an empty allow-list.
-      assertDomainAllowed(input.allowedDomains, currentUrl);
-      response = await fetch(currentUrl, { redirect: "manual", signal: controller.signal, headers: { accept: "text/html,application/xhtml+xml" } });
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location");
-        if (location === null) {
-          break;
-        }
-        currentUrl = new URL(location, currentUrl).toString();
-        continue;
-      }
-      break;
+    // Acquire the final HTML (fenced redirects, content-type guard, byte cap). The default path uses
+    // global fetch (byte-for-byte unchanged). When FARM_BIND_TLS_SAMECONN=1, an opt-in node:https
+    // transport captures the cert from the SAME socket that delivered the bytes (D1, strong binding).
+    const acquired = sameConnectionTlsBindingEnabled() ? await acquireViaHttps(input.url, input.allowedDomains, controller.signal, maxBytes, maxRedirects) : await acquireViaFetch(input.url, input.allowedDomains, controller.signal, maxBytes, maxRedirects);
+    if ("declineReason" in acquired) {
+      return { ok: false, records: [], ...(acquired.status === undefined ? {} : { status: acquired.status }), reason: acquired.declineReason };
     }
-
-    if (response === undefined) {
-      return { ok: false, records: [], reason: "tier-0 declined: too many redirects" };
-    }
-    if (!response.ok) {
-      return { ok: false, records: [], status: response.status, reason: `tier-0 declined: http ${response.status}` };
-    }
-    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
-    if (contentType !== "" && !contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
-      return { ok: false, records: [], status: response.status, reason: `tier-0 declined: non-html content-type '${contentType}'` };
-    }
-    const html = await response.text();
-    if (html.length > maxBytes) {
-      return { ok: false, records: [], status: response.status, reason: `tier-0 declined: body ${html.length} exceeds maxBytes ${maxBytes}` };
-    }
+    const { status, finalUrl, html } = acquired;
 
     const text = htmlToVisibleText(html);
     // SPA-shell guard: a client-only page serves an (almost) empty body plus a hydration payload the
     // browser would render. Accepting that as tier-0 evidence would silently register an incomplete
-    // capture, so DECLINE and let the caller escalate to a real browser. This keeps tier-0 honest:
-    // it only keeps bytes a human could actually read server-rendered. It NEVER declines a
-    // server-rendered page that merely happens to be short (no hydration/mount marker).
+    // capture, so DECLINE and let the caller escalate to a real browser.
     if (looksLikeClientRenderedShell(html, text)) {
-      return { ok: false, records: [], status: response.status, reason: `tier-0 declined: client-rendered shell (visible text ${text.trim().length} chars with a hydration/mount marker; the browser must render it)` };
+      return { ok: false, records: [], status, reason: `tier-0 declined: client-rendered shell (visible text ${text.trim().length} chars with a hydration/mount marker; the browser must render it)` };
     }
-    const finalUrl = response.url.length > 0 ? response.url : currentUrl;
     const title = extractTitle(html);
-    // Capture-binding (Tier 2, opt-in): record the server's TLS identity as provenance. Best-effort.
-    const serverTlsIdentity = tlsBindingEnabled() ? await captureTlsIdentity(finalUrl).catch(() => undefined) : undefined;
+    // Capture-binding (Tier 2). The same-connection cert (D1) is captured on the https path; otherwise,
+    // if FARM_BIND_TLS=1, a best-effort SEPARATE handshake records the (weaker) server TLS identity.
+    const serverTlsIdentity = acquired.sameConnectionTls === undefined && tlsBindingEnabled() ? await captureTlsIdentity(finalUrl).catch(() => undefined) : undefined;
+    const tlsMetadata = acquired.sameConnectionTls !== undefined ? { sameConnectionTls: acquired.sameConnectionTls } : serverTlsIdentity !== undefined ? { serverTlsIdentity } : {};
 
     // Page bundle: html -> page_html, text -> page_text by per-artifact inference. NO evidenceKind
     // override here (a single override would force BOTH artifacts to one kind).
@@ -114,7 +89,7 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
       captureId: input.captureId,
       html,
       text,
-      metadata: { ...(title === undefined ? {} : { title }), finalUrl, status: "ok", captureTier: "http_fetch", ...(serverTlsIdentity === undefined ? {} : { serverTlsIdentity }) },
+      metadata: { ...(title === undefined ? {} : { title }), finalUrl, status: "ok", captureTier: "http_fetch", ...tlsMetadata },
       captureMethod: "http-fetch"
     });
     const records: ArtifactRecord[] = [...pageRecords];
@@ -137,12 +112,178 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
       records.push(...structuredRecords);
     }
 
-    return { ok: true, finalUrl, status: response.status, records };
+    return { ok: true, finalUrl, status, records };
   } catch (error) {
     return { ok: false, records: [], reason: `tier-0 declined: ${error instanceof Error ? error.message : String(error)}` };
   } finally {
     clearTimeout(timer);
   }
+}
+
+interface AcquiredHtml {
+  status: number;
+  finalUrl: string;
+  contentType: string;
+  html: string;
+  sameConnectionTls?: SameConnectionTls;
+}
+interface AcquireDecline {
+  declineReason: string;
+  status?: number;
+}
+
+const HTML_CONTENT_TYPE = (contentType: string): boolean => contentType === "" || contentType.includes("text/html") || contentType.includes("application/xhtml");
+
+// Default acquisition via global fetch — byte-for-byte the original tier-0 behaviour.
+async function acquireViaFetch(startUrl: string, allowedDomains: string[], signal: AbortSignal, maxBytes: number, maxRedirects: number): Promise<AcquiredHtml | AcquireDecline> {
+  let currentUrl = startUrl;
+  let response: Response | undefined;
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    if (parseHttpUrl(currentUrl) === undefined) {
+      return { declineReason: `tier-0 declined: non-http(s) url ${currentUrl}` };
+    }
+    assertDomainAllowed(allowedDomains, currentUrl);
+    response = await fetch(currentUrl, { redirect: "manual", signal, headers: { accept: "text/html,application/xhtml+xml" } });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (location === null) {
+        break;
+      }
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+    break;
+  }
+  if (response === undefined) {
+    return { declineReason: "tier-0 declined: too many redirects" };
+  }
+  if (!response.ok) {
+    return { declineReason: `tier-0 declined: http ${response.status}`, status: response.status };
+  }
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  if (!HTML_CONTENT_TYPE(contentType)) {
+    return { declineReason: `tier-0 declined: non-html content-type '${contentType}'`, status: response.status };
+  }
+  const html = await response.text();
+  if (html.length > maxBytes) {
+    return { declineReason: `tier-0 declined: body ${html.length} exceeds maxBytes ${maxBytes}`, status: response.status };
+  }
+  return { status: response.status, finalUrl: response.url.length > 0 ? response.url : currentUrl, contentType, html };
+}
+
+export type HttpsOneShot = (parsed: URL, signal: AbortSignal, maxBytes: number) => Promise<HttpsOneShotResult>;
+
+// Opt-in acquisition via node:https so the certificate is captured from the SAME socket that delivered
+// the bytes (D1). Mirrors the fetch path's fenced-redirect / content-type / byte-cap contract. The
+// oneShot transport is injectable so the redirect/decline/shaping logic is unit-testable without TLS.
+export async function acquireViaHttps(startUrl: string, allowedDomains: string[], signal: AbortSignal, maxBytes: number, maxRedirects: number, oneShot: HttpsOneShot = httpsOneShot): Promise<AcquiredHtml | AcquireDecline> {
+  let currentUrl = startUrl;
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const parsed = parseHttpUrl(currentUrl);
+    if (parsed === undefined) {
+      return { declineReason: `tier-0 declined: non-http(s) url ${currentUrl}` };
+    }
+    assertDomainAllowed(allowedDomains, currentUrl);
+    const result = await oneShot(parsed, signal, maxBytes);
+    if (result.status >= 300 && result.status < 400 && result.location !== undefined) {
+      currentUrl = new URL(result.location, currentUrl).toString();
+      continue;
+    }
+    if (!(result.status >= 200 && result.status < 300)) {
+      return { declineReason: `tier-0 declined: http ${result.status}`, status: result.status };
+    }
+    if (!HTML_CONTENT_TYPE(result.contentType)) {
+      return { declineReason: `tier-0 declined: non-html content-type '${result.contentType}'`, status: result.status };
+    }
+    if (result.tooLarge) {
+      return { declineReason: `tier-0 declined: body exceeds maxBytes ${maxBytes}`, status: result.status };
+    }
+    const acquired: AcquiredHtml = { status: result.status, finalUrl: currentUrl, contentType: result.contentType, html: result.body };
+    if (parsed.protocol === "https:" && result.peerCert !== undefined) {
+      acquired.sameConnectionTls = shapeSameConnectionTls(parsed.hostname, parsed.port.length > 0 ? Number(parsed.port) : 443, result.peerCert, {
+        authorized: result.authorized ?? false,
+        ...(result.protocol === undefined ? {} : { protocol: result.protocol }),
+        ...(result.authorizationError === undefined ? {} : { authorizationError: result.authorizationError })
+      });
+    }
+    return acquired;
+  }
+  return { declineReason: "tier-0 declined: too many redirects" };
+}
+
+export interface HttpsOneShotResult {
+  status: number;
+  location?: string;
+  contentType: string;
+  body: string;
+  tooLarge: boolean;
+  peerCert?: { subject?: { CN?: string }; issuer?: { CN?: string; O?: string }; valid_from?: string; valid_to?: string; fingerprint256?: string };
+  protocol?: string;
+  authorized?: boolean;
+  authorizationError?: string;
+}
+
+// One GET (manual redirect: returns status+location for a 3xx). Captures the peer cert from the
+// response socket for https. Honours the abort signal and the byte cap (destroys the request when over).
+function httpsOneShot(parsed: URL, signal: AbortSignal, maxBytes: number): Promise<HttpsOneShotResult> {
+  return new Promise((resolve, reject) => {
+    const isHttps = parsed.protocol === "https:";
+    const requestFn = isHttps ? httpsRequest : httpRequest;
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port.length > 0 ? Number(parsed.port) : isHttps ? 443 : 80,
+      path: `${parsed.pathname}${parsed.search}`,
+      method: "GET",
+      headers: { accept: "text/html,application/xhtml+xml" },
+      signal,
+      ...(isHttps ? { rejectUnauthorized: false, servername: parsed.hostname } : {})
+    };
+    const req = requestFn(options, (res) => {
+      const status = res.statusCode ?? 0;
+      const contentType = String(res.headers["content-type"] ?? "").toLowerCase();
+      const location = typeof res.headers.location === "string" ? res.headers.location : undefined;
+      let peerCert: HttpsOneShotResult["peerCert"];
+      let protocol: string | undefined;
+      let authorized: boolean | undefined;
+      let authorizationError: string | undefined;
+      if (isHttps) {
+        const socket = res.socket as TLSSocket;
+        peerCert = socket.getPeerCertificate() as HttpsOneShotResult["peerCert"];
+        authorized = socket.authorized;
+        const negotiated = socket.getProtocol();
+        if (negotiated !== null) {
+          protocol = negotiated;
+        }
+        const authError = socket.authorizationError;
+        if (authError !== null && authError !== undefined) {
+          authorizationError = authError instanceof Error ? authError.message : String(authError);
+        }
+      }
+      // Conditional spread so an absent field is OMITTED (not present-as-undefined).
+      const tlsFields = { ...(peerCert === undefined ? {} : { peerCert }), ...(protocol === undefined ? {} : { protocol }), ...(authorized === undefined ? {} : { authorized }), ...(authorizationError === undefined ? {} : { authorizationError }) };
+      if (status >= 300 && status < 400 && location !== undefined) {
+        res.resume(); // drain; we follow the redirect on a new request
+        resolve({ status, location, contentType, body: "", tooLarge: false, ...tlsFields });
+        return;
+      }
+      let size = 0;
+      const chunks: Buffer[] = [];
+      let tooLarge = false;
+      res.on("data", (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > maxBytes) {
+          tooLarge = true;
+          req.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
+      res.on("end", () => resolve({ status, contentType, body: Buffer.concat(chunks).toString("utf8"), tooLarge, ...tlsFields }));
+      res.on("error", reject);
+    });
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 // Below this much visible server-rendered text, a hydration/mount marker is treated as a
