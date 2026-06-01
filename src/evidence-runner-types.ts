@@ -39,6 +39,9 @@ export interface EvidenceWorkflowOptions {
   browserChannel?: string | undefined;
   /** Tier-0 browserless capture: attempt a plain HTTP GET before the browser (A1). No frames. */
   httpFetch?: boolean | undefined;
+  /** Capture routing (D2). "auto" tries tier-0 first and escalates to the browser on any decline
+   * (client-rendered shell / non-HTML / off-domain / error); "browser" (default) always uses Chromium. */
+  captureRouting?: "browser" | "auto" | undefined;
   /** Capture profile (A3). "text" blocks image/media/font + ad-host subrequests and skips the page
    * screenshot for text/structure-only browser runs; "full" (default) captures everything. */
   captureProfile?: "text" | "full" | undefined;

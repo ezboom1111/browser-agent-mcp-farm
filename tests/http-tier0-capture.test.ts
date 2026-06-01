@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ArtifactWriter } from "../src/artifact-writer.js";
-import { httpTier0Capture } from "../src/http-tier0-capture.js";
+import { httpTier0Capture, looksLikeClientRenderedShell } from "../src/http-tier0-capture.js";
 
 // A1 (v0.5.0): tier-0 browserless capture. A plain HTTP GET registers the SAME artifact contract as
 // the browser path (page_html, page_text, structured_data) without launching Chromium, fencing every
@@ -85,5 +85,38 @@ describe("httpTier0Capture (A1)", () => {
     const result = await httpTier0Capture({ runDir, url: "file:///etc/passwd", allowedDomains: ["127.0.0.1"], writer, captureId: "cap", contextToken: "ctx", pageId: "pg" });
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/non-http/i);
+  });
+
+  it("declines a client-rendered shell (escalates to the browser) but keeps a short server-rendered page (D2)", async () => {
+    const SHELL = `<!doctype html><html><head><title>App</title></head><body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"items":[1,2,3]}}}</script></body></html>`;
+    const { baseUrl, host } = await startServer((path) => (path.startsWith("/shell") ? { body: SHELL } : { body: PAGE }));
+
+    const shellRun = await newRun();
+    const shell = await httpTier0Capture({ runDir: shellRun.runDir, url: `${baseUrl}/shell`, allowedDomains: [host], writer: shellRun.writer, captureId: "cap", contextToken: "ctx", pageId: "pg" });
+    expect(shell.ok).toBe(false);
+    expect(shell.reason).toMatch(/client-rendered shell/i);
+    expect(shell.records).toEqual([]);
+
+    // The short Gizmo page has real <h1>/<p> text and NO mount/hydration marker -> still captured.
+    const okRun = await newRun();
+    const ok = await httpTier0Capture({ runDir: okRun.runDir, url: `${baseUrl}/p`, allowedDomains: [host], writer: okRun.writer, captureId: "cap", contextToken: "ctx", pageId: "pg" });
+    expect(ok.ok).toBe(true);
+  });
+});
+
+describe("looksLikeClientRenderedShell (D2 decline gate)", () => {
+  it("flags an empty client mount or a hydration global only when visible text is thin", () => {
+    expect(looksLikeClientRenderedShell('<div id="root"></div>', "")).toBe(true);
+    expect(looksLikeClientRenderedShell('<div id="__next"></div><script id="__NEXT_DATA__"></script>', "loading")).toBe(true);
+    expect(looksLikeClientRenderedShell("<body></body>", "")).toBe(true); // no readable text at all
+  });
+
+  it("keeps a short server-rendered page (real text, no mount/hydration marker)", () => {
+    expect(looksLikeClientRenderedShell("<h1>Gizmo</h1><p>The price is 4,500 yen.</p>", "Gizmo The price is 4,500 yen.")).toBe(false);
+  });
+
+  it("keeps a hydrating page that ALSO server-rendered enough text to cite", () => {
+    const longText = "word ".repeat(60); // >= 200 chars of visible text
+    expect(looksLikeClientRenderedShell('<div id="__next">...</div><script id="__NEXT_DATA__"></script>', longText)).toBe(false);
   });
 });

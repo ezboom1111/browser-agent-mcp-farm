@@ -90,6 +90,14 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
     }
 
     const text = htmlToVisibleText(html);
+    // SPA-shell guard: a client-only page serves an (almost) empty body plus a hydration payload the
+    // browser would render. Accepting that as tier-0 evidence would silently register an incomplete
+    // capture, so DECLINE and let the caller escalate to a real browser. This keeps tier-0 honest:
+    // it only keeps bytes a human could actually read server-rendered. It NEVER declines a
+    // server-rendered page that merely happens to be short (no hydration/mount marker).
+    if (looksLikeClientRenderedShell(html, text)) {
+      return { ok: false, records: [], status: response.status, reason: `tier-0 declined: client-rendered shell (visible text ${text.trim().length} chars with a hydration/mount marker; the browser must render it)` };
+    }
     const finalUrl = response.url.length > 0 ? response.url : currentUrl;
     const title = extractTitle(html);
 
@@ -131,6 +139,32 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Below this much visible server-rendered text, a hydration/mount marker is treated as a
+// client-rendered shell (tier-0 declines). At or above it, the page has enough server-rendered text
+// to cite even if it also hydrates, so tier-0 keeps it.
+const SHELL_VISIBLE_TEXT_MAX = 200;
+// An empty client mount point (the framework renders into it in the browser; the server ships it empty).
+const EMPTY_ROOT_MOUNT_RE = /<div\b[^>]*\bid\s*=\s*("|')(root|__next|__nuxt|app|q-app|svelte)\1[^>]*>\s*<\/div>/i;
+// Framework hydration globals that signal the real content arrives via client-side render.
+const HYDRATION_HINT_RE = /__NEXT_DATA__|window\.__NUXT__|__remixContext|__APOLLO_STATE__|__sveltekit/;
+
+/**
+ * True when the fetched HTML is a client-rendered shell: (almost) no visible server-rendered text
+ * AND a hydration/empty-mount marker. Pure + deterministic so the tier-0 decline is testable. JSON-LD
+ * / Open Graph alone do NOT count — a fully server-rendered page can carry them, and a short page with
+ * real `<h1>`/`<p>` text and no mount marker is kept.
+ */
+export function looksLikeClientRenderedShell(html: string, visibleText: string): boolean {
+  const length = visibleText.trim().length;
+  if (length === 0) {
+    return true; // nothing a human could read server-rendered; the browser must render it
+  }
+  if (length >= SHELL_VISIBLE_TEXT_MAX) {
+    return false; // enough server-rendered text to cite, even if the page also hydrates
+  }
+  return EMPTY_ROOT_MOUNT_RE.test(html) || HYDRATION_HINT_RE.test(html);
 }
 
 function parseHttpUrl(url: string): URL | undefined {

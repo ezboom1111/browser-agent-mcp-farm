@@ -444,11 +444,14 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
   try {
     throwIfAborted(input.options.abortSignal);
 
-    // Tier-0 browserless capture (A1): when opted in, try a plain HTTP GET first. On success we
-    // skip the browser entirely and early-return with the tier-0 page records (no frames/OCR/
-    // source-navigation — those need a browser). On decline we fall through to the browser path
-    // (escalation). The lease/pool below are never touched on the tier-0 success path.
-    if (input.options.httpFetch === true) {
+    // Tier-0 browserless capture (A1/D2): try a plain HTTP GET first when opted in directly
+    // (httpFetch) OR via auto routing (captureRouting "auto"). On success we skip the browser entirely
+    // and early-return with the tier-0 page records (no frames/OCR/source-navigation — those need a
+    // browser). On decline (client-rendered shell / non-HTML / off-domain / error) we fall through to
+    // the browser path (escalation), so auto is never a worse capture than the browser. The lease/pool
+    // below are never touched on the tier-0 success path.
+    const tryTier0 = input.options.httpFetch === true || input.options.captureRouting === "auto";
+    if (tryTier0) {
       const tier0 = await input.runStage("http_tier0_capture", () =>
         httpTier0Capture({
           runDir: input.options.runDir,

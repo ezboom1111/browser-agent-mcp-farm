@@ -8,12 +8,12 @@
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.5.0 |
 | Branch | `main` |
-| Commit | `0f45c63` |
+| Commit | `a42e156` |
 | Working tree | dirty (7 files) |
-| Generated | 2026-05-31T01:44:02.641Z |
+| Generated | 2026-06-01T06:16:45.637Z |
 | Verify gate | **PASS** (build + tests + 4 smokes + npm audit) |
-| Tests | 735 tests in 81 files (734 passed, 0 failed) |
-| Coverage | lines 80.66% · statements 80.54% · functions 86.88% · branches 74.28% (ratcheting floor toward 80%) |
+| Tests | 748 tests in 82 files (747 passed, 0 failed) |
+| Coverage | lines 80.74% · statements 80.62% · functions 86.94% · branches 74.39% (ratcheting floor toward 80%) |
 
 The verify gate is:
 `npm run build && npm run test:ci && smoke + smoke:web + smoke:media + smoke:proxy && npm audit && npm run status`.
