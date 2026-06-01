@@ -8,6 +8,17 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Storage retention discipline**: evidence runs accumulate page bytes, screenshots, and (for video)
+  sampled frames — a real content page is ~1–5 MB and a media/video run 5–100 MB — and nothing bounded
+  that growth automatically. `prune-runs` now takes `--max-bytes 5GB` (after the age pass it deletes the
+  oldest remaining runs until the total fits the disk budget), a new `archive-run` does **tiered
+  retention** (reclaim a run's bulky screenshot/media bytes while keeping the ledger/claims/report/raw
+  index, so the run stays searchable and its text claims stay re-verifiable; a `.retention.json` marker
+  records what was stripped so a re-verify reports honest archival, not tampering), and setting
+  `FARM_RUNS_ROOT` (+ optional `FARM_RUNS_MAX_AGE_DAYS` / `FARM_RUNS_MAX_BYTES`) auto-sweeps that root
+  on every `serve` startup (best-effort, opt-in, stderr-logged). Builds on the existing
+  `purge-run` / `pruneRuns` primitives.
+
 - **Portable `npx` registration + `serve` skill self-heal**: `register-all` / `register-codex` /
   `register-claude` now accept `--npx` (and `--package-spec <spec>`) to register an
   `npx -y <spec> serve` invocation instead of an absolute path to this local build. The host config

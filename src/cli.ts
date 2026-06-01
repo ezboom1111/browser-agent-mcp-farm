@@ -27,7 +27,7 @@ import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { runClaimGate } from "./claim-gate.js";
 import { buildBundleManifest, exportBundleArchive, signManifest, verifyBundle, verifyBundleArchive, type BundleArchive, type BundleManifest } from "./evidence-bundle.js";
 import { scanRunArtifacts } from "./secret-scan.js";
-import { purgeRun, pruneRuns } from "./run-lifecycle.js";
+import { archiveRun, autoPruneConfigFromEnv, autoPruneRunsRoot, parseByteSize, pruneRuns, pruneRunsByBudget, purgeRun } from "./run-lifecycle.js";
 import { appendDecision, verifyDecisionLog } from "./decision-log.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
@@ -91,10 +91,12 @@ export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
 
   if (command === "serve") {
-    // Provision the Chromium binary on first run (the npm package does not bundle it) and self-heal a
-    // stale Claude skill snapshot after an upgrade. Both best-effort, both log only to stderr.
+    // Provision the Chromium binary on first run (the npm package does not bundle it), self-heal a
+    // stale Claude skill snapshot after an upgrade, and apply env-driven run retention. All best-effort,
+    // all log only to stderr.
     await ensureChromiumInstalled().catch(() => undefined);
     await refreshStaleSkillSnapshot().catch(() => undefined);
+    await autoPruneFromEnv().catch(() => undefined);
     await runStdioServer();
     return;
   }
@@ -220,6 +222,11 @@ export async function main(): Promise<void> {
 
   if (command === "prune-runs") {
     await runPruneRunsCommand();
+    return;
+  }
+
+  if (command === "archive-run") {
+    await runArchiveRunCommand();
     return;
   }
 
@@ -690,8 +697,52 @@ async function runPruneRunsCommand(): Promise<void> {
     throw new Error("prune-runs --max-age-days must be a non-negative number");
   }
   const maxAgeMs = days * 24 * 60 * 60 * 1000;
-  const result = await pruneRuns(root, hasFlag("--dry-run") ? { maxAgeMs, dryRun: true } : { maxAgeMs });
+  const dryRun = hasFlag("--dry-run");
+  const ageResult = await pruneRuns(root, dryRun ? { maxAgeMs, dryRun: true } : { maxAgeMs });
+  // Optional disk-budget pass after the age pass (delete the oldest remaining runs until under budget).
+  const maxBytesArg = getArgValue("--max-bytes");
+  let budgetResult: Awaited<ReturnType<typeof pruneRunsByBudget>> | undefined;
+  if (maxBytesArg !== undefined) {
+    const maxBytes = parseByteSize(maxBytesArg);
+    if (maxBytes === undefined) {
+      throw new Error('prune-runs --max-bytes must be a size like "5GB", "500mb", or a byte count');
+    }
+    budgetResult = await pruneRunsByBudget(root, dryRun ? { maxBytes, dryRun: true } : { maxBytes });
+  }
+  console.log(JSON.stringify(budgetResult === undefined ? ageResult : { age: ageResult, budget: budgetResult }, null, 2));
+}
+
+// Data-lifecycle: tiered archive of a single run — reclaim its bulky screenshot/media bytes while
+// keeping the ledger/claims/report/raw index. --dry-run reports the reclaimable bytes without deleting.
+async function runArchiveRunCommand(): Promise<void> {
+  const runDir = getArgValue("--run-dir");
+  if (!runDir) {
+    throw new Error("archive-run requires --run-dir <evidence-run-dir>");
+  }
+  const result = await archiveRun(runDir, hasFlag("--dry-run") ? { dryRun: true } : {});
   console.log(JSON.stringify(result, null, 2));
+  if (!result.archived && result.reason !== undefined) {
+    process.exitCode = 1;
+  }
+}
+
+// Best-effort env-driven auto-retention, run at serve startup. Opt-in: a no-op unless FARM_RUNS_ROOT is
+// set. Sweeps that root by age (FARM_RUNS_MAX_AGE_DAYS) then by disk budget (FARM_RUNS_MAX_BYTES, e.g.
+// "5GB"). Never throws and never blocks serve. Logs a one-line summary to stderr (safe for MCP stdio).
+async function autoPruneFromEnv(): Promise<void> {
+  const config = autoPruneConfigFromEnv(process.env);
+  if (config === undefined) {
+    return;
+  }
+  try {
+    const result = await autoPruneRunsRoot(config);
+    const reclaimed = (result.aged?.removed.length ?? 0) + (result.budgeted?.removed.length ?? 0);
+    if (reclaimed > 0) {
+      process.stderr.write(`[browser-agent-mcp-farm] auto-retention: reclaimed ${reclaimed} run(s) under ${config.root}\n`);
+    }
+  } catch {
+    // best-effort: retention must never break a serve
+  }
 }
 
 // Verify a hash-chained gate-verdict decision log (exit 1 if the chain is broken).
@@ -2393,8 +2444,14 @@ Commands:
           Scan a finished run's artifacts/ledgers/reports for secrets-at-rest (exit 1 if any)
   purge-run --run-dir <evidence-run-dir> [--force]
           Delete one evidence run (refuses a non-run directory unless --force)
-  prune-runs --run-root <dir> [--max-age-days 30] [--dry-run]
-          Sweep a runs root, removing runs older than the max age (--dry-run to preview)
+  prune-runs --run-root <dir> [--max-age-days 30] [--max-bytes 5GB] [--dry-run]
+          Sweep a runs root: remove runs older than the max age, then (if --max-bytes) delete the
+          oldest remaining runs until the total fits the disk budget (--dry-run to preview).
+          Auto-retention: set FARM_RUNS_ROOT (+ FARM_RUNS_MAX_AGE_DAYS / FARM_RUNS_MAX_BYTES) to sweep
+          on every serve startup.
+  archive-run --run-dir <evidence-run-dir> [--dry-run]
+          Tiered archive: reclaim a run's bulky screenshot/media bytes while keeping the
+          ledger/claims/report/raw index (its text claims stay re-verifiable; visual artifacts do not)
   export-bundle --run-dir <dir> [--output-file <manifest.json>] [--archive-file <bundle.evb>] [--private-key-env <ENV>]
           Build a Merkle-rooted manifest, or a self-contained signed .evb archive
   verify-bundle (--run-dir <dir> --manifest-file <m.json> | --archive-file <bundle.evb>) [--public-key-env <ENV>]
