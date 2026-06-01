@@ -6,6 +6,16 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-06-02 — team distribution, research lenses + the caged-judge
+
+> Distribution + verification-engine + transcendence. Portable `npx`/team distribution with first-run
+> Chromium auto-install and tag-driven release CI; storage-retention discipline; declarative research
+> lenses (research / market_scan / product_planning) reachable as an MCP tool + skills; cross-source
+> corroboration, visible-text typed-fact extraction, and the **caged-judge** (`farm_judge_claim`) — a
+> deterministically-caged semantic verification layer that lets an untrusted LLM judge propose a verdict
+> while the gate verifies every cited span — plus content-aware source independence (syndication-echo
+> collapse) and a CI-enforced, property-based anti-hallucination gate (0 leaks across 1,200 trials).
+
 ### Added
 
 - **QA harnesses as enforcing regression gates** (transcendence Tier 4, `npm run qa`,
