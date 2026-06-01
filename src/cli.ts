@@ -29,6 +29,7 @@ import { buildBundleManifest, exportBundleArchive, signManifest, verifyBundle, v
 import { scanRunArtifacts } from "./secret-scan.js";
 import { archiveRun, autoPruneConfigFromEnv, autoPruneRunsRoot, parseByteSize, pruneRuns, pruneRunsByBudget, purgeRun } from "./run-lifecycle.js";
 import { appendDecision, verifyDecisionLog } from "./decision-log.js";
+import { appendAnchor, verifyTimestampLog } from "./timestamp-anchor.js";
 import { buildHtmlPreview } from "./html-preview.js";
 import { createHttpServer } from "./http-server.js";
 import { buildOfficialApiReadiness } from "./official-api.js";
@@ -143,11 +144,21 @@ export async function main(): Promise<void> {
     const privateKeyEnv = getArgValue("--private-key-env");
     const privateKeyPem = privateKeyEnv !== undefined ? process.env[privateKeyEnv] : undefined;
 
+    // Opt-in: anchor this bundle's Merkle root into a tamper-evident, hash-chained transparency log
+    // (proves the bundle's order relative to other anchored bundles; absolute time needs a TSA — D2).
+    const anchorLog = getArgValue("--anchor-log");
+    const maybeAnchor = async (merkleRoot: string): Promise<void> => {
+      if (anchorLog !== undefined) {
+        await appendAnchor(anchorLog, { merkleRoot, runDir, at: new Date().toISOString() });
+      }
+    };
+
     // Self-contained, offline-verifiable archive when --archive-file is given.
     const archiveFile = getArgValue("--archive-file");
     if (archiveFile !== undefined) {
       const archive = await exportBundleArchive(runDir, privateKeyPem !== undefined && privateKeyPem.length > 0 ? { privateKeyPem } : {});
       await writeFile(archiveFile, `${JSON.stringify(archive)}\n`, "utf8");
+      await maybeAnchor(archive.manifest.merkleRoot);
       console.log(
         JSON.stringify(
           {
@@ -170,6 +181,7 @@ export async function main(): Promise<void> {
     if (privateKeyPem !== undefined && privateKeyPem.length > 0) {
       manifest.signature = signManifest(manifest, privateKeyPem);
     }
+    await maybeAnchor(manifest.merkleRoot);
     const outputFile = getArgValue("--output-file");
     if (outputFile !== undefined) {
       await writeFile(outputFile, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
@@ -239,6 +251,11 @@ export async function main(): Promise<void> {
 
   if (command === "verify-decision-log") {
     await runVerifyDecisionLogCommand();
+    return;
+  }
+
+  if (command === "verify-timestamp-log") {
+    await runVerifyTimestampLogCommand();
     return;
   }
 
@@ -778,6 +795,21 @@ async function runVerifyDecisionLogCommand(): Promise<void> {
   }
 
   const result = await verifyDecisionLog(logFile);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
+// Verify a hash-chained bundle transparency log: chain integrity + relative ordering (exit 1 if broken).
+// TSA tokens, if present, are reported but verified offline with `openssl ts -verify`, not here.
+async function runVerifyTimestampLogCommand(): Promise<void> {
+  const logFile = getArgValue("--log-file");
+  if (!logFile) {
+    throw new Error("verify-timestamp-log requires --log-file <transparency-log.ndjson>");
+  }
+
+  const result = await verifyTimestampLog(logFile);
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) {
     process.exitCode = 1;
@@ -2463,6 +2495,9 @@ Commands:
           verdict to a tamper-evident hash-chained decision log
   verify-decision-log --log-file <decisions.jsonl>
           Verify the hash chain of a gate-verdict decision log (exit 1 if broken/tampered)
+  verify-timestamp-log --log-file <transparency-log.ndjson>
+          Verify the hash chain + relative ordering of a bundle transparency log (exit 1 if
+          broken). TSA tokens, if present, are reported but verified offline via openssl ts -verify
   html-preview --run-dir <path>
           Generate html/farm-evidence-preview.html
   scan-secrets --run-dir <evidence-run-dir>
@@ -2481,8 +2516,9 @@ Commands:
           List the declarative research lenses, or describe one (its claim templates + report sections
           + the prioritized source-registry entries). Lenses (research | market_scan | product_planning)
           are domain configs over the same engine + gate.
-  export-bundle --run-dir <dir> [--output-file <manifest.json>] [--archive-file <bundle.evb>] [--private-key-env <ENV>]
-          Build a Merkle-rooted manifest, or a self-contained signed .evb archive
+  export-bundle --run-dir <dir> [--output-file <manifest.json>] [--archive-file <bundle.evb>] [--private-key-env <ENV>] [--anchor-log <transparency-log.ndjson>]
+          Build a Merkle-rooted manifest, or a self-contained signed .evb archive; --anchor-log
+          appends the Merkle root to a tamper-evident transparency log (proves bundle ordering)
   verify-bundle (--run-dir <dir> --manifest-file <m.json> | --archive-file <bundle.evb>) [--public-key-env <ENV>]
           Verify a bundle; --archive-file verifies fully offline (no runDir)
   critique-next [--queue <path>]
