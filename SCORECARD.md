@@ -13,8 +13,8 @@
 | Field | Value |
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.5.0 |
-| Commit | `188bc66` |
-| Generated | 2026-06-01T06:38:52.812Z |
+| Commit | `1ed8869` |
+| Generated | 2026-06-01T06:44:24.936Z |
 | **Build-completeness** | **10/10** (mean of domain gate-wiring; not a quality grade) |
 | Weakest domain | `trust` (10/10) |
 | Coverage (lines) | 80.73% |

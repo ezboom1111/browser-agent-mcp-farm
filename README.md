@@ -660,6 +660,17 @@ Useful `evidence-run` options:
 - `--profile <name>` reuses a saved profile from `auth-login`.
 - `--persistent-profile` uses a full Chromium user data directory.
 - `--headed` opens a visible Chromium window for CLI debugging.
+- `--http-fetch` tries a browserless HTTP GET first (tier-0) and escalates to
+  the browser if it declines; no screenshot/frames on the tier-0 path.
+- `--auto-capture` like `--http-fetch`, but escalates on **any** decline
+  (client-rendered shell / non-HTML / off-domain / bot-block), so it is never a
+  worse capture than the browser. A server-rendered page is captured without
+  launching Chromium and labelled `http_fetch`.
+- `--text-only` text capture profile: blocks image/media/font + ad-host
+  subrequests and skips the page screenshot (faster text/structure-only runs).
+- `--capture-cache` opt-in replay: reuse a fresh (≤ 1 h) prior bare-ephemeral
+  capture by content hash instead of launching the browser; the page claim is
+  labelled `cached_capture` with its staleness age.
 - `--no-overlay-dismissal` disables the cautious pre-capture overlay dismissal
   pass.
 - `--overlay-dismissal-max-actions <0-10>` changes how many ordinary overlay
@@ -770,7 +781,18 @@ diagnostics such as `startedAt`, `finishedAt`, `queueDurationMs`,
 service login flows: the site opens its login/consent popup, the user finishes
 login manually, then the saved profile can be reused by farm leases. Add
 `--persistent-profile` when the site needs a full Chromium user data directory
-instead of storage-state only. Add `--chrome` or
+instead of storage-state only.
+
+The saved profile directory is created owner-only (POSIX `chmod 0700`; Windows
+`icacls`). On Windows you can additionally encrypt `storage-state.json` at rest
+with DPAPI by setting `FARM_ENCRYPT_STORAGE_STATE=1`: the file is stored as an
+opaque DPAPI wrapper and transparently decrypted in memory when a lease uses it
+(no plaintext temp is ever written). Encryption is opt-in and best-effort — off
+Windows, or if it fails, the file stays plaintext under the owner-only directory
+— and decryption of an existing wrapper is always attempted even with the flag
+unset. DPAPI `CurrentUser` protects an at-rest/offline copy of the file, not
+against code already running as the logged-in user. The persistent-profile
+`user-data` directory is Chromium's own (already DPAPI-encrypted) store. Add `--chrome` or
 `--browser-channel chrome` to use the installed Chrome channel instead of the
 bundled Playwright Chromium for sites that reject automation-oriented browser
 builds.
