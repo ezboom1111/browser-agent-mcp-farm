@@ -18,6 +18,20 @@ interface ClaimCorroboration {
   minIndependentSources?: number;
 }
 
+interface JudgmentSpan {
+  artifactId?: string;
+  quote?: string;
+}
+
+interface JudgmentLedgerRow {
+  judgment_id?: string;
+  claim?: string;
+  verdict?: string;
+  support?: JudgmentSpan[];
+  refute?: JudgmentSpan[];
+  min_independent_sources?: number;
+}
+
 interface ClaimLedgerRow {
   schema_version?: string;
   claim_id?: string;
@@ -51,6 +65,7 @@ export interface ClaimGateResult {
     artifacts: number;
     claims: number;
     citations: number;
+    judgments?: number;
   };
   errors: string[];
   warnings: string[];
@@ -67,6 +82,7 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
   const artifacts = await readJsonl<ArtifactLedgerRow>(join(runDir, "artifacts.jsonl"));
   const claims = await readJsonl<ClaimLedgerRow>(join(runDir, "claims.jsonl"));
   const citations = await readJsonl<CitationLedgerRow>(join(runDir, "citations.jsonl"));
+  const judgments = await readJsonl<JudgmentLedgerRow>(join(runDir, "judgments.jsonl"));
   const errors: string[] = [];
   const warnings: string[] = [];
   const registeredIds = new Set<string>();
@@ -162,6 +178,14 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
     }
   }
 
+  // Caged-judge verification (final mode): each judgment's support/refute spans must verify against
+  // their sources' bytes, and the verdict must be structurally consistent with what verified.
+  if (mode === "final") {
+    for (const judgment of judgments) {
+      await validateJudgment(runDir, judgment, artifactsByRef, judgment.judgment_id ?? judgment.claim ?? "unknown judgment", errors, warnings);
+    }
+  }
+
   if (claims.length < minClaims) {
     errors.push(`claim count below required minimum for ${mode} mode: ${claims.length} < ${minClaims}`);
   } else if (claims.length === 0) {
@@ -173,7 +197,8 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
     counts: {
       artifacts: artifacts.length,
       claims: claims.length,
-      citations: citations.length
+      citations: citations.length,
+      ...(judgments.length > 0 ? { judgments: judgments.length } : {})
     },
     errors,
     warnings
@@ -394,6 +419,73 @@ async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow,
   // pushed to warnings on the pass path.
 }
 
+/**
+ * Caged-judge verification (the semantic ceiling, deterministically caged). A judgment asserts a
+ * verdict over a claim and cites SUPPORTING and/or REFUTING spans. The gate verifies every cited span
+ * literally appears in its source's bytes (so a fabricated or recombined span cannot back a verdict),
+ * then enforces a structural quorum: a 'supported' verdict needs >= minIndependent verified supporting
+ * spans from distinct registrable domains AND no verified refuting span (an inconsistency the judge
+ * itself surfaced); a 'refuted' verdict needs a verified refuting span. The gate does NOT (and cannot)
+ * verify the verdict is semantically correct — that is the external judge's job — but an untrusted
+ * judge cannot make 'supported' stand on evidence that does not exist or that it contradicts.
+ */
+async function validateJudgment(runDir: string, judgment: JudgmentLedgerRow, artifactsByRef: Map<string, ArtifactLedgerRow>, label: string, errors: string[], warnings: string[]): Promise<void> {
+  const verdict = judgment.verdict;
+  if (verdict !== "supported" && verdict !== "refuted" && verdict !== "insufficient") {
+    errors.push(`judgment has an invalid verdict: ${label} -> ${String(verdict)}`);
+    return;
+  }
+  const verifySpans = async (spans: JudgmentSpan[] | undefined, role: string): Promise<Array<string | undefined>> => {
+    const verifiedSourceUrls: Array<string | undefined> = [];
+    for (const span of spans ?? []) {
+      if (span.artifactId === undefined || span.quote === undefined) {
+        errors.push(`judgment ${role} span missing artifactId/quote: ${label}`);
+        continue;
+      }
+      const artifact = artifactsByRef.get(normalizeEvidenceRef(span.artifactId));
+      if (artifact === undefined) {
+        errors.push(`judgment ${role} span source not registered: ${label} -> ${span.artifactId}`);
+        continue;
+      }
+      const content = await readArtifactText(runDir, artifact);
+      if (content === undefined || !normalizeForMatch(content).includes(normalizeForMatch(span.quote))) {
+        errors.push(`judgment ${role} span quote not found in source: ${label} -> ${span.artifactId} -> "${span.quote.slice(0, 80)}"`);
+        continue;
+      }
+      verifiedSourceUrls.push(artifact.source_url);
+    }
+    return verifiedSourceUrls;
+  };
+
+  const verifiedSupportUrls = await verifySpans(judgment.support, "support");
+  const verifiedRefuteUrls = await verifySpans(judgment.refute, "refute");
+  // Clamp to >= 1 at the gate READ path (judgments.jsonl is not re-parsed through the authoring schema):
+  // a single-source 'supported' verdict is legal but lower-assurance (it is warned below); the default
+  // remains 2. A hand-written min of 0 / non-integer is forced back up to the default.
+  const rawMin = judgment.min_independent_sources;
+  const minIndependent = typeof rawMin === "number" && Number.isInteger(rawMin) && rawMin >= 1 ? rawMin : 2;
+  const independentSupport = independentSourceCount(verifiedSupportUrls);
+
+  if (verdict === "supported") {
+    if (verifiedSupportUrls.length === 0) {
+      errors.push(`'supported' judgment has no verified supporting span: ${label}`);
+    } else if (independentSupport < minIndependent) {
+      errors.push(`'supported' judgment below required independent supporting sources: ${label} -> ${independentSupport} < ${minIndependent}`);
+    } else if (independentSupport < 2) {
+      warnings.push(`'supported' judgment rests on a single independent source (lower assurance; prefer >= 2 independent sources): ${label}`);
+    }
+    if (verifiedRefuteUrls.length > 0) {
+      errors.push(`'supported' judgment is contradicted by a verified refuting span (inconsistent verdict): ${label}`);
+    }
+  } else if (verdict === "refuted") {
+    if (verifiedRefuteUrls.length === 0) {
+      errors.push(`'refuted' judgment has no verified refuting span: ${label}`);
+    }
+  } else if (verifiedSupportUrls.length === 0 && verifiedRefuteUrls.length === 0) {
+    warnings.push(`'insufficient' judgment cites no verified spans: ${label}`);
+  }
+}
+
 function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {
   return kind === "page_text" || kind === "page_html" || kind === "ocr_text" || kind === "transcript_cue" || kind === "audio_transcription" || kind === "structured_data";
 }
@@ -468,11 +560,22 @@ async function readJsonl<T>(path: string): Promise<T[]> {
     return [];
   }
 
+  // Tolerate a malformed line (skip it) rather than throwing the whole gate: the gate re-verifies
+  // UNTRUSTED run directories, so a single corrupt byte in a ledger must not crash verification. A
+  // wholesale-corrupt ledger yields [] (e.g. no claims -> the final gate fails on minClaims), so this
+  // never lets a bad run pass.
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => JSON.parse(line) as T);
+    .map((line) => {
+      try {
+        return JSON.parse(line) as T;
+      } catch {
+        return undefined;
+      }
+    })
+    .filter((row): row is T => row !== undefined);
 }
 
 function normalizeEvidenceRef(value: string): string {

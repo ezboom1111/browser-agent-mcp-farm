@@ -30,6 +30,7 @@ import {
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
+  JudgeClaimInputSchema,
   CapabilitiesInputSchema,
   LensInputSchema,
   ListRunsInputSchema,
@@ -57,6 +58,8 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_register_evidence: "Register a piece of evidence (the exact bytes/text you saw) as a hash-verified artifact you can then cite, returning its artifactId. The first half of authoring a cite-or-fail claim.",
   farm_add_claim:
     "Author a substantive claim that cites a registered artifact, with an optional anchor (where in the artifact it is grounded). The gate runs immediately: a claim whose anchor text is NOT in the cited bytes makes the result isError. This is how an agent's OWN answer becomes cite-or-fail, not just runner boilerplate.",
+  farm_judge_claim:
+    "Submit a SEMANTIC verdict (supported | refuted | insufficient) over a claim, citing the SUPPORTING and/or REFUTING spans you rely on. The gate verifies every cited span literally appears in its source's bytes and enforces a quorum: a 'supported' verdict needs >= minIndependentSources verified supporting spans from distinct registrable domains and no verified refuting span. Your verdict is untrusted, but it cannot stand on a fabricated/recombined span. Use for cross-source synthesis where token-presence grounding is too weak. isError if a span does not verify or the verdict is structurally inconsistent.",
   farm_close_page: "Close a page in a leased context when finished with it.",
   farm_click: "Guarded click on a selector. Requires a read-write lease; payment/booking/account-changing controls are refused.",
   farm_fill: "Guarded fill of a form field. Requires a read-write lease.",
@@ -124,6 +127,13 @@ export function createMcpServer(service = new FarmService()): McpServer {
     "farm_add_claim",
     AddClaimInputSchema,
     (input) => service.addClaim(input),
+    (result) => resultHasFailedClaimGate(result)
+  );
+  registerJsonTool(
+    server,
+    "farm_judge_claim",
+    JudgeClaimInputSchema,
+    (input) => service.judgeClaim(input),
     (result) => resultHasFailedClaimGate(result)
   );
   registerJsonTool(server, "farm_close_page", ClosePageInputSchema, (input) => service.closePage(input));

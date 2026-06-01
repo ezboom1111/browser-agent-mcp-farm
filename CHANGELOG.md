@@ -8,6 +8,21 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Caged-judge protocol** (`farm_judge_claim`, `judgments.jsonl`): the deliberate "strong head, caged
+  hand" applied to the SEMANTIC layer, and the fix for the aggregated-token recombination weakness the
+  fuzzer surfaced. An external judge (an LLM agent) submits a verdict — `supported` | `refuted` |
+  `insufficient` — over a claim, citing the SUPPORTING and/or REFUTING spans it relies on. The
+  deterministic gate verifies every cited span literally appears in its source's bytes and enforces a
+  structural quorum: a `supported` verdict needs ≥ `minIndependentSources` (default 2) verified
+  supporting spans from distinct registrable domains and **no** verified refuting span (an inconsistency
+  the judge itself surfaced); a `refuted` verdict needs a verified refuting span. The verdict is
+  untrusted and the gate does **not** judge its semantic correctness (that is NLU) — but an untrusted
+  judge **cannot** make `supported` stand on a fabricated/recombined span (the contiguous quote does not
+  exist) or below the independence quorum. So you get NLU-level cross-source synthesis WITHOUT trusting
+  the LLM: it proposes, the deterministic gate disposes. The gate re-verifies `judgments.jsonl` on
+  `farm_run_claim_gate`, clamps a hand-written `min` to the default (direct-ledger defence), warns on a
+  single-source `supported`, and tolerates a corrupt ledger line instead of crashing. Reviewed by the
+  code-reviewer agent (no bypass).
 - **Property-based fuzz QA** (`scripts/qa-fuzz.mjs`, `npm run qa:fuzz`): a seed-deterministic fuzzer that
   generates thousands of randomized pages with KNOWN injected facts and KNOWN fabrications, then measures
   the gate's hallucination-leak rate and extraction recall — the randomized generator is the oracle, so

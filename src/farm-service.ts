@@ -42,6 +42,7 @@ import {
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
   AddClaimInputSchema,
+  JudgeClaimInputSchema,
   LensInputSchema,
   ListRunsInputSchema,
   ExtractStructuredInputSchema,
@@ -70,6 +71,7 @@ import {
   type ReadArtifactInput,
   type RegisterEvidenceInput,
   type AddClaimInput,
+  type JudgeClaimInput,
   type LensInput,
   type ListRunsInput,
   type ExtractStructuredInput,
@@ -389,6 +391,25 @@ export class FarmService {
     await appendFile(join(parsed.runDir, "citations.jsonl"), `${citationRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
     const gate = await runClaimGate(parsed.runDir, { mode: "final", minClaims: 0 });
     return { ok: gate.ok, appended: true as const, claimId, gate };
+  }
+
+  // Caged-judge protocol (the semantic ceiling, deterministically caged). An external judge (an LLM
+  // agent) submits a verdict over a claim plus the SUPPORTING/REFUTING spans it relies on; the gate
+  // verifies every cited span literally appears in its source's bytes and enforces the verdict's
+  // structural quorum. The judge's verdict is untrusted, but it cannot make 'supported' stand on a
+  // fabricated/recombined span or below the required independent-source count.
+  async judgeClaim(input: JudgeClaimInput) {
+    const parsed = JudgeClaimInputSchema.parse(input);
+    const registeredIds = new Set((await this.readArtifactRows(parsed.runDir)).map((row) => row.artifact_id).filter((id): id is string => typeof id === "string"));
+    const unregistered = [...parsed.support, ...parsed.refute].map((span) => span.artifactId).filter((id) => !registeredIds.has(id));
+    if (unregistered.length > 0) {
+      return { ok: false as const, appended: false as const, error: `judgment span source(s) not registered: ${[...new Set(unregistered)].join(", ")}` };
+    }
+    const judgmentId = `judgment-${randomUUID()}`;
+    const row = { judgment_id: judgmentId, claim: parsed.claim, verdict: parsed.verdict, support: parsed.support, refute: parsed.refute, min_independent_sources: parsed.minIndependentSources };
+    await appendFile(join(parsed.runDir, "judgments.jsonl"), `${JSON.stringify(row)}\n`);
+    const gate = await runClaimGate(parsed.runDir, { mode: "final", minClaims: 0 });
+    return { ok: gate.ok, appended: true as const, judgmentId, verdict: parsed.verdict, gate };
   }
 
   // Self-description so an agent can confirm it reached THIS server (vs a
