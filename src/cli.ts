@@ -36,6 +36,7 @@ import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportA
 import { formatAcquisitionRoutesAsLines, routeCoverageReport } from "./acquisition-router.js";
 import { appendRecipeCanaryResult, evaluateRecipeCanary, loadRecipeCanaryLedger, runRecipeCanary, type RecipeCanaryGolden, type RecipeCanaryObservation, type RecipeCanaryResult } from "./recipe-canary.js";
 import { ensureHardenedDir, listProfiles, profilePaths, removeProfile } from "./profile-store.js";
+import { encryptStorageStateFileInPlace, storageStateEncryptionEnabled } from "./secret-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
 import { registerAll, registerClaude, registerCodex } from "./registration.js";
@@ -453,6 +454,10 @@ async function runAuthCdpImport(): Promise<void> {
     const storageState = await context.storageState({ indexedDB: true });
     const filteredStorageState = filterStorageState(storageState, cookieDomains);
     await writeFile(paths.storageStatePath, `${JSON.stringify(filteredStorageState, null, 2)}\n`, "utf8");
+    // At-rest DPAPI encryption of the saved storage state (D3, opt-in, Windows, best-effort).
+    if (storageStateEncryptionEnabled()) {
+      await encryptStorageStateFileInPlace(paths.storageStatePath).catch(() => undefined);
+    }
     console.log(
       JSON.stringify(
         {
