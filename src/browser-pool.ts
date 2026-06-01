@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Frame, type Page, type Request, type Response } from "playwright";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
@@ -9,6 +8,7 @@ import { FarmError } from "./farm-error.js";
 import { buildTimestampPlan, frameCaptureId, type FrameSample, type FrameSampleRunResult, type FrameVisualFingerprint, type MediaElementSnapshot, type SeekResult, type SerializedCue } from "./frame-sampler.js";
 import type { Lease, LeaseManager } from "./lease-manager.js";
 import { ensureHardenedDir, profilePaths, profileRoot } from "./profile-store.js";
+import { encryptStorageStateFileInPlace, loadStorageStateForContext, storageStateEncryptionEnabled } from "./secret-store.js";
 import { acquireProfileLock, refreshProfileLock, releaseProfileLock, type ProfileLockHandle } from "./profile-lock.js";
 
 const MAX_MEDIA_ARTIFACTS_PER_PAGE = 40;
@@ -1112,6 +1112,11 @@ export class BrowserPool {
       if (state.storageStatePath) {
         await ensureHardenedDir(dirname(state.storageStatePath));
         await state.context.storageState({ path: state.storageStatePath, indexedDB: true }).catch(() => undefined);
+        // At-rest DPAPI encryption of the just-written storage state (D3, opt-in). Best-effort: no-op
+        // off Windows or when disabled, so the dir-level 0700/ACL hardening above remains the floor.
+        if (storageStateEncryptionEnabled()) {
+          await encryptStorageStateFileInPlace(state.storageStatePath).catch(() => undefined);
+        }
       }
       await state.context.close().catch(() => undefined);
     } finally {
@@ -1162,7 +1167,10 @@ export class BrowserPool {
       this.activeProfileLeases.set(profileLockKey, lease.contextToken);
     }
 
-    const options = contextOptionsForLease(lease, storageStatePath);
+    // Resolve the saved storage state to a path (plaintext, unchanged) or an in-memory object (a
+    // decrypted DPAPI wrapper — never a plaintext temp on disk). undefined => no usable saved state.
+    const resolvedStorageState = lease.storagePolicy === "storage-state" && storageStatePath !== undefined ? await loadStorageStateForContext(storageStatePath) : undefined;
+    const options = contextOptionsForLease(lease, resolvedStorageState);
     let context: BrowserContext;
     let persistent = false;
 
@@ -2119,7 +2127,7 @@ function isCapturableMedia(mime: string): boolean {
   return mime.startsWith("image/") || mime === "text/vtt";
 }
 
-function contextOptionsForLease(lease: Lease, storageStatePath?: string): BrowserContextOptions {
+function contextOptionsForLease(lease: Lease, storageState?: string | Record<string, unknown>): BrowserContextOptions {
   const options: BrowserContextOptions = {};
   if (lease.proxy !== undefined) {
     const proxy: NonNullable<BrowserContextOptions["proxy"]> = { server: lease.proxy.server };
@@ -2146,8 +2154,8 @@ function contextOptionsForLease(lease: Lease, storageStatePath?: string): Browse
   if (lease.fingerprint?.colorScheme !== undefined) {
     options.colorScheme = lease.fingerprint.colorScheme;
   }
-  if (lease.storagePolicy === "storage-state" && storageStatePath !== undefined && existsSync(storageStatePath)) {
-    options.storageState = storageStatePath;
+  if (lease.storagePolicy === "storage-state" && storageState !== undefined) {
+    options.storageState = storageState as NonNullable<BrowserContextOptions["storageState"]>;
   }
   return options;
 }
