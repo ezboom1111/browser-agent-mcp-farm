@@ -43,6 +43,12 @@ function normalizedInputToWorkflowOptions(input: NormalizedEvidenceRunInput, run
     storagePolicy,
     headed: input.headed,
     browserChannel: input.browserChannel,
+    // Forward the capture-routing controls so MCP/HTTP callers (not just the CLI) can use tier-0
+    // browserless capture (A1), the text capture profile (A3), and auto routing (D2). All default to
+    // the browser/full path, so an MCP caller that sets none keeps the prior behaviour exactly.
+    httpFetch: input.httpFetch,
+    captureProfile: input.captureProfile,
+    captureRouting: input.captureRouting,
     overlayDismissal: input.overlayDismissal,
     ocr: input.ocr,
     denseSampling: input.denseSampling,

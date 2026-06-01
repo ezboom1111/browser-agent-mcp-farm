@@ -422,6 +422,12 @@ export const EvidenceRunInputSchema = z.object({
   headed: z.boolean().default(false).describe("Run with a visible browser window. NOT supported over MCP (use the CLI); MCP evidence-run is headless."),
   browserChannel: BrowserChannelSchema.optional(),
   httpFetch: z.boolean().default(false).describe("Tier-0 browserless capture: try a plain HTTP GET first (no Chromium) when the page is server-rendered; falls back to the browser if it declines. No screenshots/frames are produced on the tier-0 path. Default false."),
+  captureRouting: z
+    .enum(["browser", "auto"])
+    .default("browser")
+    .describe(
+      "Capture routing. 'auto' tries the tier-0 browserless HTTP GET first and escalates to the browser whenever the page is a client-rendered shell, non-HTML, off-domain, or bot-blocked — so it is never a worse capture than 'browser', but a server-rendered page is captured without launching Chromium (and is labelled http_fetch, with no screenshot). 'browser' (default) always uses Chromium, leaving the default capture method, screenshot, and provenance unchanged."
+    ),
   captureProfile: z.enum(["text", "full"]).default("full").describe("Browser capture profile. 'text' blocks image/media/font + ad-host subrequests and skips the page screenshot (faster text/structure-only runs); 'full' (default) captures everything including the screenshot."),
   overlayDismissal: z
     .object({
