@@ -41,6 +41,8 @@ import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
 import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, type RegisterOptions } from "./registration.js";
 import { ensureChromiumInstalled } from "./browser-install.js";
+import { describeLens, listLenses } from "./lens.js";
+import type { LocaleSegment } from "./source-registry.js";
 import { EvidenceRunScheduler } from "./scheduler.js";
 import { isInformationCategory, isLocaleSegment, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryFilter } from "./source-registry.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
@@ -227,6 +229,11 @@ export async function main(): Promise<void> {
 
   if (command === "archive-run") {
     await runArchiveRunCommand();
+    return;
+  }
+
+  if (command === "lens") {
+    runLensCommand();
     return;
   }
 
@@ -710,6 +717,24 @@ async function runPruneRunsCommand(): Promise<void> {
     budgetResult = await pruneRunsByBudget(root, dryRun ? { maxBytes, dryRun: true } : { maxBytes });
   }
   console.log(JSON.stringify(budgetResult === undefined ? ageResult : { age: ageResult, budget: budgetResult }, null, 2));
+}
+
+// Research lenses (engine #3): list the declarative lenses, or describe one (its claim templates +
+// report sections + the source-registry entries it prioritizes) with `--lens <id> [--locale <seg>]`.
+function runLensCommand(): void {
+  const id = getArgValue("--lens");
+  if (id === undefined) {
+    console.log(JSON.stringify({ ok: true, lenses: listLenses() }, null, 2));
+    return;
+  }
+  const locale = getArgValue("--locale") as LocaleSegment | undefined;
+  const described = describeLens(id, locale);
+  if (described === undefined) {
+    console.log(JSON.stringify({ ok: false, error: `unknown lens: ${id}`, available: listLenses().map((lens) => lens.id) }, null, 2));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(JSON.stringify({ ok: true, ...described }, null, 2));
 }
 
 // Data-lifecycle: tiered archive of a single run — reclaim its bulky screenshot/media bytes while
@@ -2452,6 +2477,10 @@ Commands:
   archive-run --run-dir <evidence-run-dir> [--dry-run]
           Tiered archive: reclaim a run's bulky screenshot/media bytes while keeping the
           ledger/claims/report/raw index (its text claims stay re-verifiable; visual artifacts do not)
+  lens [--lens <id>] [--locale <segment>]
+          List the declarative research lenses, or describe one (its claim templates + report sections
+          + the prioritized source-registry entries). Lenses (research | market_scan | product_planning)
+          are domain configs over the same engine + gate.
   export-bundle --run-dir <dir> [--output-file <manifest.json>] [--archive-file <bundle.evb>] [--private-key-env <ENV>]
           Build a Merkle-rooted manifest, or a self-contained signed .evb archive
   verify-bundle (--run-dir <dir> --manifest-file <m.json> | --archive-file <bundle.evb>) [--public-key-env <ENV>]

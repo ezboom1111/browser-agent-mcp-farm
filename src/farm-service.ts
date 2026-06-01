@@ -12,6 +12,7 @@ import { runEvidenceWorkflow } from "./evidence-runner.js";
 import { extractStructuredData } from "./structured-extractor.js";
 import { AGENT_GUIDANCE, SERVER_NAME } from "./agent-guidance.js";
 import { farmVersion } from "./version.js";
+import { lensSummaries } from "./lens.js";
 import { proposeGroundedClaims } from "./grounded-extraction.js";
 import { parseWebVtt } from "./transcript-parser.js";
 import type { EvidenceKind } from "./schemas.js";
@@ -399,7 +400,11 @@ export class FarmService {
       // The caged external-capture tier (B3) is OFF by default; reported so an agent can see it is
       // not available unless an operator explicitly enabled it.
       externalBridgeEnabled: externalBridgeEnabled(),
-      optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") }
+      optionalDeps: { tesseractAvailable: optionalDepAvailable("tesseract.js") },
+      // Declarative research lenses (engine #3): domain configs over the same engine + gate. An agent
+      // picks a lens, then uses the CLI `lens --lens <id>` (or a skill) for its full claim templates +
+      // prioritized sources. Marketing/planning/etc. are config, not separate servers.
+      lenses: lensSummaries()
     };
   }
 

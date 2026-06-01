@@ -8,6 +8,16 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Declarative research lenses** (`lens.ts`, CLI `lens`, `farm_capabilities.lenses`): the core —
+  capture + the cite-or-fail gate — is domain-neutral, so a "lens" is a config (not forked code) that
+  points the same engine at a domain: which source-registry categories to prioritize, what typed claims
+  to author (and which high-stakes ones should be corroborated across independent sources, engine #2),
+  and how to shape the cited report. Ships `research` (general), `market_scan` (marketing), and
+  `product_planning` lenses; `lens --lens <id>` describes a lens + its prioritized sources, and
+  `farm_capabilities` advertises the lens summaries. So marketing/planning/etc. are data over one
+  engine — the gstack "many skills" model done as config — and no domain semantics leak into the core
+  (the dependency-boundary guard still holds). The lens claim templates are validated against the real
+  claim-type / evidence-kind enums.
 - **Cross-source corroboration** (`source-independence.ts`, `farm_add_claim` `corroboration`): a claim
   can now assert support from multiple **independent** sources. `farm_add_claim` accepts
   `corroboration: { sources: [{ artifactId, quote? }], minIndependentSources }`; the final-mode gate
