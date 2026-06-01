@@ -341,9 +341,17 @@ export class FarmService {
   // is not grounded in the cited bytes makes gate.ok false).
   async addClaim(input: AddClaimInput) {
     const parsed = AddClaimInputSchema.parse(input);
-    const registered = (await this.readArtifactRows(parsed.runDir)).some((row) => row.artifact_id === parsed.artifactId);
-    if (!registered) {
+    const artifactRows = await this.readArtifactRows(parsed.runDir);
+    const registeredIds = new Set(artifactRows.map((row) => row.artifact_id).filter((id): id is string => typeof id === "string"));
+    if (!registeredIds.has(parsed.artifactId)) {
       return { ok: false as const, appended: false as const, error: `cited artifact not registered: ${parsed.artifactId}` };
+    }
+    // Every corroboration source must already be registered, so the claim cannot cite phantom support.
+    if (parsed.corroboration !== undefined) {
+      const unregistered = parsed.corroboration.sources.map((source) => source.artifactId).filter((id) => !registeredIds.has(id));
+      if (unregistered.length > 0) {
+        return { ok: false as const, appended: false as const, error: `corroboration source(s) not registered: ${unregistered.join(", ")}` };
+      }
     }
     const claimId = `claim-${randomUUID()}`;
     const claimRow: Record<string, unknown> = {
@@ -365,14 +373,16 @@ export class FarmService {
     if (parsed.timestampSec !== undefined) {
       claimRow.timestampSec = parsed.timestampSec;
     }
-    const citationRow = {
-      claim_id: claimId,
-      evidence: parsed.artifactId,
-      artifact_id: parsed.artifactId,
-      evidence_kind: parsed.evidenceKind
-    };
+    if (parsed.corroboration !== undefined) {
+      claimRow.corroboration = parsed.corroboration;
+    }
+    const citationRows: Array<Record<string, unknown>> = [{ claim_id: claimId, evidence: parsed.artifactId, artifact_id: parsed.artifactId, evidence_kind: parsed.evidenceKind }];
+    // Record each corroboration source as a citation too, so the citation graph reflects the support.
+    for (const source of parsed.corroboration?.sources ?? []) {
+      citationRows.push({ claim_id: claimId, evidence: source.artifactId, artifact_id: source.artifactId });
+    }
     await appendFile(join(parsed.runDir, "claims.jsonl"), `${JSON.stringify(claimRow)}\n`);
-    await appendFile(join(parsed.runDir, "citations.jsonl"), `${JSON.stringify(citationRow)}\n`);
+    await appendFile(join(parsed.runDir, "citations.jsonl"), `${citationRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
     const gate = await runClaimGate(parsed.runDir, { mode: "final", minClaims: 0 });
     return { ok: gate.ok, appended: true as const, claimId, gate };
   }

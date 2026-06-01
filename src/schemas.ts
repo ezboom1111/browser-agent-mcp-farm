@@ -525,7 +525,24 @@ export const AddClaimInputSchema = z.object({
   anchor: ClaimAnchorSchema.optional().describe("WHERE in the cited artifact the claim is grounded; verified against the bytes."),
   claimTaxonomy: ClaimTaxonomySchema.optional().describe("quote (default) | derived | aggregated."),
   verificationLevel: VerificationLevelSchema.default("grounded").describe("Verification level recorded on the claim."),
-  timestampSec: z.number().nonnegative().max(86_400).optional().describe("Required for visual claims citing a frame screenshot.")
+  timestampSec: z.number().nonnegative().max(86_400).optional().describe("Required for visual claims citing a frame screenshot."),
+  corroboration: z
+    .object({
+      sources: z
+        .array(
+          z.object({
+            artifactId: z.string().min(1).describe("artifact_id of an INDEPENDENT supporting source (already registered)."),
+            quote: z.string().min(1).optional().describe("Optional supporting text that the gate verifies appears in THIS source's bytes.")
+          })
+        )
+        .min(1)
+        .describe("Additional independent sources that support this claim, beyond the primary artifactId."),
+      minIndependentSources: z.number().int().min(2).max(20).default(2).describe("Minimum distinct registrable-domain sources required across the primary + supporting sources; the gate fails the claim below this. Default 2.")
+    })
+    .optional()
+    .describe(
+      "Cross-source corroboration: assert this claim is backed by multiple INDEPENDENT sources. The gate verifies each cited source is registered, verifies any per-source quote against that source's bytes, and counts distinct registrable domains — it proves N independent hash-verified sources are cited, not that they semantically agree."
+    )
 });
 
 export const CapabilitiesInputSchema = z.object({});

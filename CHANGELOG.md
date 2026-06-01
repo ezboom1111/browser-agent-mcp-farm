@@ -8,6 +8,18 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Cross-source corroboration** (`source-independence.ts`, `farm_add_claim` `corroboration`): a claim
+  can now assert support from multiple **independent** sources. `farm_add_claim` accepts
+  `corroboration: { sources: [{ artifactId, quote? }], minIndependentSources }`; the final-mode gate
+  verifies each cited source is registered, verifies any per-source `quote` against THAT source's actual
+  bytes, and counts distinct **registrable domains** across the primary + supporting sources — failing
+  the claim below `minIndependentSources` (default 2). Independence uses a deterministic registrable-
+  domain heuristic (www-stripped, a small known two-level-suffix set, else last two labels) that
+  deliberately UNDER-counts (a subdomain of one site is not independent). It proves N independent,
+  hash-verified sources are cited (and any quoted support is present in each) — **not** that the sources
+  semantically agree (beyond a deterministic gate), and source provenance stays self-asserted. A claim
+  with no `corroboration` block is unaffected. This is the trust backbone for marketing/planning
+  conclusions where a single-source claim is not enough.
 - **Storage retention discipline**: evidence runs accumulate page bytes, screenshots, and (for video)
   sampled frames — a real content page is ~1–5 MB and a media/video run 5–100 MB — and nothing bounded
   that growth automatically. `prune-runs` now takes `--max-bytes 5GB` (after the age pass it deletes the

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ClaimAnchorSchema, ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
+import { independentSourceCount } from "./source-independence.js";
 
 interface ArtifactLedgerRow {
   artifact_id?: string;
@@ -9,6 +10,12 @@ interface ArtifactLedgerRow {
   sha256?: string;
   kind?: string;
   evidence_kind?: EvidenceKind;
+  source_url?: string;
+}
+
+interface ClaimCorroboration {
+  sources?: Array<{ artifactId?: string; quote?: string }>;
+  minIndependentSources?: number;
 }
 
 interface ClaimLedgerRow {
@@ -23,6 +30,7 @@ interface ClaimLedgerRow {
   verification_level?: string;
   anchor?: unknown;
   claim_taxonomy?: string;
+  corroboration?: ClaimCorroboration;
 }
 
 interface CitationLedgerRow {
@@ -148,6 +156,7 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       if (claim.anchor !== undefined) {
         await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors);
       }
+      await validateClaimCorroboration(runDir, claim, artifactsByRef, claimLabel, errors, warnings);
     } else {
       validateSmokeTypedClaim(claim, artifact, claimLabel, warnings);
     }
@@ -311,6 +320,51 @@ async function validateClaimGrounding(runDir: string, claim: ClaimLedgerRow, art
   }
   if (!normContent.includes(normalizeForMatch(anchor.quote))) {
     errors.push(`claim text not found in cited artifact: ${claimLabel} -> "${anchor.quote.slice(0, 80)}"`);
+  }
+}
+
+/**
+ * Cross-source corroboration (engine #2). When a final-mode claim carries a `corroboration` block,
+ * verify each cited supporting source is REGISTERED, verify any per-source quote against THAT source's
+ * actual bytes, and count the distinct registrable domains across the primary + supporting sources. If
+ * the independent-source count is below the required minimum the claim fails. This proves the claim
+ * cites N independent, hash-verified sources (and any quoted support is present in each) — it does NOT
+ * prove the sources semantically agree, which is beyond a deterministic gate.
+ */
+async function validateClaimCorroboration(runDir: string, claim: ClaimLedgerRow, artifactsByRef: Map<string, ArtifactLedgerRow>, claimLabel: string, errors: string[], warnings: string[]): Promise<void> {
+  const corroboration = claim.corroboration;
+  if (corroboration === undefined || corroboration.sources === undefined || corroboration.sources.length === 0) {
+    return;
+  }
+  const minIndependent = corroboration.minIndependentSources ?? 2;
+  const sourceUrls: Array<string | undefined> = [];
+  const primary = claim.artifact_id === undefined ? undefined : artifactsByRef.get(normalizeEvidenceRef(claim.artifact_id));
+  sourceUrls.push(primary?.source_url);
+
+  for (const source of corroboration.sources) {
+    if (source.artifactId === undefined) {
+      errors.push(`corroboration source missing artifactId: ${claimLabel}`);
+      continue;
+    }
+    const artifact = artifactsByRef.get(normalizeEvidenceRef(source.artifactId));
+    if (artifact === undefined) {
+      errors.push(`corroboration source not registered: ${claimLabel} -> ${source.artifactId}`);
+      continue;
+    }
+    sourceUrls.push(artifact.source_url);
+    if (source.quote !== undefined) {
+      const content = await readArtifactText(runDir, artifact);
+      if (content === undefined || !normalizeForMatch(content).includes(normalizeForMatch(source.quote))) {
+        errors.push(`corroboration quote not found in source: ${claimLabel} -> ${source.artifactId} -> "${source.quote.slice(0, 80)}"`);
+      }
+    }
+  }
+
+  const independent = independentSourceCount(sourceUrls);
+  if (independent < minIndependent) {
+    errors.push(`claim corroboration below required independent sources: ${claimLabel} -> ${independent} < ${minIndependent}`);
+  } else {
+    warnings.push(`claim corroborated by ${independent} independent source(s): ${claimLabel}`);
   }
 }
 
