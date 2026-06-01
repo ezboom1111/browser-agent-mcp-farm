@@ -545,6 +545,27 @@ export const AddClaimInputSchema = z.object({
     )
 });
 
+// Caged-judge protocol: a SEMANTIC judgment about a claim ("supported"/"refuted"/"insufficient"),
+// where each supporting/refuting span is a quote the gate verifies LITERALLY appears in its cited
+// source's bytes. The verdict is the (untrusted) judge's; the gate does NOT verify the verdict is
+// semantically correct (that is NLU), but it DOES verify every cited span exists and enforces a
+// structural quorum — so a "supported" verdict cannot stand on a fabricated/recombined span, cannot
+// stand below the required count of INDEPENDENT supporting sources, and cannot ignore a refuting span
+// the judge itself surfaced. This cages a powerful-but-untrusted LLM judge under the deterministic gate.
+export const JudgmentVerdictSchema = z.enum(["supported", "refuted", "insufficient"]);
+const JudgmentSpanSchema = z.object({
+  artifactId: z.string().min(1).describe("artifact_id of a registered source."),
+  quote: z.string().min(1).describe("Contiguous text the gate verifies appears verbatim in THIS source's bytes.")
+});
+export const JudgeClaimInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory holding the cited sources' ledger."),
+  claim: z.string().min(1).describe("The claim being judged."),
+  verdict: JudgmentVerdictSchema.describe("The judge's verdict over the cited spans."),
+  support: z.array(JudgmentSpanSchema).default([]).describe("Spans that SUPPORT the claim; each verified against its source's bytes."),
+  refute: z.array(JudgmentSpanSchema).default([]).describe("Spans that REFUTE/contradict the claim; each verified against its source's bytes."),
+  minIndependentSources: z.number().int().min(1).max(20).default(2).describe("Independent registrable-domain sources required among the verified SUPPORT spans for a 'supported' verdict. Default 2.")
+});
+
 export const CapabilitiesInputSchema = z.object({});
 
 export const LensInputSchema = z.object({
@@ -628,6 +649,8 @@ export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
 export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
 export type LensInput = z.input<typeof LensInputSchema>;
+export type JudgeClaimInput = z.input<typeof JudgeClaimInputSchema>;
+export type JudgmentVerdict = z.infer<typeof JudgmentVerdictSchema>;
 export type ListRunsInput = z.input<typeof ListRunsInputSchema>;
 export type ExtractStructuredInput = z.input<typeof ExtractStructuredInputSchema>;
 export type ExportBundleInput = z.input<typeof ExportBundleInputSchema>;
