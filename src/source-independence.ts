@@ -8,7 +8,12 @@
 
 const TWO_LEVEL_SUFFIXES = new Set(["co.uk", "org.uk", "gov.uk", "ac.uk", "me.uk", "co.jp", "or.jp", "ne.jp", "go.jp", "co.kr", "or.kr", "go.kr", "com.au", "net.au", "org.au", "gov.au", "edu.au", "com.br", "com.cn", "net.cn", "org.cn", "co.in", "co.nz", "com.tr", "co.za", "com.mx", "com.sg", "com.hk", "com.tw"]);
 
-/** The registrable domain (~eTLD+1) for a URL, or undefined if it has no usable host. */
+/**
+ * The registrable domain (~eTLD+1) for a URL, or undefined if it has no usable host. Caveat: a
+ * hosted-user-content host (e.g. `a.blogspot.com`, `b.github.io`) collapses to one registrable domain
+ * even though its subdomains are different authors — a deliberate trust-conservative under-count (it
+ * treats them as one source rather than risk over-stating independence). A full PSL would split these.
+ */
 export function registrableDomain(url: string): string | undefined {
   let host: string;
   try {
