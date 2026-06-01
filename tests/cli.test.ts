@@ -113,6 +113,33 @@ describe("cli", () => {
     expect(exitCode).toBeFalsy();
   });
 
+  it("export-bundle --anchor-log appends a chained anchor that verify-timestamp-log accepts", async () => {
+    const run = await makeRun();
+    const dir = await mkdtemp(join(tmpdir(), "farm-cli-anchor-"));
+    dirs.push(dir);
+    const anchorLog = join(dir, "transparency-log.ndjson");
+    const manifestFile = join(run, "manifest.json");
+    const exported = await runCli(["export-bundle", "--run-dir", run, "--output-file", manifestFile, "--anchor-log", anchorLog]);
+    expect(exported.out).toContain("merkleRoot");
+
+    const verified = await runCli(["verify-timestamp-log", "--log-file", anchorLog]);
+    expect(verified.out).toContain('"ok": true');
+    expect(verified.out).toContain('"orderingOnlyCount": 1');
+    expect(verified.exitCode).toBeFalsy();
+  });
+
+  it("verify-timestamp-log fails (exit 1) on a tampered transparency log", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-cli-anchor-bad-"));
+    dirs.push(dir);
+    const anchorLog = join(dir, "transparency-log.ndjson");
+    // A single entry whose recomputed hash will not match the forged merkleRoot.
+    const forged = { seq: 1, prevHash: "0".repeat(64), at: "2026-06-02T00:00:00.000Z", merkleRoot: "forged", entryHash: "deadbeef" };
+    await writeFile(anchorLog, `${JSON.stringify(forged)}\n`, "utf8");
+    const { out, exitCode } = await runCli(["verify-timestamp-log", "--log-file", anchorLog]);
+    expect(out).toContain('"ok": false');
+    expect(exitCode).toBe(1);
+  });
+
   it("export-bundle --archive-file then verify-bundle --archive-file round-trips", async () => {
     const run = await makeRun();
     const evb = join(run, "bundle.evb");

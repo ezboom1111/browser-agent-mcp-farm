@@ -8,6 +8,18 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Bundle transparency log** (`timestamp-anchor.ts`, opt-in `export-bundle --anchor-log <file>`,
+  capture-binding Tier 2 — the ordering anchor): a tamper-evident, hash-chained NDJSON log of evidence-
+  bundle Merkle roots. Each anchor carries the previous entry's hash, so reordering, removing, or
+  altering any anchored bundle breaks the chain and is caught by `verify-timestamp-log` (exit 1). A near-
+  clone of the gate-verdict decision log, but for bundles. **Honestly scoped (no theater):** the local
+  chain proves the RELATIVE ORDER of anchored bundles and that the log was not edited after the fact — it
+  does NOT prove absolute wall-clock time (the `at` field is the untrusted local clock; entries are
+  labeled "ordering"). A genuine time proof needs an external RFC-3161 TSA token over the entry hash; the
+  TSA client is an injected seam (default: none, wiring is opt-in and deferred) and the token lives
+  OUTSIDE the chain hash, so a tamperer can only STRIP it (degrading "tsa" → "ordering", a weaker claim),
+  never forge one. The module deliberately does not hand-roll RFC-3161 crypto — a verifier checks any TSA
+  token offline with `openssl ts -verify`. Node built-ins only.
 - **Same-connection TLS byte-binding** (opt-in `FARM_BIND_TLS_SAMECONN=1`, capture-binding Tier 2 — the
   strong upgrade): tier-0 capture can now run over a `node:https` transport that reads the certificate
   from the EXACT socket that delivered the bytes (no second handshake), recorded as `sameConnectionTls`
