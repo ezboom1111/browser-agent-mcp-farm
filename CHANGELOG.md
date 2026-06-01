@@ -6,6 +6,20 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+### Added
+
+- **Server TLS-identity provenance** (`tls-identity.ts`, opt-in `FARM_BIND_TLS=1`, transcendence Tier 2 —
+  the self-contained piece): when enabled, a tier-0 capture records the server's TLS identity —
+  certificate `fingerprint256`, issuer, subject, validity, negotiated protocol, and whether the chain
+  validated — into the capture metadata, so a reader can pin the cert and detect a man-in-the-middle (an
+  unexpected issuer), an expired/changed cert, or a host that silently switched CAs. **Honestly scoped
+  (no theater):** it is a SEPARATE handshake to the final host, so it is provenance ABOUT THE SERVER at
+  capture time, NOT a cryptographic binding of the captured bytes to that exact connection — the record
+  itself says so. Uses Node's built-in `tls` (no new dependency, no external service); best-effort and
+  hang-proof. A same-connection byte-binding, an RFC-3161 trusted-timestamp anchor, and multi-vantage
+  agreement are the further infrastructure-dependent steps and are deliberately left out of the
+  deterministic core.
+
 ## [0.6.0] — 2026-06-02 — team distribution, research lenses + the caged-judge
 
 > Distribution + verification-engine + transcendence. Portable `npx`/team distribution with first-run

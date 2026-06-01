@@ -1,6 +1,7 @@
 import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 import { assertDomainAllowed } from "./lease-manager.js";
 import { attachTypedFacts, extractStructuredData } from "./structured-extractor.js";
+import { captureTlsIdentity, tlsBindingEnabled } from "./tls-identity.js";
 
 // Tier-0 browserless capture (A1). For a source whose needed bytes are server-rendered, a plain
 // HTTP GET produces the SAME artifact contract as the browser path — page_html, page_text, and a
@@ -100,6 +101,8 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
     }
     const finalUrl = response.url.length > 0 ? response.url : currentUrl;
     const title = extractTitle(html);
+    // Capture-binding (Tier 2, opt-in): record the server's TLS identity as provenance. Best-effort.
+    const serverTlsIdentity = tlsBindingEnabled() ? await captureTlsIdentity(finalUrl).catch(() => undefined) : undefined;
 
     // Page bundle: html -> page_html, text -> page_text by per-artifact inference. NO evidenceKind
     // override here (a single override would force BOTH artifacts to one kind).
@@ -111,7 +114,7 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
       captureId: input.captureId,
       html,
       text,
-      metadata: { ...(title === undefined ? {} : { title }), finalUrl, status: "ok", captureTier: "http_fetch" },
+      metadata: { ...(title === undefined ? {} : { title }), finalUrl, status: "ok", captureTier: "http_fetch", ...(serverTlsIdentity === undefined ? {} : { serverTlsIdentity }) },
       captureMethod: "http-fetch"
     });
     const records: ArtifactRecord[] = [...pageRecords];
