@@ -69,7 +69,21 @@ export function computeCaptureCacheKey(profile: CaptureCacheProfile, opts: Captu
   const bucket = Math.floor(opts.nowMs / 1000 / bucketSec);
   // Canonical, order-stable material over EVERY byte-affecting field + the time bucket. Omitting any
   // of these would let a different-engine / different-viewport / different-settle capture collide.
-  const material = JSON.stringify([profile.url, profile.captureProfile, profile.launchArgsProfile, profile.resolvedChannel, profile.browserVersion, profile.sampleFrames, profile.viewport ?? "default", profile.locale ?? "default", profile.timezoneId ?? "default", profile.userAgent ?? "default", profile.waitMs ?? -1, profile.settleMs ?? -1, bucket]);
+  const material = JSON.stringify([
+    profile.url,
+    profile.captureProfile,
+    profile.launchArgsProfile,
+    profile.resolvedChannel,
+    profile.browserVersion,
+    profile.sampleFrames,
+    profile.viewport ?? "default",
+    profile.locale ?? "default",
+    profile.timezoneId ?? "default",
+    profile.userAgent ?? "default",
+    profile.waitMs ?? -1,
+    profile.settleMs ?? -1,
+    bucket
+  ]);
   return createHash("sha256").update(material, "utf8").digest("hex");
 }
 
