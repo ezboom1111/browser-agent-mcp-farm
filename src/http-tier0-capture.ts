@@ -1,6 +1,6 @@
 import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 import { assertDomainAllowed } from "./lease-manager.js";
-import { extractStructuredData } from "./structured-extractor.js";
+import { attachTypedFacts, extractStructuredData } from "./structured-extractor.js";
 
 // Tier-0 browserless capture (A1). For a source whose needed bytes are server-rendered, a plain
 // HTTP GET produces the SAME artifact contract as the browser path — page_html, page_text, and a
@@ -118,7 +118,8 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
 
     // structured_data via a SEPARATE bundle call (its single evidenceKind override applies only here).
     const structured = extractStructuredData(html);
-    const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
+    attachTypedFacts(structured, text); // typed facts from the browserless visible text (engine #4)
+    const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0 || (structured.typedFacts?.length ?? 0) > 0;
     if (hasStructured) {
       const structuredRecords = await input.writer.writeCaptureBundle({
         runDir: input.runDir,

@@ -3,6 +3,8 @@
 // results are byte-reproducible. Publisher markup (JSON-LD / Open Graph) is a SITE
 // CLAIM, not ground truth — callers should cross-check it against DOM/OCR.
 
+import { extractTypedFacts, type TypedFact } from "./typed-facts.js";
+
 export interface StructuredSummary {
   type?: string;
   name?: string;
@@ -45,6 +47,21 @@ export interface StructuredData {
   // Set only by callers that have the page's visible text (see crossCheckStructured);
   // NOT produced by extractStructuredData, which stays byte-reproducible from HTML.
   crossCheck?: StructuredCrossCheck[];
+  // Typed facts (price/rating/percentage/date) extracted from the VISIBLE TEXT (engine #4). Set only by
+  // callers that have the page text (attachTypedFacts); each fact's `raw` is a verbatim text substring,
+  // so a claim citing it is groundable against the page_text bytes.
+  typedFacts?: TypedFact[];
+}
+
+/** Attach visible-text typed facts to a structured-data object (engine #4). No-op for empty text. */
+export function attachTypedFacts(data: StructuredData, visibleText: string): void {
+  if (visibleText.length === 0) {
+    return;
+  }
+  const facts = extractTypedFacts(visibleText);
+  if (facts.length > 0) {
+    data.typedFacts = facts;
+  }
 }
 
 export function extractStructuredData(html: string): StructuredData {

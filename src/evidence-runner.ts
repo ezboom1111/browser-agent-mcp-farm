@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { computeCaptureCacheKey, isEngineResolved, lookupCachedCapture, playwrightPackageVersion, readEngineIdentity, stalenessAgeMs, storeCachedCapture, writeEngineIdentity, type CachedCaptureArtifact, type CaptureCacheProfile } from "./capture-cache.js";
-import { crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
+import { attachTypedFacts, crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
 import { httpTier0Capture } from "./http-tier0-capture.js";
 import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
@@ -850,8 +850,10 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
           if (crossCheck.length > 0) {
             structured.crossCheck = crossCheck;
           }
+          // Typed facts (price/rating/percentage/date) from the visible text (engine #4), groundable.
+          attachTypedFacts(structured, visibleText);
         }
-        const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
+        const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0 || (structured.typedFacts?.length ?? 0) > 0;
         if (hasStructured) {
           await input.runStage("structured_extraction", () =>
             withAbort(
@@ -1025,7 +1027,10 @@ export async function tryReplayCachedCapture(input: { cacheRoot: string; runDir:
   }
   const records = [...(await input.writer.writeCaptureBundle(pageInput))];
   const structured = extractStructuredData(html);
-  const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0;
+  if (text !== undefined) {
+    attachTypedFacts(structured, text);
+  }
+  const hasStructured = structured.jsonLd.length > 0 || structured.hydration.length > 0 || Object.keys(structured.openGraph).length > 0 || structured.summary.name !== undefined || structured.tables.length > 0 || (structured.typedFacts?.length ?? 0) > 0;
   if (hasStructured) {
     records.push(
       ...(await input.writer.writeCaptureBundle({

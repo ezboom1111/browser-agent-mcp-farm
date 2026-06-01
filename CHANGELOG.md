@@ -8,6 +8,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Typed-fact extraction from visible text** (`typed-facts.ts`): a deterministic, domain-neutral layer
+  that extracts prices, ratings, percentages, and dates from the RENDERED visible text — the facts a
+  page shows without any structured markup, complementing the JSON-LD/OG summary. Each fact's `raw` is a
+  verbatim substring of the page text, so a claim citing it carries a groundable text_span anchor; pure
+  regex, byte-reproducible. The facts ride in the existing `structured_data` artifact (`typedFacts`)
+  wherever visible text is available (browser capture, tier-0, cache replay), so a lens (market_scan
+  prices, product_planning percentages, …) can query the same typed layer. A SITE CLAIM, like the
+  JSON-LD summary — it says the value is on the page, not that it is true.
 - **Declarative research lenses** (`lens.ts`, CLI `lens`, `farm_capabilities.lenses`): the core —
   capture + the cite-or-fail gate — is domain-neutral, so a "lens" is a config (not forked code) that
   points the same engine at a domain: which source-registry categories to prioritize, what typed claims
