@@ -8,6 +8,14 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Sector QA/QC harness** (`scripts/qa-sectors.mjs`, `npm run qa:sectors`): a deterministic, offline,
+  end-to-end QA run across 12 sectors × {structured, semi-structured, unstructured} local fixtures plus
+  an adversarial/edge battery. Per sector it tier-0-captures, checks structured + typed-fact extraction,
+  and verifies the cite-or-fail gate (a grounded claim PASSES, a fabricated one is BLOCKED). The
+  adversarial battery exercises off-domain-redirect (SSRF) decline, non-HTML decline, client-shell
+  decline-to-escalate, contradictory-markup flagging, near-miss fabrication blocking, post-registration
+  byte-tamper detection, cross-source corroboration (independent vs same-domain), Korean/non-ASCII, and
+  the zero-claim final gate. Baseline result: 97/97 checks — every hallucination/integrity case caught.
 - **`farm_lens` MCP tool + lens skills** (makes the lenses agent-usable): the declarative research
   lenses (engine #3) are now reachable over MCP — `farm_lens { lensId? }` lists the lenses or describes
   one (claim templates + report sections + prioritized sources), and `farm_capabilities` already
