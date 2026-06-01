@@ -8,9 +8,9 @@
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.5.0 |
 | Branch | `main` |
-| Commit | `188bc66` |
-| Working tree | dirty (4 files) |
-| Generated | 2026-06-01T06:38:52.442Z |
+| Commit | `1ed8869` |
+| Working tree | dirty (3 files) |
+| Generated | 2026-06-01T06:44:24.560Z |
 | Verify gate | **PASS** (build + tests + 4 smokes + npm audit) |
 | Tests | 757 tests in 84 files (756 passed, 0 failed) |
 | Coverage | lines 80.73% · statements 80.55% · functions 86.7% · branches 74.28% (ratcheting floor toward 80%) |

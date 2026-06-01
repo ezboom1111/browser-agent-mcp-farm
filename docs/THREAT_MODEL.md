@@ -52,6 +52,27 @@ before relying on a claim, a gate verdict, or a bundle.
 - No raw video or audio stream download.
 - No claim of full video/audio understanding without transcript/audio evidence.
 
+## Credentials at rest
+
+Saved sessions live under `~/.gstack/browser-profiles/<profile>/`. The directory
+is created **owner-only** (POSIX `chmod 0700`; Windows `icacls` grant-then-remove-
+inheritance), which is the floor. Two credential stores can sit there: the
+persistent-profile `user-data` directory (Chromium's own cookie/login DBs, which
+Chromium already DPAPI-encrypts on Windows) and `storage-state.json` (the farm's
+own Playwright cookie/origin jar).
+
+`storage-state.json` is plaintext by default. On Windows, setting
+`FARM_ENCRYPT_STORAGE_STATE=1` stores it as a **DPAPI (`CurrentUser`) wrapper**
+and decrypts it in memory at use (no plaintext temp on disk). The secret reaches
+PowerShell only via stdin (never argv / 4688 / PSReadline), the script has no
+interpolation surface, and the at-rest write is atomic (temp + rename). What this
+**does** defend: an at-rest or offline copy of the file (backup, disk theft,
+another standard user — already blocked by the `0700`/ACL dir too) cannot be
+decrypted off the user's logon. What it does **not** defend: code already running
+as the logged-in user — DPAPI `CurrentUser` is same-user-decryptable by design.
+It is best-effort: off Windows, or on any failure, the file stays plaintext under
+the owner-only directory and no run is broken.
+
 ## Practical guidance
 
 Treat a green gate / valid bundle as **"this evidence is internally consistent,

@@ -6,9 +6,13 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
-## [0.5.0] — validated engine + provenance (in progress)
+## [0.5.0] — 2026-06-01 — validated engine, browserless capture tiers + at-rest credential encryption
 
-> Accumulates the v0.5.0 capture-tier / security / engine work. Entries land incrementally.
+> The v0.5.0 capture-tier / security / engine release: a deterministic engine-provenance and
+> content-cache spine, browserless + text + auto capture tiers that invert the render budget, and a
+> tightened security boundary (credentialed-lease domain fence, owner-only credential dirs, opt-in
+> DPAPI at-rest encryption, a caged external-bridge tier). The security boundary stays the
+> deterministic claim gate, never an AI.
 
 ### Security
 
@@ -19,9 +23,20 @@ adheres to semantic versioning. Build/test status is tracked in
   user) followed by inheritance removal is applied grant-first so a failure can never lock the
   directory. Hardening is best-effort and never breaks login/capture. This is directory-level
   protection sufficient for a single-user machine; per-file encryption (e.g. DPAPI) was deliberately
-  not added — the PowerShell bridge would put a plaintext key in transit and DPAPI CurrentUser is
-  same-user-decryptable, so the marginal benefit did not justify that secret-handling path (tracked
-  as a follow-up). Complements the B1a credentialed-lease domain fence.
+  not added at this layer — directory ACLs are the floor; per-file encryption is now available
+  opt-in as D3 below. Complements the B1a credentialed-lease domain fence.
+- **Opt-in DPAPI at-rest encryption for storage-state** (D3, `secret-store.ts`,
+  `FARM_ENCRYPT_STORAGE_STATE=1`): closes the remaining B1b gap — the farm's own credential file
+  (`storage-state.json`) can be DPAPI-encrypted at rest on Windows. The secret crosses only the
+  PowerShell **stdin/stdout** pipes as base64 — never argv (kept out of the 4688 audit log and
+  PSReadline) — and the `-Command` script is a closed two-constant enum (no injection surface).
+  Decrypt-on-use hands Playwright an **in-memory object**, so no plaintext temp is ever written to
+  disk, and encrypt-in-place uses an atomic temp+rename. Encryption is **opt-in** (so it never
+  silently changes a credential-file format) while decryption is always attempted; everything is
+  best-effort and falls back to the 0700/ACL hardening (never throwing) off Windows or on any
+  failure. The persistent-profile `userDataDir` stays Chromium's own (already DPAPI-encrypted) store.
+  Reviewed by the security-reviewer agent (atomic write, fail-closed on a corrupt file, content-free
+  failure logging).
 
 ### Changed
 
@@ -57,10 +72,25 @@ adheres to semantic versioning. Build/test status is tracked in
   two binaries never collide on one key); freshness is **clamped to ≤ 1 hour** (a longer TTL is
   ignored) with numeric staleness recorded; the cache directory is **per-run-root** (not a global
   dir), so one agent never serves another's bytes as first-party; and only a bare ephemeral lease is
-  eligible (the gate lives at the call site). The hot-path replay wiring (re-register a fresh hit and
-  label the page claim `cached_capture` with its staleness age) is intentionally a separate,
-  opt-in follow-up — for a verification tool, serving cached bytes as current evidence is the most
-  freshness-sensitive change and is kept off the default path.
+  eligible (the gate lives at the call site). The hot-path replay wiring is shipped opt-in as D1 below.
+- **Capture-cache hot-path replay** (D1, opt-in `captureCache` / CLI `--capture-cache`): wires the C4
+  cache into the evidence run. A bare ephemeral run on the bundled Chromium engine can replay a fresh
+  (≤ 1 h) prior capture by content hash instead of launching — the identical bytes are re-registered
+  (same sha256), the page claim is labelled **`cached_capture`** with its staleness age (never
+  `browser_visible`), and `structured_data` is re-derived. Pre-launch engine resolution is made safe
+  by persisting the resolved engine identity stamped with the installed Playwright version; a version
+  mismatch, a missing source run, or a re-hash that fails the stored sha256 each force a real launch
+  rather than serving stale/altered bytes. Credentialed / fingerprinted / named-profile /
+  branded-channel runs are never cached, and the default path is unchanged (opt-in only).
+- **Tier-0 SPA-shell decline gate + auto routing** (D2): the browserless tier-0 path now **declines a
+  client-rendered shell** (thin server-rendered visible text plus a hydration / empty-mount marker),
+  so it never registers an incomplete capture as evidence — the caller escalates to a real browser.
+  This also hardens the existing `--http-fetch` path. A new `captureRouting: "auto"` (CLI
+  `--auto-capture`) tries tier-0 first and escalates on any decline, so it is **never a worse capture
+  than the browser**; the default stays `"browser"`, leaving the default capture method, screenshot,
+  and provenance unchanged. `httpFetch` / `captureProfile` / `captureRouting` are now forwarded
+  through the MCP/HTTP evidence-run normalizer (previously dropped on that path), so non-CLI callers
+  can use the tier-0 / text / auto controls.
 - **External-bridge caged tier** (B3, `storagePolicy: "external-bridge"`, `docs/EXTERNAL_BRIDGE.md`):
   an off-by-default lease tier for a powerful-but-untrusted external capturer, so that capability can
   be used without weakening the trust model — its bytes flow through `register_evidence`
