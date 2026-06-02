@@ -21,6 +21,7 @@ export const EvidenceKindSchema = z.enum([
   "ocr_text",
   "structured_data",
   "multi_vantage_agreement",
+  "capture_transcript",
   "official_api_metadata",
   "api_cache",
   "source_strategy",

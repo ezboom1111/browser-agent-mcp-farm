@@ -5,6 +5,7 @@ import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 import { assertDomainAllowed } from "./lease-manager.js";
 import { attachTypedFacts, extractStructuredData } from "./structured-extractor.js";
 import { captureTlsIdentity, sameConnectionTlsBindingEnabled, shapeSameConnectionTls, tlsBindingEnabled, type SameConnectionTls } from "./tls-identity.js";
+import { buildCaptureTranscript, captureTranscriptEnabled, type TranscriptResponse } from "./capture-transcript.js";
 
 // Tier-0 browserless capture (A1). For a source whose needed bytes are server-rendered, a plain
 // HTTP GET produces the SAME artifact contract as the browser path — page_html, page_text, and a
@@ -93,6 +94,37 @@ export async function httpTier0Capture(input: HttpTier0CaptureInput): Promise<Ht
       captureMethod: "http-fetch"
     });
     const records: ArtifactRecord[] = [...pageRecords];
+
+    // Capture transcript (origin-binding Phase 0, opt-in FARM_CAPTURE_TRANSCRIPT=1). A capturer-attested
+    // record of the responses, bound to the registered page_html artifact so the gate can cross-check the
+    // digest. Honestly NOT origin proof (TLS deniability); see capture-transcript.ts / the design.
+    if (captureTranscriptEnabled()) {
+      const htmlRecord = pageRecords.find((record) => record.path.endsWith(".html"));
+      if (htmlRecord !== undefined) {
+        const response: TranscriptResponse = { url: finalUrl, status, bodySha256: htmlRecord.sha256 };
+        if (acquired.contentType.length > 0) {
+          response.contentType = acquired.contentType;
+        }
+        const transcript = buildCaptureTranscript({
+          finalUrl,
+          pageBody: html,
+          responses: [response],
+          binds: { path: htmlRecord.path, sha256: htmlRecord.sha256 },
+          ...(acquired.sameConnectionTls === undefined ? {} : { certIdentity: acquired.sameConnectionTls as unknown as Record<string, unknown> })
+        });
+        const transcriptRecords = await input.writer.writeCaptureBundle({
+          runDir: input.runDir,
+          sourceUrl: input.url,
+          contextToken: input.contextToken,
+          pageId: input.pageId,
+          captureId: `${input.captureId}-transcript`,
+          text: JSON.stringify(transcript),
+          evidenceKind: "capture_transcript",
+          captureMethod: "capture-transcript"
+        });
+        records.push(...transcriptRecords);
+      }
+    }
 
     // structured_data via a SEPARATE bundle call (its single evidenceKind override applies only here).
     const structured = extractStructuredData(html);
