@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ClaimAnchorSchema, ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
 import { independentSourceGroups } from "./source-independence.js";
+import { CAPTURE_TRANSCRIPT_SCHEMA } from "./capture-transcript.js";
 
 interface ArtifactLedgerRow {
   artifact_id?: string;
@@ -66,6 +67,7 @@ export interface ClaimGateResult {
     claims: number;
     citations: number;
     judgments?: number;
+    captureTranscripts?: number;
   };
   errors: string[];
   warnings: string[];
@@ -107,6 +109,20 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       }
     } else {
       errors.push("artifact missing path");
+    }
+  }
+
+  // Capture-transcript consistency (origin-binding Phase 0). A capturer-attested transcript binds itself
+  // to a registered page artifact; here we cross-check that the transcript's recorded digest equals that
+  // artifact's registered (and already re-hashed) sha256. This is an INTEGRITY check — it only ever ADDS
+  // an error on inconsistency, never raises a verdict — so it runs in both modes and cannot let a bad run
+  // pass (preserving the 0-leak property). It is NOT origin proof: see capture-transcript.ts / the design.
+  let captureTranscriptCount = 0;
+  for (const artifact of artifacts) {
+    if (artifact.evidence_kind === "capture_transcript" && artifact.path !== undefined) {
+      if (await validateCaptureTranscript(runDir, artifact, artifactsByRef, artifact.path, errors)) {
+        captureTranscriptCount += 1;
+      }
     }
   }
 
@@ -198,7 +214,8 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       artifacts: artifacts.length,
       claims: claims.length,
       citations: citations.length,
-      ...(judgments.length > 0 ? { judgments: judgments.length } : {})
+      ...(judgments.length > 0 ? { judgments: judgments.length } : {}),
+      ...(captureTranscriptCount > 0 ? { captureTranscripts: captureTranscriptCount } : {})
     },
     errors,
     warnings
@@ -491,6 +508,45 @@ async function validateJudgment(runDir: string, judgment: JudgmentLedgerRow, art
   } else if (verifiedSupport.length === 0 && verifiedRefute.length === 0) {
     warnings.push(`'insufficient' judgment cites no verified spans: ${label}`);
   }
+}
+
+/**
+ * Capture-transcript consistency (origin-binding Phase 0). A `capture_transcript` artifact carries a
+ * `binds: {path, sha256}` reference to the registered page artifact it was captured alongside. The gate
+ * verifies that bound digest equals the page artifact's REGISTERED sha256 (which the gate already
+ * re-hashed against disk). A mismatch means the transcript is desynced from the bytes — an integrity
+ * failure. This ONLY adds errors; it never raises a verdict. It is schema-discriminated so the bundle's
+ * metadata sidecar (also tagged capture_transcript) is skipped. It is NOT origin proof — a producer that
+ * controls the bytes can write a self-consistent transcript (TLS deniability); see the design doc.
+ */
+async function validateCaptureTranscript(runDir: string, artifact: ArtifactLedgerRow, artifactsByRef: Map<string, ArtifactLedgerRow>, label: string, errors: string[]): Promise<boolean> {
+  const content = await readArtifactText(runDir, artifact);
+  if (content === undefined) {
+    return false; // unreadable/non-text — the artifact re-hash already covers post-registration tamper
+  }
+  let parsed: { schema?: unknown; binds?: { path?: unknown; sha256?: unknown } };
+  try {
+    parsed = JSON.parse(content) as { schema?: unknown; binds?: { path?: unknown; sha256?: unknown } };
+  } catch {
+    return false; // not JSON (the metadata sidecar IS JSON, but a stray text artifact may not be) — skip
+  }
+  if (parsed.schema !== CAPTURE_TRANSCRIPT_SCHEMA) {
+    return false; // the bundle's metadata sidecar (or some other capture_transcript-tagged blob), not the body
+  }
+  const binds = parsed.binds;
+  if (binds === undefined || typeof binds.path !== "string" || typeof binds.sha256 !== "string") {
+    errors.push(`capture_transcript missing a bound-artifact reference: ${label}`);
+    return true;
+  }
+  const bound = artifactsByRef.get(normalizeEvidenceRef(binds.path));
+  if (bound === undefined) {
+    errors.push(`capture_transcript binds an unregistered artifact: ${label} -> ${binds.path}`);
+    return true;
+  }
+  if (bound.sha256 !== undefined && bound.sha256 !== binds.sha256) {
+    errors.push(`capture_transcript bound-artifact digest mismatch (transcript inconsistent with registered bytes): ${label} -> ${binds.path}`);
+  }
+  return true;
 }
 
 function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {

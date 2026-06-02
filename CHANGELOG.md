@@ -8,6 +8,19 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Capture transcript — origin-binding Phase 0** (`capture-transcript.ts`, opt-in
+  `FARM_CAPTURE_TRANSCRIPT=1`): a deterministic, capturer-attested record of the HTTP responses a
+  tier-0 capture was assembled from — per-response `{url,status,contentType,bodySha256}` plus the final
+  page-body digest and a `binds` reference to the registered `page_html` artifact (new `capture_transcript`
+  evidence kind). The claim gate cross-checks that the transcript's bound digest equals the page
+  artifact's registered (already re-hashed) sha256 — an **integrity** check that catches a transcript
+  desynced from the bytes. It **only ever adds an error, never raises a verdict** (so the 0-leak fuzzer
+  property holds: 0/1200), runs in both modes, and is schema-discriminated (`capture_transcript/1`) so the
+  bundle's metadata sidecar is skipped. **Honestly scoped (no theater):** this is *capturer-attested,
+  NOT origin-proven* — by TLS deniability a client that controls the bytes can write a self-consistent
+  transcript after the fact, so it does not prove origin X sent these bytes. Origin-binding needs a
+  neutral notary in the live TLS session (the deferred `NotaryClient` seam). Node built-ins only; the new
+  design is documented in [`docs/ORIGIN_BINDING_DESIGN.md`](docs/ORIGIN_BINDING_DESIGN.md).
 - **Multi-vantage capture orchestrator** (`multi-vantage-capture.ts`, opt-in `FARM_ENABLE_MULTI_VANTAGE=1`,
   capture-binding Tier 2 — the agreement applied): fans the same url across N independent egress points
   (proxied leases), feeds the per-vantage captures to the agreement core, and writes a hash-registered
