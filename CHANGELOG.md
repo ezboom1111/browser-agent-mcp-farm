@@ -98,6 +98,9 @@ adheres to semantic versioning. Build/test status is tracked in
   records a **decision to stop at Phase 0**, with rationale (a personal tool's criterion is
   use-value/hour, not moat; the capturer-distrusting adversary does not exist when the producer is the
   user) and a flip condition — see [`docs/ORIGIN_BINDING_DESIGN.md`](docs/ORIGIN_BINDING_DESIGN.md).
+- **Positioning**: the README opening and the package description now lead with the cite-or-fail
+  *verification-floor* identity (the role under any agent's web research), with the honest boundary kept
+  explicit — grounding in the captured bytes, not live-origin truth.
 
 ## [0.6.0] — 2026-06-02 — team distribution, research lenses + the caged-judge
 
