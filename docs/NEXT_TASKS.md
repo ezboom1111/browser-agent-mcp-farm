@@ -2,7 +2,9 @@
 
 ## Current Handoff State
 
-The Codex baseline was taken over on branch `claude/handoff-baseline`. Phases
+The Codex baseline was taken over on branch `claude/handoff-baseline` (since
+merged to `main`; current build/test status is in [`../STATUS.md`](../STATUS.md)).
+Phases
 0-5 of the handoff-hardening plan are done and committed, each behind a green
 `npm run verify`:
 

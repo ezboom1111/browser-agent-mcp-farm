@@ -2,9 +2,9 @@
   "package": "browser-agent-mcp-farm",
   "version": "0.6.0",
   "branch": "main",
-  "commit": "4c2098c",
-  "workingTree": "dirty (7 files)",
-  "generatedAt": "2026-06-02T03:30:54.172Z",
+  "commit": "7e1ae62",
+  "workingTree": "dirty (11 files)",
+  "generatedAt": "2026-06-03T01:41:30.449Z",
   "gate": "npm run verify",
   "verify": "PASS",
   "tests": {
