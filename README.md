@@ -4,7 +4,13 @@
 [![qa (anti-hallucination fuzz)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
-Local generic browser research farm exposed as an MCP stdio server.
+Local browser research farm exposed as an MCP stdio server — a **verification
+floor** for agent web research: it captures what the browser actually saw and
+**fails any cited claim that doesn't re-match hash-registered bytes**
+(cite-or-fail), then exports tamper-evident bundles a second agent re-verifies
+offline. It proves your citations are grounded in the captured bytes — **not**
+that the page equals live-origin truth (see
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)).
 
 ## Install & 60-second Quickstart
 
