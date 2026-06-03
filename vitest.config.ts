@@ -25,6 +25,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text-summary", "json-summary"],
       reportsDirectory: "coverage",
+      // Coverage is intentionally scoped to src/ only. The youtube-research velocity helper
+      // (skills/**/*.mjs) is a consumer-side tool outside the farm's coverage contract, so its
+      // in-gate test runs without ever moving the ratchet. Do NOT widen this to include skills/.
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts", "**/*.d.ts"],
       thresholds
