@@ -103,6 +103,36 @@ When you need fine control:
 See [`docs/THREAT_MODEL.md`](../../docs/THREAT_MODEL.md) for exactly what these
 prove and do not prove.
 
+## Pattern: be the verification layer for a "deep research" answer
+
+Deep-research / agentic-browse tools — and ever-larger base models — are strong
+at **breadth**, but their **citations are frequently unreliable**: independent
+testing of AI search answers has found the wrong or broken source cited a
+majority of the time. This farm's job is the complementary half — turn the few
+**load-bearing** claims of any such answer into cite-or-fail, tamper-evident
+evidence a third party can re-check. Use it when the gathering happened elsewhere
+and you must not ship an uncited or misquoted claim:
+
+1. Pick the claims a decision actually rests on (the load-bearing few, not every
+   sentence).
+2. Get the bytes: with only a URL, `farm_evidence_run { url }` (or `farm_capture`)
+   captures and hash-registers the page; if you already hold the exact text you
+   read, `farm_register_evidence { text, evidenceKind, sourceUrl }`.
+3. `farm_add_claim { claim, artifactId, anchor: { type: "text_span", quote } }` —
+   the gate **rejects** a claim whose `quote` is not present in the cited bytes,
+   so a hallucinated citation cannot pass.
+4. `farm_run_claim_gate` — uncited / unregistered / misquoted claims fail the run
+   (non-zero exit).
+5. `farm_export_bundle { runDir }` → a Merkle-rooted `.evb` a teammate
+   re-verifies fully offline with `farm_verify_bundle`, trusting hashes, not you.
+
+Honest boundary: this proves your answer is **grounded in the captured bytes**
+(no invented quotes, no dangling citations) and that the bundle is byte-stable —
+it does **not** redo the research's coverage, and it does not prove the captured
+page equals live-origin truth to a distrusting adversary (see
+`docs/THREAT_MODEL.md`). It is the cheapest way to stop a fast, broad, but
+loosely-cited answer from becoming an unverifiable one.
+
 ## Evidence rules to respect
 
 - A claim is only as good as its citation: visual claims require a timestamped
