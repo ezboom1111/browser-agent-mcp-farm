@@ -1,6 +1,7 @@
 # Browser-Agent MCP Farm
 
 [![CI](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml)
+[![qa (anti-hallucination fuzz)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
 Local generic browser research farm exposed as an MCP stdio server.
@@ -935,6 +936,12 @@ converges" — see `tests/evidence-exchange.test.ts` for the worked A→B exampl
 
 See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for exactly what the claim gate
 and the bundle prove and do not prove.
+
+The cite-or-fail boundary is regression-tested by a versioned, seed-deterministic
+property-based fuzz corpus (`scripts/fuzz-corpus.json`, run by `npm run qa:fuzz`
+and the `qa` CI workflow): it currently holds **0 hallucination leaks across 1,200
+fabrication / near-miss / recombination trials over 8 corpus seeds**. A new hard
+case is added by appending a seed, never removing one.
 
 The payment guard blocks write actions on URLs, selectors, and target element
 text/attributes containing payment-like terms such as `checkout`, `payment`,

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "description": "Versioned adversarial-resistance corpus for the cite-or-fail gate. Each entry is a deterministic property-based scenario seed; ALL seeds run on every QA pass (regression). Append a seed (never remove) and bump version when a new hard case is found. The aggregate gate fails on any span-mode hallucination leak, any false-reject of a real fact, or pooled typed-fact recall below 99%.",
+  "seeds": [
+    { "seed": 2654435769, "hex": "0x9e3779b9", "note": "golden-ratio baseline (the original single seed)" },
+    { "seed": 305419896, "hex": "0x12345678", "note": "ascending nibbles" },
+    { "seed": 3735928559, "hex": "0xdeadbeef", "note": "classic marker constant" },
+    { "seed": 3405691582, "hex": "0xcafebabe", "note": "classic marker constant" },
+    { "seed": 16777619, "hex": "0x01000193", "note": "FNV-32 prime" },
+    { "seed": 1540483477, "hex": "0x5bd1e995", "note": "MurmurHash2 mixing constant" },
+    { "seed": 668265263, "hex": "0x27d4eb2f", "note": "Wang integer-hash constant" },
+    { "seed": 2779096485, "hex": "0xa5a5a5a5", "note": "alternating bit pattern" }
+  ]
+}

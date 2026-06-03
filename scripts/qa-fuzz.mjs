@@ -2,13 +2,20 @@
 // fabrications, then measure whether the cite-or-fail gate EVER passes a fabrication (the hallucination
 // leak rate) and how much it recalls. A seeded PRNG makes it deterministic/reproducible; the randomized
 // generator is the oracle, removing the "self-authored fixture" bias of the hand-written sector suite.
-import { mkdtemp, rm } from "node:fs/promises";
+//
+// The seeds come from a VERSIONED CORPUS (scripts/fuzz-corpus.json): every seed runs on every pass
+// (regression), and a new hard case is added by appending a seed — never by removing one. The gate is
+// enforced on the POOLED result across the whole corpus: any span-mode hallucination leak, any
+// false-reject of a real fact, or pooled typed-fact recall below 99% exits non-zero.
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { FarmService } from "../dist/farm-service.js";
 import { extractTypedFacts } from "../dist/typed-facts.js";
 
-const SEED = 0x9e3779b9;
+const HERE = dirname(fileURLToPath(import.meta.url));
+
 function mulberry32(a) {
   return () => {
     a |= 0;
@@ -18,70 +25,68 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const rng = mulberry32(SEED);
-const pick = (arr) => arr[Math.floor(rng() * arr.length)];
-const int = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
 
 const ENTITIES = ["Alpha", "Bravo", "Cortex", "Delta", "Equinox", "Falcon", "Granite", "Helio", "Ionix", "Jasper"];
 const WORDS = ["market", "growth", "revenue", "users", "launch", "study", "report", "quarter", "region", "product", "service", "update", "trend", "sector", "value", "result", "cohort", "segment", "forecast", "demand", "margin", "retention"];
 const withCommas = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-const genPrice = () => `$${withCommas(int(1000, 99999))}.${String(int(0, 99)).padStart(2, "0")}`;
-const genRating = () => `${int(1, 4)}.${int(0, 9)}/5`;
-const genPct = () => `${int(1, 99)}%`;
-const genDate = () => `20${int(20, 29)}-${String(int(1, 12)).padStart(2, "0")}-${String(int(1, 28)).padStart(2, "0")}`;
-const sentence = () => Array.from({ length: int(5, 11) }, () => pick(WORDS)).join(" ");
 
-// A page with: two "<Entity> grew <pct>" sentences (for the recombination attack), plus random
-// price/rating/date facts embedded in prose. Returns the visible text + the ground-truth facts.
-function genPage() {
-  const facts = [];
-  const e1 = pick(ENTITIES);
-  let e2 = pick(ENTITIES);
-  while (e2 === e1) e2 = pick(ENTITIES);
-  const p1 = genPct();
-  let p2 = genPct();
-  while (p2 === p1) p2 = genPct();
-  const lines = [`${e1} grew ${p1} last year.`, `${e2} grew ${p2} this year.`];
-  facts.push({ kind: "percentage", raw: p1 }, { kind: "percentage", raw: p2 });
-  for (const [kind, gen] of [
-    ["price", genPrice],
-    ["rating", genRating],
-    ["date", genDate]
-  ]) {
-    if (rng() < 0.85) {
-      const raw = gen();
-      lines.push(`The ${pick(WORDS)} ${kind} is ${raw} as observed.`);
-      facts.push({ kind, raw });
+// One deterministic seed's full battery: gate trials (fabrication / near-miss / recombination) + typed-fact
+// recall. Identical semantics to the original single-seed harness; only the seed and budgets are injected.
+async function runSeed(svc, seed, nGate, nRecall) {
+  const rng = mulberry32(seed);
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+  const int = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
+  const genPrice = () => `$${withCommas(int(1000, 99999))}.${String(int(0, 99)).padStart(2, "0")}`;
+  const genRating = () => `${int(1, 4)}.${int(0, 9)}/5`;
+  const genPct = () => `${int(1, 99)}%`;
+  const genDate = () => `20${int(20, 29)}-${String(int(1, 12)).padStart(2, "0")}-${String(int(1, 28)).padStart(2, "0")}`;
+  const sentence = () => Array.from({ length: int(5, 11) }, () => pick(WORDS)).join(" ");
+
+  // A page with: two "<Entity> grew <pct>" sentences (for the recombination attack), plus random
+  // price/rating/date facts embedded in prose. Returns the visible text + the ground-truth facts.
+  function genPage() {
+    const facts = [];
+    const e1 = pick(ENTITIES);
+    let e2 = pick(ENTITIES);
+    while (e2 === e1) e2 = pick(ENTITIES);
+    const p1 = genPct();
+    let p2 = genPct();
+    while (p2 === p1) p2 = genPct();
+    const lines = [`${e1} grew ${p1} last year.`, `${e2} grew ${p2} this year.`];
+    facts.push({ kind: "percentage", raw: p1 }, { kind: "percentage", raw: p2 });
+    for (const [kind, gen] of [
+      ["price", genPrice],
+      ["rating", genRating],
+      ["date", genDate]
+    ]) {
+      if (rng() < 0.85) {
+        const raw = gen();
+        lines.push(`The ${pick(WORDS)} ${kind} is ${raw} as observed.`);
+        facts.push({ kind, raw });
+      }
     }
+    for (let i = 0; i < int(2, 5); i++) lines.splice(int(0, lines.length), 0, `${sentence()}.`);
+    return { text: lines.join(" "), facts, e1, e2, p1, p2 };
   }
-  for (let i = 0; i < int(2, 5); i++) lines.splice(int(0, lines.length), 0, `${sentence()}.`);
-  return { text: lines.join(" "), facts, e1, e2, p1, p2 };
-}
 
-// Mutate a fact's last digit so it is a NEAR-MISS not present verbatim in the text.
-function nearMiss(raw, text) {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const digits = [...raw].map((c, i) => ({ c, i })).filter((x) => /\d/.test(x.c));
-    const d = pick(digits);
-    const newDigit = String((Number(d.c) + int(1, 8)) % 10);
-    const mutated = raw.slice(0, d.i) + newDigit + raw.slice(d.i + 1);
-    if (mutated !== raw && !text.includes(mutated)) return mutated;
+  // Mutate a fact's last digit so it is a NEAR-MISS not present verbatim in the text.
+  function nearMiss(raw, text) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const digits = [...raw].map((c, i) => ({ c, i })).filter((x) => /\d/.test(x.c));
+      const d = pick(digits);
+      const newDigit = String((Number(d.c) + int(1, 8)) % 10);
+      const mutated = raw.slice(0, d.i) + newDigit + raw.slice(d.i + 1);
+      if (mutated !== raw && !text.includes(mutated)) return mutated;
+    }
+    return null;
   }
-  return null;
-}
 
-async function run() {
-  const svc = new FarmService();
-  const N_GATE = 400; // pages through the full register -> add_claim -> gate path
-  const N_RECALL = 5000; // pages through pure typed-fact extraction (fast)
-
-  // ---- Gate precision: does a fabrication EVER pass? (the hallucination leak rate) ----
   const tally = { groundedPass: 0, groundedN: 0, fabBlocked: 0, fabN: 0, nearBlocked: 0, nearN: 0, recombSpanBlocked: 0, recombSpanN: 0, recombAggPass: 0, recombAggN: 0, recombAggWarned: 0 };
   const leaks = [];
-  for (let i = 0; i < N_GATE; i++) {
+  for (let i = 0; i < nGate; i++) {
     const pg = genPage();
-    const url = `https://fuzz-${i}.example.com/p`;
-    const newDir = async () => mkdtemp(join(tmpdir(), `fuzz-${i}-`));
+    const url = `https://fuzz-${seed}-${i}.example.com/p`;
+    const newDir = async () => mkdtemp(join(tmpdir(), `fuzz-${seed}-${i}-`));
     const dirs = [];
     const claim = async (anchor, taxonomy) => {
       const d = await newDir();
@@ -130,7 +135,7 @@ async function run() {
 
   // ---- Typed-fact recall over many pages (pure, fast) ----
   const recall = { price: { hit: 0, n: 0 }, rating: { hit: 0, n: 0 }, percentage: { hit: 0, n: 0 }, date: { hit: 0, n: 0 } };
-  for (let i = 0; i < N_RECALL; i++) {
+  for (let i = 0; i < nRecall; i++) {
     const pg = genPage();
     const found = new Set(extractTypedFacts(pg.text).map((f) => `${f.kind}:${f.raw}`));
     for (const f of pg.facts) {
@@ -139,35 +144,69 @@ async function run() {
     }
   }
 
+  const spanLeaks = tally.fabN - tally.fabBlocked + (tally.nearN - tally.nearBlocked) + (tally.recombSpanN - tally.recombSpanBlocked);
+  return { tally, recall, leaks, spanLeaks };
+}
+
+async function run() {
+  const corpus = JSON.parse(await readFile(join(HERE, "fuzz-corpus.json"), "utf8"));
+  // Per-seed budgets are split so the whole corpus costs ~the same as the original single seed
+  // (total gate pages ~= seeds * N_GATE). Override for a deeper local sweep.
+  const N_GATE = Number(process.env.FARM_FUZZ_GATE_PAGES ?? 50); // pages/seed through the full register -> add_claim -> gate path
+  const N_RECALL = Number(process.env.FARM_FUZZ_RECALL_PAGES ?? 1000); // pages/seed through pure typed-fact extraction (fast)
+
+  const svc = new FarmService();
+  const agg = { groundedPass: 0, groundedN: 0, fabBlocked: 0, fabN: 0, nearBlocked: 0, nearN: 0, recombSpanBlocked: 0, recombSpanN: 0, recombAggPass: 0, recombAggN: 0, recombAggWarned: 0 };
+  const aggRecall = { price: { hit: 0, n: 0 }, rating: { hit: 0, n: 0 }, percentage: { hit: 0, n: 0 }, date: { hit: 0, n: 0 } };
+  let aggSpanLeaks = 0;
+  const allLeaks = [];
+  const perSeed = [];
+
+  for (const entry of corpus.seeds) {
+    const r = await runSeed(svc, entry.seed >>> 0, N_GATE, N_RECALL);
+    for (const k of Object.keys(agg)) agg[k] += r.tally[k];
+    for (const k of Object.keys(aggRecall)) {
+      aggRecall[k].hit += r.recall[k].hit;
+      aggRecall[k].n += r.recall[k].n;
+    }
+    aggSpanLeaks += r.spanLeaks;
+    for (const l of r.leaks) allLeaks.push(`[${entry.hex}] ${l}`);
+    perSeed.push({ hex: entry.hex, spanLeaks: r.spanLeaks });
+  }
+
   // ---- REPORT ----
   const pct = (a, b) => (b === 0 ? "n/a" : `${((100 * a) / b).toFixed(1)}%`);
-  console.log("\n================ PROPERTY-BASED FUZZ QA (seed-deterministic) ================\n");
-  console.log(`Gate trials: ${N_GATE} pages.   Recall trials: ${N_RECALL} pages.\n`);
-  console.log("-- GATE PRECISION (the hallucination leak rate) --");
-  console.log(`  grounded span (control) PASS:      ${tally.groundedPass}/${tally.groundedN}  (${pct(tally.groundedPass, tally.groundedN)})  [want 100% — real facts accepted]`);
-  console.log(`  pure fabrication BLOCKED:          ${tally.fabBlocked}/${tally.fabN}  (${pct(tally.fabBlocked, tally.fabN)})  [want 100%]`);
-  console.log(`  near-miss BLOCKED:                 ${tally.nearBlocked}/${tally.nearN}  (${pct(tally.nearBlocked, tally.nearN)})  [want 100%]`);
-  console.log(`  recombination (SPAN) BLOCKED:      ${tally.recombSpanBlocked}/${tally.recombSpanN}  (${pct(tally.recombSpanBlocked, tally.recombSpanN)})  [want 100%]`);
-  const spanLeaks = tally.fabN - tally.fabBlocked + (tally.nearN - tally.nearBlocked) + (tally.recombSpanN - tally.recombSpanBlocked);
-  console.log(`\n  >>> SPAN-MODE HALLUCINATION LEAKS: ${spanLeaks} / ${tally.fabN + tally.nearN + tally.recombSpanN}  (default quote mode)`);
-  console.log(`  recombination (AGGREGATED token mode) PASS: ${tally.recombAggPass}/${tally.recombAggN}  (${pct(tally.recombAggPass, tally.recombAggN)})  [KNOWN WEAKNESS — tokens present, meaning false]`);
-  console.log(`  ...of which the gate WARNED (scatter):     ${tally.recombAggWarned}/${tally.recombAggN}  (${pct(tally.recombAggWarned, tally.recombAggN)})  [new hardening surfaces the recombination]`);
-  console.log("\n-- TYPED-FACT RECALL --");
-  for (const k of ["price", "rating", "percentage", "date"]) console.log(`  ${k.padEnd(11)} ${pct(recall[k].hit, recall[k].n)}  (${recall[k].hit}/${recall[k].n})`);
-  if (leaks.length) {
+  const totalSpanTrials = agg.fabN + agg.nearN + agg.recombSpanN;
+  console.log("\n================ PROPERTY-BASED FUZZ QA (versioned corpus, seed-deterministic) ================\n");
+  console.log(`Corpus v${corpus.version}: ${corpus.seeds.length} seeds.   Per seed: ${N_GATE} gate pages, ${N_RECALL} recall pages.`);
+  console.log(`Totals: ${corpus.seeds.length * N_GATE} gate pages, ${totalSpanTrials} span-mode trials, ${corpus.seeds.length * N_RECALL} recall pages.\n`);
+  console.log("-- GATE PRECISION (the hallucination leak rate, pooled across the corpus) --");
+  console.log(`  grounded span (control) PASS:      ${agg.groundedPass}/${agg.groundedN}  (${pct(agg.groundedPass, agg.groundedN)})  [want 100% — real facts accepted]`);
+  console.log(`  pure fabrication BLOCKED:          ${agg.fabBlocked}/${agg.fabN}  (${pct(agg.fabBlocked, agg.fabN)})  [want 100%]`);
+  console.log(`  near-miss BLOCKED:                 ${agg.nearBlocked}/${agg.nearN}  (${pct(agg.nearBlocked, agg.nearN)})  [want 100%]`);
+  console.log(`  recombination (SPAN) BLOCKED:      ${agg.recombSpanBlocked}/${agg.recombSpanN}  (${pct(agg.recombSpanBlocked, agg.recombSpanN)})  [want 100%]`);
+  console.log(`\n  >>> SPAN-MODE HALLUCINATION LEAKS: ${aggSpanLeaks} / ${totalSpanTrials}  (default quote mode, pooled)`);
+  console.log(`  recombination (AGGREGATED token mode) PASS: ${agg.recombAggPass}/${agg.recombAggN}  (${pct(agg.recombAggPass, agg.recombAggN)})  [KNOWN WEAKNESS — tokens present, meaning false]`);
+  console.log(`  ...of which the gate WARNED (scatter):     ${agg.recombAggWarned}/${agg.recombAggN}  (${pct(agg.recombAggWarned, agg.recombAggN)})  [hardening surfaces the recombination]`);
+  console.log("\n-- TYPED-FACT RECALL (pooled) --");
+  for (const k of ["price", "rating", "percentage", "date"]) console.log(`  ${k.padEnd(11)} ${pct(aggRecall[k].hit, aggRecall[k].n)}  (${aggRecall[k].hit}/${aggRecall[k].n})`);
+  console.log("\n-- PER-SEED SPAN LEAKS --");
+  for (const s of perSeed) console.log(`  ${s.hex.padEnd(12)} ${s.spanLeaks} leak(s)`);
+  if (allLeaks.length) {
     console.log("\n-- SPAN LEAK SAMPLES --");
-    for (const l of leaks.slice(0, 8)) console.log("  ! " + l);
+    for (const l of allLeaks.slice(0, 8)) console.log(`  ! ${l}`);
   }
+
   console.log("\n================ VERDICT ================");
-  console.log(spanLeaks === 0 ? "SPAN MODE: 0 hallucination leaks across all fabrication/near-miss/recombination trials — the default cite-or-fail boundary held." : `SPAN MODE: ${spanLeaks} LEAK(S) — investigate.`);
-  console.log(`AGGREGATED MODE: ${pct(tally.recombAggPass, tally.recombAggN)} of semantically-false recombinations passed (the documented token-match weakness; quantified — use farm_judge_claim / text_span for high assurance).`);
+  console.log(aggSpanLeaks === 0 ? `SPAN MODE: 0 hallucination leaks across all ${totalSpanTrials} fabrication/near-miss/recombination trials over ${corpus.seeds.length} corpus seeds — the default cite-or-fail boundary held.` : `SPAN MODE: ${aggSpanLeaks} LEAK(S) — investigate.`);
+  console.log(`AGGREGATED MODE: ${pct(agg.recombAggPass, agg.recombAggN)} of semantically-false recombinations passed (the documented token-match weakness; quantified — use farm_judge_claim / text_span for high assurance).`);
 
   // Tier 4: this is a regression GATE, not just a report. Any span-mode hallucination leak, any
-  // false-reject of a real fact, or recall below 99% on the generated formats exits non-zero.
-  const recallOk = ["price", "rating", "percentage", "date"].every((k) => recall[k].n === 0 || recall[k].hit / recall[k].n >= 0.99);
-  const noFalseReject = tally.groundedPass === tally.groundedN;
-  const pass = spanLeaks === 0 && noFalseReject && recallOk;
-  console.log(`\nGATE: ${pass ? "PASS" : "FAIL"}  (span leaks=${spanLeaks}, grounded ${tally.groundedPass}/${tally.groundedN}, recall>=99%=${recallOk})`);
+  // false-reject of a real fact, or pooled recall below 99% on the generated formats exits non-zero.
+  const recallOk = ["price", "rating", "percentage", "date"].every((k) => aggRecall[k].n === 0 || aggRecall[k].hit / aggRecall[k].n >= 0.99);
+  const noFalseReject = agg.groundedPass === agg.groundedN;
+  const pass = aggSpanLeaks === 0 && noFalseReject && recallOk;
+  console.log(`\nGATE: ${pass ? "PASS" : "FAIL"}  (span leaks=${aggSpanLeaks}, grounded ${agg.groundedPass}/${agg.groundedN}, recall>=99%=${recallOk})`);
   if (!pass) {
     process.exitCode = 1;
   }

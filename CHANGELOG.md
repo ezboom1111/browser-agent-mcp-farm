@@ -8,6 +8,18 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Added
 
+- **Versioned anti-hallucination fuzz corpus** (`scripts/fuzz-corpus.json`, run by `npm run qa:fuzz` and
+  the `qa` CI workflow): the property-based cite-or-fail fuzzer now sweeps a *versioned, append-only* set
+  of deterministic seeds (8 at corpus v1) instead of a single seed, and gates on the **pooled** result —
+  any span-mode hallucination leak, any false-reject of a real fact, or pooled typed-fact recall < 99%
+  exits non-zero. Same cost as before (~400 gate pages / 1,200 span-mode trials total), now spread across
+  8 seeds: **0 leaks on every seed**. A new hard case is added by appending a seed, never removing one.
+  The README now carries the `qa` workflow status badge as a CI-verifiable (not self-asserted) trust signal.
+- **`gather → verify` skill pattern** (`skills/browser-agent-mcp-farm/SKILL.md`): a first-class workflow
+  for using the farm as the *verification layer* under a broad-but-loosely-cited deep-research answer —
+  register the bytes seen, author a cite-or-fail claim, run the gate, export a tamper-evident `.evb` a
+  teammate re-verifies offline. The honest boundary is kept explicit (proves grounding in the captured
+  bytes, not coverage or live-origin truth).
 - **Capture transcript — origin-binding Phase 0** (`capture-transcript.ts`, opt-in
   `FARM_CAPTURE_TRANSCRIPT=1`): a deterministic, capturer-attested record of the HTTP responses a
   tier-0 capture was assembled from — per-response `{url,status,contentType,bodySha256}` plus the final
@@ -76,6 +88,16 @@ adheres to semantic versioning. Build/test status is tracked in
   hang-proof. A same-connection byte-binding, an RFC-3161 trusted-timestamp anchor, and multi-vantage
   agreement are the further infrastructure-dependent steps and are deliberately left out of the
   deterministic core.
+
+### Changed
+
+- **Docs truth-up + origin-binding decision record**: narrative docs that still claimed a stale `v0.3.0`
+  and pointed at the merged `claude/handoff-baseline` branch now link to the generated
+  [`STATUS.md`](STATUS.md) instead of restating counts (drift-proof); point-in-time history (this
+  changelog, `DEVELOPMENT_HISTORY.md`, past verify logs) is left intact. The origin-binding design now
+  records a **decision to stop at Phase 0**, with rationale (a personal tool's criterion is
+  use-value/hour, not moat; the capturer-distrusting adversary does not exist when the producer is the
+  user) and a flip condition — see [`docs/ORIGIN_BINDING_DESIGN.md`](docs/ORIGIN_BINDING_DESIGN.md).
 
 ## [0.6.0] — 2026-06-02 — team distribution, research lenses + the caged-judge
 
