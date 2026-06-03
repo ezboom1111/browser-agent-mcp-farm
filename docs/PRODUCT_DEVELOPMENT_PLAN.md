@@ -194,7 +194,8 @@ calibration rather than generic search readiness.
 
 ## What Exists Today
 
-Version `0.3.0` already includes:
+The farm already includes (current build/test status in
+[`../STATUS.md`](../STATUS.md)):
 
 - isolated Playwright BrowserContext leases
 - MCP, CLI, and local HTTP evidence-run entry points
@@ -934,7 +935,7 @@ Fallback behavior:
 
 Status: done.
 
-This is the current `0.3.0` state: evidence-run, source strategy, OCR, dense
+This is the current evidence-core state: evidence-run, source strategy, OCR, dense
 sampling, official API metadata, obstruction capture, scheduler, CI, npm pack,
 and strict claim gate.
 

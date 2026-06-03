@@ -81,7 +81,8 @@ For a new Codex or Claude session, read these files in this order:
 
 ## Current Verification Status
 
-`npm run verify` is green on the working branch (`claude/handoff-baseline`). The
+`npm run verify` is green on `main` (the original `claude/handoff-baseline`
+handoff has since been merged). The
 generated [`STATUS.md`](../STATUS.md) records the exact build/test/coverage
 result and the commit it came from — read it instead of relying on counts
 written into prose. The gate now also runs a standalone typecheck over src and
@@ -99,7 +100,7 @@ Use this prompt for Codex or Claude:
 ```text
 Read AGENTS.md, docs/DOCUMENTATION_MAP.md, docs/ARCHITECTURE.md,
 docs/CLAUDE_HANDOFF.md, STATUS.md, and docs/NEXT_TASKS.md. Continue from the
-current worktree on branch claude/handoff-baseline. Do not revert user changes.
+current worktree on branch main. Do not revert user changes.
 Run npm run verify to confirm the gate is green, then continue the next item in
 docs/NEXT_TASKS.md.
 ```

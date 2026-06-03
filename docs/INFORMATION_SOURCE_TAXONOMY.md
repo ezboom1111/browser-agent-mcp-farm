@@ -79,7 +79,7 @@ Use support tiers so docs and tests can state exactly where a platform stands.
 | 4 | Explicit recipes. Has fixture-backed safe recipes for filters, panels, media, or follow-up. |
 | 5 | Calibrated. Has real-site tuning and optional official API integration where credentials permit. |
 
-Current `0.3.0` status is strongest at tiers 2-4 for generic browser-visible
+Current status is strongest at tiers 2-4 for generic browser-visible
 evidence, source strategy, source navigation plans, and explicit local recipes.
 It is not tier 5 for Naver/Google/travel/social real-site defaults yet.
 
