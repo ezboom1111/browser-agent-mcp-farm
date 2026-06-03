@@ -1,9 +1,29 @@
-# Origin-Bound Capture Attestation — Design (DRAFT)
+# Origin-Bound Capture Attestation — Design + Decision Record
 
-> Status: **design draft for review** (no code yet). Produced from a focused
-> technical review of capture provenance, TLS limits, repo integration, and
-> design red-team constraints. This document covers only the technical design
-> and its honest limits.
+> **Decision (2026-06-03): STOP at Phase 0.** Phase 0 (the capturer-attested
+> `capture_transcript`) is **shipped** — opt-in, default byte-unchanged. Phase 1
+> (browser-path cert identity) is **skipped**: it is strictly weaker than the
+> already-shipped tier-0 same-connection TLS pin (D1, `FARM_BIND_TLS_SAMECONN`),
+> so building it would be negative value. The neutral-notary line (Phase 2 /
+> zkTLS) is **deferred as design only** — the seam is described below but is not
+> built.
+>
+> **Why stop.** This is a personal, non-monetized tool. Origin-binding hardens
+> against a *distrusting third party who suspects the capturer fabricated the
+> bytes* — a threat that only exists when the producer and the verifier are
+> adversaries. Here the producer **is** the user; the user's real adversary is
+> their own model's hallucination, which the **shipped cite-or-fail gate already
+> closes**. The criterion is use-value-per-hour, not moat. zkTLS solves the
+> *inverse* problem (proving private data to a distrusting verifier) and serves
+> the opposite audience.
+>
+> **Flip condition.** Build the Phase 2 *seam* (never the weak Phase 1) only if
+> the user gains a real external/adversarial verifier audience (e.g. an on-chain
+> or regulatory dispute where the capturer is presumed hostile).
+>
+> The rest of this document is the technical design and its honest limits;
+> Sections 1–2 below are why no client-only layer can close the gap. See also
+> [`CAPTURE_BINDING.md`](CAPTURE_BINDING.md) and [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
 ## 1. The problem: the open roof (fabrication-at-capture)
 

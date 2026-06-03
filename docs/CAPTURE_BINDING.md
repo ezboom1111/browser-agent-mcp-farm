@@ -96,5 +96,11 @@ browser path can still record the weaker `securityDetails` provenance if needed.
 | Agreement core (pure) | `src/multi-vantage-agreement.ts` |
 | Multi-vantage orchestrator | `src/multi-vantage-capture.ts` |
 
+The more aggressive **origin-binding** line (proving captured bytes came from
+origin X to a capturer-distrusting third party) is a separate design whose
+**decision is to stop at Phase 0** — see
+[`ORIGIN_BINDING_DESIGN.md`](ORIGIN_BINDING_DESIGN.md) for the decision record and
+why a neutral notary (zkTLS), not any client-only layer, is the only gap-closer.
+
 See [`docs/THREAT_MODEL.md`](THREAT_MODEL.md) for the surrounding trust model and
 [`CHANGELOG.md`](../CHANGELOG.md) for the per-build history.
