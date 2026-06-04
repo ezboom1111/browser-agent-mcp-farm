@@ -41,8 +41,22 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
    key, 10k units/day) for long-form/Shorts; TikTok Creative Center (manual, view-only) for
    short-form trending sounds/hashtags; Google Trends for cross-platform demand. In Korea,
    lead with Instagram Reels + YouTube (TikTok is a minor teen platform there).
-2. **GET transcript** (spoken layer): read **already-served** captions with a transcript tool
-   (e.g. `youtube-transcript-api`), or paste a transcript. Obey the Security rules below.
+2. **GET the spoken/listed layer — a fallback ladder** (the transcript path is fragile, so degrade
+   gracefully instead of failing the run):
+   - **(a) Transcript — primary, $0:** read **already-served** captions (e.g. `youtube-transcript-api`)
+     or paste one. **Pace it:** a residential IP gets `IpBlocked`/`RequestBlocked` after a burst of a
+     few dozen fetches (measured ~15-20 in one session). Fetch **sequentially with a delay and a
+     per-session cap, never in parallel.** If blocked, **back off hours — never add `--cookies` to beat
+     it (that is the permanent-ban path).**
+   - **(b) IP-blocked or no captions → official Data API `videos.list?part=snippet` (keyed, never
+     IP-blocked):** `title` + `description`. For list/guide videos (hotels, places, rankings) the
+     **description usually enumerates the load-bearing items with chapter timestamps** (each hotel /
+     place / pick) — often the exact answer with zero scraping. The keyed API shares no fate with the
+     caption endpoint, so it survives a block.
+   - **(c) Spoken content still missing → Gemini native YouTube-URL** (Google-side fetch, IP-immune,
+     audio+visual). Treat as a **lead**; re-ground load-bearing numbers through the farm.
+   - **(d) Honest gap:** if (a)–(c) cannot reach it, say so — do not fill with guesses.
+   Obey the Security rules below.
 3. **UNDERSTAND**: the agent reads the transcript ($0). Use Gemini only when the *visual* track
    carries the meaning. Treat Gemini output as a **lead, never cited evidence**.
 4. **QUANTIFY**: compute view-velocity from two timestamped `videos.list` statistics snapshots
