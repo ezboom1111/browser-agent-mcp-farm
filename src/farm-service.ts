@@ -313,7 +313,7 @@ export class FarmService {
   // captured transcript bytes. The farm performs no speech-to-text — the transcript is the
   // platform's own caption (e.g. Google's auto-ASR for YouTube), supplied lawfully and recorded
   // with bring-your-own-capture provenance.
-  async registerTranscript(input: { runDir: string; sourceUrl: string; vtt?: string; text?: string; captureMethod?: string; capturedBy?: string }) {
+  async registerTranscript(input: { runDir: string; sourceUrl: string; vtt?: string | undefined; text?: string | undefined; captureMethod?: string | undefined; capturedBy?: string | undefined }) {
     let transcriptText: string;
     let cueCount = 0;
     if (input.vtt !== undefined) {
