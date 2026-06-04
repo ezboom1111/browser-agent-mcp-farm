@@ -49,11 +49,22 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
    with [`lib/velocity.mjs`](lib/velocity.mjs) (`viewVelocityPerHour`). Stamp every reading with
    a captured-at time — short-form trend half-life is days.
 5. **VERIFY** the load-bearing few (2–5 numbers a decision rests on): register the exact bytes
-   (the `videos.list` JSON snapshot, or the served caption line) with `farm_register_evidence`,
-   author a claim with `farm_add_claim` (an `anchor.text_span` literally present in the bytes;
-   captions are `transcript_cue`, **never** `audio_transcription`), run `farm_run_claim_gate`,
-   and `farm_export_bundle`. Put **captured-at** and a **freshness note** on the claim as fields,
-   not prose. Do NOT verify everything — the gate is a microscope on the load-bearing few.
+   with `farm_register_evidence`, author a claim with `farm_add_claim` whose `anchor.text_span`
+   quote is **literally present in those bytes**, run `farm_run_claim_gate`, and
+   `farm_export_bundle`. Two rules proven in practice (2026-06):
+   - **Register anything you will quote as a text kind** — `page_text`, `transcript_cue`,
+     `ocr_text`, or `page_html`. `text_span` anchoring is **rejected** on `official_api_metadata`,
+     `metadata`, and `structured_data` (gate error: *"text_span anchor requires a
+     text/HTML/OCR/transcript artifact"*). Register the `videos.list` JSON (or the specific field)
+     as **`page_text`** and anchor the exact substring (e.g. `"viewCount": "658078"`); captions
+     stay `transcript_cue`, **never** `audio_transcription`.
+   - **A number with no `text_span` is NOT verified.** Citing `official_api_metadata` *without* an
+     anchor passes the gate yet never byte-checks the value — a deliberately wrong `999999` slips
+     through (measured). The `text_span` is the whole cite-or-fail guarantee; without it you only
+     prove an artifact exists, not that your number matches it.
+   Put **captured-at** and a **freshness note** on the claim as fields, not prose. Do NOT verify
+   everything — the gate is a microscope on the load-bearing few. A failed claim still appends to
+   the run ledger (no delete) — if a run is contaminated, start a **fresh `runDir`**.
 
 ## Using `lib/velocity.mjs`
 
