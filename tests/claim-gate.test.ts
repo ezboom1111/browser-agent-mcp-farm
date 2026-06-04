@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ArtifactWriter, type ArtifactRecord } from "../src/artifact-writer.js";
 import { runClaimGate } from "../src/claim-gate.js";
+import { FarmService } from "../src/farm-service.js";
 import type { EvidenceKind } from "../src/schemas.js";
 
 let runDirs: string[] = [];
@@ -502,6 +503,23 @@ describe("runClaimGate", () => {
 
     const result = await runClaimGate(runDir, { mode: "final" });
     expect(result.ok).toBe(true);
+  });
+
+  it("hard-warns (but does not fail) on a metadata-kind claim with no anchor — surfaces the unverified-number hole", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-meta-noanchor-"));
+    runDirs.push(runDir);
+    const service = new FarmService();
+    const reg = await service.registerEvidence({ runDir, sourceUrl: "https://www.googleapis.com/youtube/v3/videos", text: "views: 658078", evidenceKind: "official_api_metadata" });
+    expect(reg.registered).toBe(true);
+    if (!reg.artifactId) {
+      throw new Error("expected a registered artifact id");
+    }
+    const res = await service.addClaim({ runDir, claim: "views are 999999", claimType: "metadata", artifactId: reg.artifactId, evidenceKind: "official_api_metadata", verificationLevel: "official_api" });
+    if (!res.appended) {
+      throw new Error("expected the claim to be appended");
+    }
+    expect(res.gate.ok).toBe(true);
+    expect(res.gate.warnings.some((w) => w.includes("NOT byte-verified"))).toBe(true);
   });
 });
 

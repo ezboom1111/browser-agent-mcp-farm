@@ -187,6 +187,14 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
       validateDestinationProvenanceClaim(claim, citationsByClaimId.get(claim.claim_id ?? ""), claimLabel, errors);
       if (claim.anchor !== undefined) {
         await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors, warnings);
+      } else if (artifact !== undefined && (artifact.evidence_kind === "official_api_metadata" || artifact.evidence_kind === "metadata")) {
+        // The "999999" hole: a metadata-kind artifact carries no text-groundable span, so a claim that
+        // cites it WITHOUT an anchor is never byte-checked — a wrong value (e.g. 999999) would pass.
+        // Hard-warn (not a hard error): destination-provenance claims legitimately carry no text_span
+        // and are validated separately, and flipping the pass/fail contract for every farm consumer
+        // would need a deprecation cycle. To actually verify the number, re-register the field as
+        // page_text or structured_data and cite it with a text_span anchor.
+        warnings.push(`claim cites ${artifact.evidence_kind} with no anchor — its value is NOT byte-verified (a wrong number would pass the gate); re-register the field as page_text or structured_data and add a text_span anchor: ${claimLabel}`);
       }
       await validateClaimCorroboration(runDir, claim, artifactsByRef, claimLabel, errors, warnings);
     } else {
