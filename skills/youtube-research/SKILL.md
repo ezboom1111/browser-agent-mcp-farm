@@ -41,21 +41,32 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
    key, 10k units/day) for long-form/Shorts; TikTok Creative Center (manual, view-only) for
    short-form trending sounds/hashtags; Google Trends for cross-platform demand. In Korea,
    lead with Instagram Reels + YouTube (TikTok is a minor teen platform there).
-2. **GET the spoken/listed layer — a fallback ladder** (the transcript path is fragile, so degrade
-   gracefully instead of failing the run):
-   - **(a) Transcript — primary, $0:** read **already-served** captions (e.g. `youtube-transcript-api`)
-     or paste one. **Pace it:** a residential IP gets `IpBlocked`/`RequestBlocked` after a burst of a
-     few dozen fetches (measured ~15-20 in one session). Fetch **sequentially with a delay and a
-     per-session cap, never in parallel.** If blocked, **back off hours — never add `--cookies` to beat
-     it (that is the permanent-ban path).**
-   - **(b) IP-blocked or no captions → official Data API `videos.list?part=snippet` (keyed, never
-     IP-blocked):** `title` + `description`. For list/guide videos (hotels, places, rankings) the
-     **description usually enumerates the load-bearing items with chapter timestamps** (each hotel /
-     place / pick) — often the exact answer with zero scraping. The keyed API shares no fate with the
-     caption endpoint, so it survives a block.
-   - **(c) Spoken content still missing → Gemini native YouTube-URL** (Google-side fetch, IP-immune,
-     audio+visual). Treat as a **lead**; re-ground load-bearing numbers through the farm.
-   - **(d) Honest gap:** if (a)–(c) cannot reach it, say so — do not fill with guesses.
+2. **GET the spoken/listed layer — route to the cheapest *trustworthy* source first** (the external
+   scraper is fragile and bot-detected, so do not reach for it by reflex):
+   - **(0) Classify the video.** **List/guide** (ranking, "BEST N", a places/hotels list — tell-tale:
+     the description has ≥3 timestamped chapter lines) → the answer is usually already structured in the
+     **keyed Data API**; skip scraping. **Narrative** (one continuous explanation) → you need the spoken
+     track.
+   - **(a) List/guide → official Data API `videos.list?part=snippet` (keyed, NEVER IP-blocked, 1 quota
+     unit):** `title` + `description` typically **enumerate the load-bearing items with chapter
+     timestamps** (each hotel / place / pick) — often the exact answer with zero scraping. Make this the
+     **first** stop for list/guide videos; the IP-ban trigger never even fires.
+   - **(b) Narrative track → prefer farm-witnessed VTT when available.** If you capture the watch/embed
+     page in the farm browser with captions enabled (e.g. an embed URL with `cc_load_policy=1`), the
+     farm records the **player-loaded WebVTT** (`text/vtt`) and **`farm_register_transcript`** registers
+     it as a `transcript_cue` of bytes **the farm itself saw** — closing the "agent chose which bytes to
+     register" gap; preferred over a hand paste. Player auto-load is not guaranteed; if no VTT is
+     captured, fall through to (c). Subject to the ToS note below.
+   - **(c) External transcript tool — last resort** (e.g. `youtube-transcript-api`): it scrapes the
+     internal `timedtext` and is **behavioral-bot-detected** — a residential IP gets `IpBlocked` after a
+     burst (**measured: ~19 fetches soft-blocked us in one session**; it is not a quota, so there is no
+     safe count). Fetch sparingly, sequentially, with a long delay; **never** `--cookies` (permanent-ban
+     path). On block, back off hours or fall back to (a).
+   - **(d) Visual-only / still missing → Gemini native YouTube-URL** (Google-side fetch, IP-immune,
+     audio+visual). Treat as a **lead**; re-ground load-bearing numbers through the farm — for a number
+     Gemini read off a *frame*, re-ground via a frame screenshot + OCR (`ocr_text`), never by registering
+     Gemini prose as `page_text`.
+   - **(e) Honest gap:** if none reach it, say so — do not fill with guesses.
    Obey the Security rules below.
 3. **UNDERSTAND**: the agent reads the transcript ($0). Use Gemini only when the *visual* track
    carries the meaning. Treat Gemini output as a **lead, never cited evidence**.
@@ -66,16 +77,24 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
    with `farm_register_evidence`, author a claim with `farm_add_claim` whose `anchor.text_span`
    quote is **literally present in those bytes**, run `farm_run_claim_gate`, and
    `farm_export_bundle`. Two rules proven in practice (2026-06):
-   - **Register anything you will quote as a text kind** — `page_text`, `transcript_cue`,
-     `ocr_text`, or `page_html`. `text_span` anchoring is **rejected** on `official_api_metadata`,
-     `metadata`, and `structured_data` (gate error: *"text_span anchor requires a
-     text/HTML/OCR/transcript artifact"*). Register the `videos.list` JSON (or the specific field)
-     as **`page_text`** and anchor the exact substring (e.g. `"viewCount": "658078"`); captions
-     stay `transcript_cue`, **never** `audio_transcription`.
+   - **Register anything you will quote as a text-groundable kind** — `page_text`, `transcript_cue`,
+     `ocr_text`, `page_html`, or **`structured_data`**. `text_span` anchoring is **rejected only on
+     `official_api_metadata` and `metadata`** (gate error: *"text_span anchor requires a
+     text/HTML/OCR/transcript artifact"*) — **NOT** on `structured_data` (a 2026-06 correction; it is
+     groundable per `claim-gate.ts` `isTextGroundableKind`). Register the `videos.list` JSON as
+     **`structured_data`** (semantically correct + anchorable) or `page_text`, and anchor the exact
+     substring (e.g. `"viewCount": "658078"`); captions stay `transcript_cue`, **never**
+     `audio_transcription` (the farm does no ASR).
    - **A number with no `text_span` is NOT verified.** Citing `official_api_metadata` *without* an
      anchor passes the gate yet never byte-checks the value — a deliberately wrong `999999` slips
      through (measured). The `text_span` is the whole cite-or-fail guarantee; without it you only
      prove an artifact exists, not that your number matches it.
+   - **Corroborate the highest-stakes number across INDEPENDENT domains.** For the one number a
+     decision really rests on, use `farm_add_claim`'s `corroboration.sources`: cite the YouTube
+     artifact PLUS an independent registrable domain (the creator's official site / a news page / a
+     press kit), each with a `quote` present in THAT source's bytes. The gate fails the claim below 2
+     distinct domains, so a single-source YouTube number cannot pose as corroborated. (Engine already
+     wired; this is the one guarantee no gather tool — Gemini, NotebookLM, Supadata — offers.)
    Put **captured-at** and a **freshness note** on the claim as fields, not prose. Do NOT verify
    everything — the gate is a microscope on the load-bearing few. A failed claim still appends to
    the run ledger (no delete) — if a run is contaminated, start a **fresh `runDir`**.
@@ -97,6 +116,13 @@ CAPTCHA, or age gates.
 
 - Reading served caption tracks is a **gray area** under YouTube's Terms of Service — it is
   **not** clearly permitted. Use only for **personal, non-commercial research**.
+- **Farm-browser passive caption capture** (`farm_register_transcript`, preferred over the external
+  scraper): the farm's own browser may **passively** record a caption track the **player already
+  loaded** on an **already-playing PUBLIC** video — bytes the farm witnessed, not an agent paste.
+  Boundary: public videos only, your **own residential IP**, personal/non-commercial, **passive
+  only**. The moment it would require enabling captions behind an age-gate/login or driving playback
+  to force a track, it is **out of scope (stop)**. Same gray area as reading served captions; it
+  bypasses **no** access control.
 - Run any transcript fetch from your **own residential IP** at low volume. Do **not** route it
   through datacenter IPs or proxies.
 - **Never** authenticate with cookies or an OAuth token tied to a real YouTube/Google account for
@@ -141,9 +167,9 @@ CAPTCHA, or age gates.
   those surfaces by eye / the screen-share microscope.
 - A personalized "For You" / recommendations feed is **not** the global trend (filter bubble).
   Read aggregate signals (Creative Center, Data API); label any personal feed as a sample.
-- The farm proves *what was on screen and that it was not altered* — never that a platform
-  "trending/momentum" score is correct or that the trend is still current. Cite-or-fail makes
-  claims **traceable, not true**.
+- The farm proves *what was registered and that it was not altered after registration* — never that
+  the captured bytes faithfully represent reality, that a platform "trending/momentum" score is
+  correct, or that the trend is still current. Cite-or-fail makes claims **traceable, not true**.
 
 See the verification-floor skill
 [`../browser-agent-mcp-farm/SKILL.md`](../browser-agent-mcp-farm/SKILL.md) for the farm tools this
