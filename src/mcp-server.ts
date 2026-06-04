@@ -29,6 +29,7 @@ import {
   RunClaimGateInputSchema,
   ReadArtifactInputSchema,
   RegisterEvidenceInputSchema,
+  RegisterTranscriptInputSchema,
   AddClaimInputSchema,
   JudgeClaimInputSchema,
   CapabilitiesInputSchema,
@@ -56,6 +57,8 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_run_claim_gate: "Re-run the claim gate over an existing run's runDir to validate that claims cite registered, hash-verified artifacts. Read-only; the result is isError when the gate fails.",
   farm_read_artifact: "Read one registered artifact's bytes (text or base64) by artifactId or path, RE-HASHING on read to detect tampering (recordedSha256 vs recomputed). Lets a parallel agent SEE another run's evidence and verify it. Read-only; isError if not found or tampered.",
   farm_register_evidence: "Register a piece of evidence (the exact bytes/text you saw) as a hash-verified artifact you can then cite, returning its artifactId. The first half of authoring a cite-or-fail claim.",
+  farm_register_transcript:
+    "Register a video's transcript (its caption/spoken track) from any LAWFUL source — a served WebVTT track captured on the wire, a transcript tool, or a human paste — as a transcript_cue artifact you can cite. Supply WebVTT (parsed into timed cues) or plain text. The farm performs NO speech-to-text; the transcript is the platform's own caption, recorded with bring-your-own-capture provenance. The second half of a cite-or-fail spoken-content claim.",
   farm_add_claim:
     "Author a substantive claim that cites a registered artifact, with an optional anchor (where in the artifact it is grounded). The gate runs immediately: a claim whose anchor text is NOT in the cited bytes makes the result isError. This is how an agent's OWN answer becomes cite-or-fail, not just runner boilerplate.",
   farm_judge_claim:
@@ -122,6 +125,7 @@ export function createMcpServer(service = new FarmService()): McpServer {
     (result) => resultHasFailedClaimGate(result)
   );
   registerJsonTool(server, "farm_register_evidence", RegisterEvidenceInputSchema, (input) => service.registerEvidence(input));
+  registerJsonTool(server, "farm_register_transcript", RegisterTranscriptInputSchema, (input) => service.registerTranscript(input), resultHasFailedClaimGate);
   registerJsonTool(
     server,
     "farm_add_claim",

@@ -19,6 +19,29 @@ describe("createMcpServer", () => {
     expect(Object.keys(tools)).toContain("farm_evidence_run");
   });
 
+  it("registers farm_register_transcript and ingests WebVTT into a transcript_cue artifact", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-mcp-transcript-"));
+    dirs.push(runDir);
+    const tool = registeredTools(createMcpServer()).farm_register_transcript;
+    expect(tool).toBeDefined();
+    const vtt = "WEBVTT\n\n00:00:00.000 --> 00:00:02.000\nhello farm\n\n00:00:02.000 --> 00:00:04.000\nsecond cue\n";
+    const result = await tool.handler({ runDir, sourceUrl: "https://www.youtube.com/watch?v=demo", vtt });
+    expect(result.isError).toBeUndefined();
+    const payload = JSON.parse(result.content[0].text) as { ok: boolean; evidenceKind: string; artifactId: string; cueCount: number };
+    expect(payload.ok).toBe(true);
+    expect(payload.evidenceKind).toBe("transcript_cue");
+    expect(payload.cueCount).toBeGreaterThan(0);
+    expect(typeof payload.artifactId).toBe("string");
+  });
+
+  it("farm_register_transcript reports an error when neither vtt nor text is supplied", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-mcp-transcript-err-"));
+    dirs.push(runDir);
+    const tool = registeredTools(createMcpServer()).farm_register_transcript;
+    const result = await tool.handler({ runDir, sourceUrl: "https://www.youtube.com/watch?v=demo" });
+    expect(result.isError).toBe(true);
+  });
+
   it("returns MCP isError when evidence-run final gate fails", async () => {
     const service = {
       evidenceRun: async () => ({ ok: false, runDir: "run", reportPath: "report", claimGate: { ok: false, errors: ["bad"], warnings: [] } })

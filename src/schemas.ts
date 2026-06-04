@@ -518,6 +518,19 @@ export const RegisterEvidenceInputSchema = z.object({
   capturedAt: z.string().min(1).optional().describe("ISO 8601 timestamp the bytes were captured (defaults to now).")
 });
 
+// Register a video's transcript (caption/spoken track) from any LAWFUL source — a served WebVTT
+// track the farm browser captured on the wire, a transcript tool, or a human paste — as a
+// transcript_cue artifact. WebVTT is parsed into timed cues; plain text is registered as-is. The
+// farm performs NO speech-to-text. The second half of a cite-or-fail spoken-content claim.
+export const RegisterTranscriptInputSchema = z.object({
+  runDir: z.string().min(1).describe("Run directory to register the transcript artifact into (a fresh dir, or an existing runDir)."),
+  sourceUrl: z.url().describe("The video/source URL the transcript came from (recorded as provenance)."),
+  vtt: z.string().min(1).optional().describe("WebVTT caption text; parsed into timed cues. Provide this OR text."),
+  text: z.string().min(1).optional().describe("Plain-text transcript; registered as-is. Provide this OR vtt."),
+  captureMethod: z.string().min(1).optional().describe("How the transcript was captured, e.g. 'byo-transcript' / 'farm-vtt' / 'byo-human' (default 'byo-transcript')."),
+  capturedBy: z.string().min(1).optional().describe("Id of the tool/agent/human that captured the transcript (provenance).")
+});
+
 export const AddClaimInputSchema = z.object({
   runDir: z.string().min(1).describe("Run directory containing the cited artifact's ledger."),
   claim: z.string().min(1).describe("The substantive claim text you are asserting."),
@@ -649,6 +662,7 @@ export type ListArtifactsInput = z.input<typeof ListArtifactsInputSchema>;
 export type RunClaimGateInput = z.input<typeof RunClaimGateInputSchema>;
 export type ReadArtifactInput = z.input<typeof ReadArtifactInputSchema>;
 export type RegisterEvidenceInput = z.input<typeof RegisterEvidenceInputSchema>;
+export type RegisterTranscriptInput = z.input<typeof RegisterTranscriptInputSchema>;
 export type AddClaimInput = z.input<typeof AddClaimInputSchema>;
 export type LensInput = z.input<typeof LensInputSchema>;
 export type JudgeClaimInput = z.input<typeof JudgeClaimInputSchema>;
