@@ -135,7 +135,7 @@ async function expectTesseractInstalled(): Promise<void> {
     const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
     await dynamicImport("tesseract.js");
   } catch {
-    throw new Error("FARM_OCR_INTEGRATION=1 requires optional peer dependency tesseract.js to be installed.");
+    throw new Error("FARM_OCR_INTEGRATION=1 requires the optional dependency tesseract.js to be installed (run 'npm install tesseract.js').");
   }
 }
 

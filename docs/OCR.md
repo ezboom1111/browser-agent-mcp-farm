@@ -1,10 +1,17 @@
 # OCR Setup
 
-OCR is optional. The package declares `tesseract.js` as an optional peer
-dependency so normal installs do not download OCR engine assets unless the user
-chooses to enable OCR.
+OCR is optional. The package declares `tesseract.js` as an **optional
+dependency**, so a normal `npm install` / `npx` of the farm auto-installs the
+OCR engine on every machine, and the overall install does **not** fail if that
+single optional package cannot be fetched or built (e.g. offline or
+`--omit=optional`). The heavy language traineddata is still downloaded lazily on
+the first recognize call, so non-OCR users pay almost nothing.
 
 ## Install
+
+The engine normally comes along automatically. Only run this if a lean/offline
+install skipped it (you can confirm via `farm_capabilities` →
+`optionalDeps.tesseractAvailable`):
 
 ```powershell
 npm install tesseract.js

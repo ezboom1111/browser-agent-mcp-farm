@@ -703,9 +703,10 @@ Useful `evidence-run` options:
   pass.
 - `--overlay-dismissal-max-actions <0-10>` changes how many ordinary overlay
   dismissals can happen before capture; the default is `3`.
-- `--ocr` runs bounded OCR over sampled frame screenshots when optional
-  `tesseract.js` peer dependency is installed; otherwise it records an
-  OCR-unavailable artifact. Empty text and low-confidence text are recorded as
+- `--ocr` runs bounded OCR over sampled frame screenshots. The `tesseract.js`
+  engine auto-installs as an optional dependency, so it is normally present;
+  if a lean/offline install skipped it, OCR records an OCR-unavailable artifact
+  (run `npm install tesseract.js` to enable). Empty text and low-confidence text are recorded as
   partial status so they do not become verified OCR evidence. OCR text-profile
   metadata distinguishes price, percent/discount, map/local, travel/commerce,
   rating, distance, hours, contact/address, reservation, menu, and commerce

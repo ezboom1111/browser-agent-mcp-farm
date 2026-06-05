@@ -47,8 +47,9 @@ checks when `FARM_OFFICIAL_API_INTEGRATION=1` plus provider credentials are set.
 Use `official-api-readiness --url <url>` before live checks to inspect
 credential env references without calling provider APIs or printing tokens.
 `npm run test:ocr-integration` is an opt-in OCR harness and only runs when
-`FARM_OCR_INTEGRATION=1` and optional peer dependency `tesseract.js` is
-installed. It renders local map-label, travel-price, coupon/discount, and
+`FARM_OCR_INTEGRATION=1` and the optional dependency `tesseract.js` is
+installed (it auto-installs with the package; a lean/offline install may have
+skipped it). It renders local map-label, travel-price, coupon/discount, and
 optional Korean/Japanese screenshots and checks OCR text-profile metadata.
 
 ## Git State
