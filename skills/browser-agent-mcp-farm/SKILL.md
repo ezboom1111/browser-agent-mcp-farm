@@ -57,8 +57,10 @@ claim-gated report:
    optional `evidenceKind` filter) and re-validate with `farm_run_claim_gate`.
 
 Useful `farm_evidence_run` options:
-- `ocr: { "enabled": true }` — OCR over sampled frames (needs the optional
-  `tesseract.js` peer dep) for image-rendered prices/labels/map pins.
+- `ocr: { "enabled": true }` — OCR over sampled frames for image-rendered
+  prices/labels/map pins. The `tesseract.js` engine auto-installs as an optional
+  dependency; if a lean/offline install skipped it (`farm_capabilities` →
+  `optionalDeps.tesseractAvailable: false`), run `npm install tesseract.js`.
 - `denseSampling: { "enabled": true }` — denser frames around transcript / OCR /
   scene-change hits for video evidence.
 - `sourceNavigation` — an explicit, bounded, read-only recipe for portal pages

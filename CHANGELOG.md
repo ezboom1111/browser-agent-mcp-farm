@@ -91,6 +91,17 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Changed
 
+- **OCR engine now auto-provisions on every machine**: `tesseract.js` moved from an *optional peer
+  dependency* (which npm never auto-installs for an end-user app, so OCR silently stayed unavailable on
+  a fresh teammate's box) to an **`optionalDependency`** — a normal `npm install` / `npx` of the farm now
+  pulls the OCR engine automatically, while the overall install still does **not** fail if that one
+  package can't be fetched/built (offline, `--omit=optional`). This closes the asymmetry with the
+  Chromium first-run auto-install (`ensureChromiumInstalled`); OCR previously had no equivalent
+  provisioning device. The graceful-degradation safety net is unchanged: when the engine is genuinely
+  absent the run still records an honest `ocr.status: "unavailable"` artifact (it never fabricates), and
+  that message + the `docs/OCR.md`, `SKILL.md`, `README.md` notes now name the exact
+  `npm install tesseract.js` fallback and the `farm_capabilities → optionalDeps.tesseractAvailable`
+  check. No code path or default behavior changes; OCR is still opt-in per run via `ocr.enabled`.
 - **Docs truth-up + origin-binding decision record**: narrative docs that still claimed a stale `v0.3.0`
   and pointed at the merged `claude/handoff-baseline` branch now link to the generated
   [`STATUS.md`](STATUS.md) instead of restating counts (drift-proof); point-in-time history (this

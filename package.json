@@ -84,13 +84,8 @@
     "playwright": "^1.60.0",
     "zod": "^4.1.13"
   },
-  "peerDependencies": {
+  "optionalDependencies": {
     "tesseract.js": "^7.0.0"
-  },
-  "peerDependenciesMeta": {
-    "tesseract.js": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",

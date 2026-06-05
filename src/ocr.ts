@@ -115,7 +115,7 @@ export async function runOcrForFrameArtifacts(input: {
 
   const worker = await (input.workerFactory ?? createOptionalTesseractWorker)(options.language);
   if (worker === undefined) {
-    warnings.push("OCR skipped because optional dependency tesseract.js is not installed or could not initialize.");
+    warnings.push("OCR skipped: optional OCR engine 'tesseract.js' is not installed or could not initialize. It normally auto-installs as an optional dependency; on a lean/offline install run 'npm install tesseract.js' to enable OCR.");
     records.push(
       ...(await writer.writeCaptureBundle({
         runDir: input.runDir,
@@ -129,7 +129,7 @@ export async function runOcrForFrameArtifacts(input: {
             status: "unavailable",
             language: options.language,
             minConfidence: options.minConfidence,
-            reason: "optional dependency tesseract.js is not installed or could not initialize",
+            reason: "optional OCR engine 'tesseract.js' is not installed or could not initialize; it normally auto-installs as an optional dependency, otherwise run 'npm install tesseract.js' to enable OCR",
             requestedFrames: frameScreenshots.length
           } satisfies OcrEvidenceMetadata
         },
