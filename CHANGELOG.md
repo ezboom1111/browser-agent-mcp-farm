@@ -6,6 +6,8 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-06-05 — OCR engine auto-provision; accumulated origin-binding + multi-vantage work
+
 ### Added
 
 - **Versioned anti-hallucination fuzz corpus** (`scripts/fuzz-corpus.json`, run by `npm run qa:fuzz` and
