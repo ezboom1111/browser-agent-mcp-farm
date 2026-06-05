@@ -1,3 +1,4 @@
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSourceCoverageCalibrationLoopPlan, formatSourceCoverageCalibrationLoopReport, sourceCoverageCalibrationLoopOutputPaths } from "../src/source-coverage-calibration-loop.js";
 import type { SourceNavigationPromotionSummary } from "../src/source-navigation-promotion.js";
@@ -5,13 +6,20 @@ import { reviewSourceNavigationPromotion } from "../src/source-navigation-promot
 
 describe("source coverage calibration loop", () => {
   it("builds a readiness-guided calibration plan for actionable top slots", () => {
+    const runRoot = resolve("runs", "coverage");
+    const targetFile = join(runRoot, "targets.txt");
+    const promotionDir = join(runRoot, "promotion");
+    const selectorHint = join(promotionDir, "google_search-search", "selector-hints.tsv");
+    const retryPlanMd = join(runRoot, "profile-headed-retry-plan.md");
+    const retryPlanJson = join(runRoot, "profile-headed-retry-plan.json");
+    const retryPlanCheck = join(runRoot, "profile-headed-retry-plan-check.json");
     const plan = buildSourceCoverageCalibrationLoopPlan({
       category: "search",
       locale: "ko-KR",
       query: "seoul hotel",
-      runRoot: "C:\\runs\\coverage",
-      targetFile: "C:\\runs\\coverage\\targets.txt",
-      promotionDir: "C:\\runs\\coverage\\promotion",
+      runRoot,
+      targetFile,
+      promotionDir,
       repeat: 2,
       calibrationConcurrency: 2,
       calibrationRuntime: {
@@ -28,7 +36,7 @@ describe("source coverage calibration loop", () => {
         maxDepth: 2,
         deepeningConcurrency: 2
       },
-      selectorHintFiles: ["C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"],
+      selectorHintFiles: [selectorHint],
       promotionSummaries: [promotionSummary("google_search", "ready", 2)]
     });
 
@@ -50,7 +58,7 @@ describe("source coverage calibration loop", () => {
         maxDepth: 2,
         deepeningConcurrency: 2
       },
-      selectorHintFiles: ["C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv"],
+      selectorHintFiles: [selectorHint],
       targetCount: 2
     });
     expect(plan.targets.map((target) => target.id)).toEqual(["naver_search", "daum_search"]);
@@ -59,7 +67,7 @@ describe("source coverage calibration loop", () => {
     expect(plan.commands.calibrateBatch).toContain("--calibration-concurrency '2'");
     expect(plan.commands.calibrateBatch).toContain("--headed --browser-channel 'chrome' --profile 'ko-search'");
     expect(plan.commands.calibrateBatch).not.toContain("--persistent-profile");
-    expect(plan.commands.calibrateBatch).toContain("--selector-hints-file 'C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv'");
+    expect(plan.commands.calibrateBatch).toContain(`--selector-hints-file '${selectorHint}'`);
     expect(plan.commands.promoteBatch).toContain("source-navigation-promote-batch");
     expect(plan.commands.promotionReview).toContain("source-navigation-promotion-review");
     expect(plan.commands.promotionReview).toContain("--source-navigation-max-followups '3'");
@@ -72,7 +80,7 @@ describe("source coverage calibration loop", () => {
 
     const report = formatSourceCoverageCalibrationLoopReport({
       plan,
-      files: sourceCoverageCalibrationLoopOutputPaths("C:\\runs\\coverage")
+      files: sourceCoverageCalibrationLoopOutputPaths(runRoot)
     });
     expect(report).toContain("# Source Coverage Calibration Report");
     expect(report).toContain("- Mode: plan_only");
@@ -88,12 +96,12 @@ describe("source coverage calibration loop", () => {
     expect(report).toContain("- Profile mode: storage-state:ko-search");
     expect(report).toContain("- Promotion evidence-run options: --source-navigation-max-followups '3' --source-navigation-followup-concurrency '2' --source-navigation-fallback-followups --source-navigation-max-fallback-followups '1' --source-navigation-max-depth '2' --source-navigation-deepening-concurrency '2'");
     expect(report).toContain("- Selector hint input files: 1");
-    expect(report).toContain("- Profile/headed retry plan: C:\\runs\\coverage\\profile-headed-retry-plan.md");
-    expect(report).toContain("- Profile/headed retry plan JSON: C:\\runs\\coverage\\profile-headed-retry-plan.json");
-    expect(report).toContain("- Profile/headed retry plan check: C:\\runs\\coverage\\profile-headed-retry-plan-check.json");
+    expect(report).toContain(`- Profile/headed retry plan: ${retryPlanMd}`);
+    expect(report).toContain(`- Profile/headed retry plan JSON: ${retryPlanJson}`);
+    expect(report).toContain(`- Profile/headed retry plan check: ${retryPlanCheck}`);
     expect(report).toContain("## Profile/Headed Retry Check");
     expect(report).toContain("warning: empty_retry_plan");
-    expect(report).toContain("C:\\runs\\coverage\\promotion\\google_search-search\\selector-hints.tsv");
+    expect(report).toContain(selectorHint);
     expect(report).toContain("source-navigation-calibrate-batch");
     expect(report).toContain("Calibration batch concurrency is enabled; keep profile-heavy, login, or fragile provider retries at concurrency 1 unless reviewed.");
   });
