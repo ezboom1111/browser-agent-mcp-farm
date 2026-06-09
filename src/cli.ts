@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createInterface } from "node:readline/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium, type BrowserContext } from "playwright";
@@ -40,7 +40,7 @@ import { ensureHardenedDir, listProfiles, profilePaths, removeProfile } from "./
 import { encryptStorageStateFileInPlace, storageStateEncryptionEnabled } from "./secret-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
-import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, type RegisterOptions } from "./registration.js";
+import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, registerCodexSkill, registerCodexSkills, type RegisterOptions } from "./registration.js";
 import { ensureChromiumInstalled } from "./browser-install.js";
 import { describeLens, listLenses } from "./lens.js";
 import type { LocaleSegment } from "./source-registry.js";
@@ -94,11 +94,12 @@ export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
 
   if (command === "serve") {
-    // Provision the Chromium binary on first run (the npm package does not bundle it), self-heal a
-    // stale Claude skill snapshot after an upgrade, and apply env-driven run retention. All best-effort,
+    // Provision the Chromium binary on first run (the npm package does not bundle it), self-heal
+    // stale host skill snapshots after an upgrade, and apply env-driven run retention. All best-effort,
     // all log only to stderr.
     await ensureChromiumInstalled().catch(() => undefined);
     await refreshStaleSkillSnapshot().catch(() => undefined);
+    await refreshStaleSkillSnapshot(join(homedir(), ".codex", "skills")).catch(() => undefined);
     await autoPruneFromEnv().catch(() => undefined);
     await runStdioServer();
     return;
@@ -394,7 +395,8 @@ export async function main(): Promise<void> {
   }
 
   if (command === "register-codex") {
-    console.log(JSON.stringify(await registerCodex(undefined, registerOptionsFromArgs()), null, 2));
+    const results = [await registerCodex(undefined, registerOptionsFromArgs()), ...(await registerCodexSkills()), await registerCodexSkill()];
+    console.log(JSON.stringify({ ok: results.every((result) => result.ok), results }, null, 2));
     return;
   }
 

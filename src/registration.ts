@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -123,7 +123,7 @@ export async function registerClaude(options: RegisterOptions = {}): Promise<Reg
 }
 
 export async function registerAll(options: RegisterOptions = {}): Promise<RegistrationResult[]> {
-  return [await registerCodex(join(homedir(), ".codex", "config.toml"), options), await registerClaude(options), ...(await registerClaudeSkills()), await registerCodexSkill()];
+  return [await registerCodex(join(homedir(), ".codex", "config.toml"), options), await registerClaude(options), ...(await registerClaudeSkills()), ...(await registerCodexSkills()), await registerCodexSkill()];
 }
 
 // Install the Codex-facing usage guidance (when-to-use / fast path / authoring /
@@ -153,24 +153,32 @@ export async function registerCodexSkill(agentsPath = join(homedir(), ".codex", 
 // Install the in-repo Claude skill (skills/browser-agent-mcp-farm/SKILL.md) so a
 // Claude agent auto-discovers and routes to the farm, not just the raw MCP tools.
 export async function registerClaudeSkill(skillsRoot = join(homedir(), ".claude", "skills")): Promise<RegistrationResult> {
+  return registerMainSkillSnapshot("claude", skillsRoot);
+}
+
+async function registerMainSkillSnapshot(target: "codex" | "claude", skillsRoot: string): Promise<RegistrationResult> {
   const source = skillSourcePath();
   if (!existsSync(source)) {
-    return { ok: false, target: "claude", message: `Skill source not found at ${source}.` };
+    return { ok: false, target, message: `Skill source not found at ${source}.` };
   }
-  const destDir = join(skillsRoot, SERVER_NAME);
+  return installSkillSnapshot(target, skillsRoot, SERVER_NAME, dirname(source));
+}
+
+async function installSkillSnapshot(target: "codex" | "claude", skillsRoot: string, skillName: string, sourceDir: string): Promise<RegistrationResult> {
+  const destDir = join(skillsRoot, skillName);
   const dest = join(destDir, "SKILL.md");
   const backupPath = existsSync(dest) ? await backupFile(dest) : undefined;
   await mkdir(destDir, { recursive: true });
-  await copyFile(source, dest);
+  await cp(sourceDir, destDir, { recursive: true, force: true });
   // Stamp the copied snapshot with this package version so `serve` can self-heal a stale copy
   // after an upgrade (the skill is a COPY, not a path reference, so it would otherwise drift).
   await writeFile(join(destDir, SKILL_VERSION_MARKER), `${farmVersion()}\n`, "utf8").catch(() => undefined);
 
   const result: RegistrationResult = {
     ok: true,
-    target: "claude",
+    target,
     configPath: dest,
-    message: `Installed ${SERVER_NAME} skill into ${dest}.`
+    message: `Installed ${skillName} skill into ${dest}.`
   };
   if (backupPath !== undefined) {
     result.backupPath = backupPath;
@@ -205,7 +213,7 @@ export async function refreshStaleSkillSnapshot(skillsRoot = join(homedir(), ".c
     return { refreshed: false, reason: "skill source not found in package" };
   }
   try {
-    await copyFile(source, dest);
+    await cp(dirname(source), destDir, { recursive: true, force: true });
     await writeFile(markerPath, `${current}\n`, "utf8");
     return { refreshed: true, reason: `refreshed skill snapshot ${installed || "(unstamped)"} -> ${current}` };
   } catch {
@@ -214,38 +222,37 @@ export async function refreshStaleSkillSnapshot(skillsRoot = join(homedir(), ".c
 }
 
 // Install EVERY in-repo skill (the main browser-agent-mcp-farm skill plus the lens skills:
-// market-scan, product-planning, …) into the Claude skills root, each version-stamped for serve
+// market-scan, product-planning, ...) into a host skills root, each version-stamped for serve
 // self-heal. Falls back to the single main skill if the skills directory cannot be scanned.
 export async function registerClaudeSkills(skillsRoot = join(homedir(), ".claude", "skills")): Promise<RegistrationResult[]> {
+  return registerHostSkills("claude", skillsRoot);
+}
+
+export async function registerCodexSkills(skillsRoot = join(homedir(), ".codex", "skills")): Promise<RegistrationResult[]> {
+  return registerHostSkills("codex", skillsRoot);
+}
+
+async function registerHostSkills(target: "codex" | "claude", skillsRoot: string): Promise<RegistrationResult[]> {
   const sourceDir = skillsSourceDir();
   let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(sourceDir, { withFileTypes: true });
   } catch {
-    return [await registerClaudeSkill(skillsRoot)];
+    return [await registerMainSkillSnapshot(target, skillsRoot)];
   }
   const results: RegistrationResult[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) {
       continue;
     }
-    const source = join(sourceDir, entry.name, "SKILL.md");
-    if (!existsSync(source)) {
+    const sourceSkillDir = join(sourceDir, entry.name);
+    const sourceSkillFile = join(sourceSkillDir, "SKILL.md");
+    if (!existsSync(sourceSkillFile)) {
       continue;
     }
-    const destDir = join(skillsRoot, entry.name);
-    const dest = join(destDir, "SKILL.md");
-    const backupPath = existsSync(dest) ? await backupFile(dest) : undefined;
-    await mkdir(destDir, { recursive: true });
-    await copyFile(source, dest);
-    await writeFile(join(destDir, SKILL_VERSION_MARKER), `${farmVersion()}\n`, "utf8").catch(() => undefined);
-    const result: RegistrationResult = { ok: true, target: "claude", configPath: dest, message: `Installed ${entry.name} skill into ${dest}.` };
-    if (backupPath !== undefined) {
-      result.backupPath = backupPath;
-    }
-    results.push(result);
+    results.push(await installSkillSnapshot(target, skillsRoot, entry.name, sourceSkillDir));
   }
-  return results.length > 0 ? results : [await registerClaudeSkill(skillsRoot)];
+  return results.length > 0 ? results : [await registerMainSkillSnapshot(target, skillsRoot)];
 }
 
 export function distCliPath(): string {

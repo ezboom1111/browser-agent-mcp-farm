@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { claudeServerArgv, codexNpxServerBlock, codexServerBlock, refreshStaleSkillSnapshot, registerClaudeSkill, registerClaudeSkills, registerCodex, registerCodexSkill } from "../src/registration.js";
+import { claudeServerArgv, codexNpxServerBlock, codexServerBlock, refreshStaleSkillSnapshot, registerClaudeSkill, registerClaudeSkills, registerCodex, registerCodexSkill, registerCodexSkills } from "../src/registration.js";
 import { renderCodexGuidanceBlock } from "../src/agent-guidance.js";
 import { farmVersion } from "../src/version.js";
 
@@ -141,6 +141,7 @@ describe("registerClaudeSkill", () => {
 
     const installed = join(dir, "browser-agent-mcp-farm", "SKILL.md");
     expect(existsSync(installed)).toBe(true);
+    expect(existsSync(join(dir, "browser-agent-mcp-farm", "agents", "openai.yaml"))).toBe(true);
     const content = await readFile(installed, "utf8");
     expect(content).toContain("name: browser-agent-mcp-farm");
   });
@@ -159,6 +160,26 @@ describe("registerClaudeSkills (installs every in-repo skill)", () => {
       expect(existsSync(join(dir, skill, "SKILL.md"))).toBe(true);
       expect(existsSync(join(dir, skill, ".farm-skill-version"))).toBe(true);
     }
+    expect(existsSync(join(dir, "youtube-research", "lib", "velocity.mjs"))).toBe(true);
+    const marketScan = await readFile(join(dir, "market-scan", "SKILL.md"), "utf8");
+    expect(marketScan).toContain("name: market-scan");
+  });
+});
+
+describe("registerCodexSkills (installs every in-repo skill)", () => {
+  it("installs the main farm skill plus the lens skills into the Codex skills root", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-codex-skills-"));
+    dirs.push(dir);
+
+    const results = await registerCodexSkills(dir);
+    expect(results.length).toBeGreaterThanOrEqual(3);
+    expect(results.every((result) => result.ok && result.target === "codex")).toBe(true);
+
+    for (const skill of ["browser-agent-mcp-farm", "market-scan", "product-planning"]) {
+      expect(existsSync(join(dir, skill, "SKILL.md"))).toBe(true);
+      expect(existsSync(join(dir, skill, ".farm-skill-version"))).toBe(true);
+    }
+    expect(existsSync(join(dir, "youtube-research", "lib", "velocity.mjs"))).toBe(true);
     const marketScan = await readFile(join(dir, "market-scan", "SKILL.md"), "utf8");
     expect(marketScan).toContain("name: market-scan");
   });
