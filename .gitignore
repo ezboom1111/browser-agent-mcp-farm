@@ -3,6 +3,8 @@ dist/
 coverage/
 tmp/
 .status/
+.farm-runs/
+*.traineddata
 
 
 # npm pack output
