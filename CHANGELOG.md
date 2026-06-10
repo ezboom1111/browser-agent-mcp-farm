@@ -6,6 +6,8 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-06-10
+
 ### Added
 
 - **Structured-provenance check in the claim gate** (closes the measured "structured-in-disguise"
