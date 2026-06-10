@@ -1,4 +1,29 @@
-import { latestCanaryByRecipe, type RecipeCanaryResult, type RecipeCanaryVerdict } from "./recipe-canary.js";
+// The recipe-canary RUNNER was removed with the selector subsystem
+// (docs/SELECTOR_STACK_EXCISION.md). The ledger entry format and the latest-per-recipe
+// fold live here so old canary ledgers still classify; without a runner nothing new
+// becomes autonomous_ready — honest degradation, not implied support.
+
+export type RecipeCanaryVerdict = "pass" | "needs_recalibration";
+
+export interface RecipeCanaryResult {
+  recipeKey: string;
+  verdict: RecipeCanaryVerdict;
+  verifiedAt: string;
+  missingSelectors: string[];
+  unexpectedObstructions: string[];
+}
+
+/** Fold the ledger to the latest result per recipeKey (newest verifiedAt wins). */
+export function latestCanaryByRecipe(entries: RecipeCanaryResult[]): Record<string, RecipeCanaryResult> {
+  const latest: Record<string, RecipeCanaryResult> = {};
+  for (const entry of entries) {
+    const prior = latest[entry.recipeKey];
+    if (prior === undefined || entry.verifiedAt >= prior.verifiedAt) {
+      latest[entry.recipeKey] = entry;
+    }
+  }
+  return latest;
+}
 
 // Coverage report (master-plan P4): a single honest surface that classifies each source
 // into exactly one coverage class. "autonomous_ready" REQUIRES a maintained recipe with a

@@ -34,7 +34,7 @@ describe("createHttpServer", () => {
     expect(job.error).toContain("url");
   });
 
-  it("queues source navigation recipe payloads through HTTP", async () => {
+  it("queues rich evidence-run payloads through HTTP", async () => {
     let received: unknown;
     const scheduler = new EvidenceRunScheduler({
       concurrency: 1,
@@ -52,34 +52,32 @@ describe("createHttpServer", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         url: "https://example.com/",
-        sourceNavigation: {
+        ocr: {
           enabled: true,
-          calibrate: true,
-          calibrationSelectorTimeoutMs: 1000,
-          actions: [{ actionKey: "page-capture", operation: "capture" }],
-          captureBeforeAfter: false,
-          maxDepth: 2,
-          maxDeepeningRuns: 1,
-          maxDeepeningRunsPerDomain: 1,
-          deepeningTimeoutMs: 7500,
-          maxDeepeningArtifacts: 50
+          maxFrames: 5,
+          timeoutMs: 5000,
+          language: "eng",
+          minConfidence: 40
+        },
+        officialApi: {
+          enabled: true,
+          credentials: { youtubeApiKeyEnv: "YT_KEY" }
         }
       })
     });
     expect(enqueueResult.ok).toBe(true);
     await waitForJobStatus(baseUrl, enqueueResult.job.id, "completed");
     expect(received).toMatchObject({
-      sourceNavigation: {
+      ocr: {
         enabled: true,
-        calibrate: true,
-        calibrationSelectorTimeoutMs: 1000,
-        actions: [{ actionKey: "page-capture", operation: "capture" }],
-        captureBeforeAfter: false,
-        maxDepth: 2,
-        maxDeepeningRuns: 1,
-        maxDeepeningRunsPerDomain: 1,
-        deepeningTimeoutMs: 7500,
-        maxDeepeningArtifacts: 50
+        maxFrames: 5,
+        timeoutMs: 5000,
+        language: "eng",
+        minConfidence: 40
+      },
+      officialApi: {
+        enabled: true,
+        credentials: { youtubeApiKeyEnv: "YT_KEY" }
       }
     });
   });

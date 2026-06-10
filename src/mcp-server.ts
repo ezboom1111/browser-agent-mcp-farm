@@ -51,7 +51,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   farm_capture_after_idle: "Wait for network/DOM idle (bounded), then capture. Use for SPA/dynamic pages where content arrives after load.",
   farm_sample_frames: "Sample timestamped frame screenshots from visible media (required to support visual claims). Supports dense sampling around transcript/OCR/scene-change hits.",
   farm_evidence_run:
-    "Flagship one-shot research workflow: given a URL (and optional bounded source-navigation recipe) it captures the page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a final claim-gated report. Prefer this for end-to-end research; it manages its own lease. Returns runDir + reportPath; the result is isError when the final claim gate fails.",
+    "Flagship one-shot research workflow: given a URL it captures the page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy, and produces a final claim-gated report. Prefer this for end-to-end research; it manages its own lease. Returns runDir + reportPath; the result is isError when the final claim gate fails.",
   farm_read_report: "Read back the Markdown report a prior farm_evidence_run produced, given its reportPath. Read-only; no browser.",
   farm_list_artifacts: "List the artifact ledger (artifacts.jsonl) for a prior run's runDir, optionally filtered by evidence kind. Read-only; no browser.",
   farm_run_claim_gate: "Re-run the claim gate over an existing run's runDir to validate that claims cite registered, hash-verified artifacts. Read-only; the result is isError when the gate fails.",

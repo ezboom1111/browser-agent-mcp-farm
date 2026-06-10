@@ -64,7 +64,7 @@ describe("createMcpServer", () => {
     expect(result.content[0].text).toContain("invalid");
   });
 
-  it("accepts explicit source navigation recipes for farm_evidence_run", async () => {
+  it("forwards rich evidence-run options for farm_evidence_run", async () => {
     let received: unknown;
     const service = {
       evidenceRun: async (input: unknown) => {
@@ -85,22 +85,6 @@ describe("createMcpServer", () => {
         sceneChange: true,
         sceneChangeThreshold: 12,
         sceneChangeMaxHits: 3
-      },
-      sourceNavigation: {
-        enabled: true,
-        calibrate: true,
-        calibrationSelectorTimeoutMs: 1000,
-        actions: [{ actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }],
-        perActionTimeoutMs: 5000,
-        followUpConcurrency: 2,
-        fallbackFollowUps: true,
-        maxFallbackFollowUps: 1,
-        maxDepth: 2,
-        maxDeepeningRuns: 1,
-        maxDeepeningRunsPerDomain: 1,
-        deepeningConcurrency: 1,
-        deepeningTimeoutMs: 7500,
-        maxDeepeningArtifacts: 50
       }
     });
 
@@ -115,22 +99,6 @@ describe("createMcpServer", () => {
         sceneChange: true,
         sceneChangeThreshold: 12,
         sceneChangeMaxHits: 3
-      },
-      sourceNavigation: {
-        enabled: true,
-        calibrate: true,
-        calibrationSelectorTimeoutMs: 1000,
-        actions: [{ actionKey: "bounded-scroll", operation: "scroll", direction: "bottom" }],
-        perActionTimeoutMs: 5000,
-        followUpConcurrency: 2,
-        fallbackFollowUps: true,
-        maxFallbackFollowUps: 1,
-        maxDepth: 2,
-        maxDeepeningRuns: 1,
-        maxDeepeningRunsPerDomain: 1,
-        deepeningConcurrency: 1,
-        deepeningTimeoutMs: 7500,
-        maxDeepeningArtifacts: 50
       }
     });
   });
