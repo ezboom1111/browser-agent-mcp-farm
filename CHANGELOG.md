@@ -34,13 +34,33 @@ adheres to semantic versioning. Build/test status is tracked in
   (measured residential-IP ban vector; the Gemini native-URL + ASR-escalation paths cover the same
   gap IP-immune) and date-stamps its platform-share snapshot instead of reciting it as a norm.
 
-### Deprecated
+### Removed (BREAKING for `farm_evidence_run` consumers — ship as a minor version bump)
 
-- **Source-navigation selector/calibration subsystem frozen** (per the durability analysis and the
-  2026-06-10 3-agent audit: selector recipes rot; model vision + consented capture solved the
-  problem). No new recipes/calibration targets. Excision plan with measured scope (~8.5k of
-  13k LOC deletable, triage + tier routing kept):
-  [`docs/SELECTOR_STACK_EXCISION.md`](docs/SELECTOR_STACK_EXCISION.md).
+- **Source-navigation selector/calibration subsystem excised** (P2–P5 of
+  [`docs/SELECTOR_STACK_EXCISION.md`](docs/SELECTOR_STACK_EXCISION.md), executed 2026-06-10;
+  rationale: selector recipes rot, and model vision + consented-browser capture solved the
+  problem they were built for). Net **−25,956 lines** (13 src files + 17 test files).
+  - Deleted: per-site recipe catalog (`source-navigation-recipes`/`-recipe-catalog`), the
+    calibration loops (`-calibration`, `-calibration-batch/-loader/-targets`,
+    `source-coverage-calibration-loop`, `source-coverage-readiness`), promotion machinery,
+    the recipe executor (`-executor`, `-execution`, `source-navigation.ts`), and the
+    `recipe-canary` runner — plus their 13 CLI commands (`source-navigation-*`,
+    `source-coverage-*`, `recipe-canary`, `coverage-report`).
+  - `farm_evidence_run` / `evidence-run` no longer accept `sourceNavigation` input (unknown
+    keys are stripped, so old callers don't crash — the input is ignored) and no longer return
+    the `sourceNavigation*` / `destinationTriage` / `destinationDeepening*` result fields.
+  - **Kept**: destination triage, destination-url/recovery-plan, source-strategy,
+    source-registry, acquisition-tier routing, and `coverage-report.ts` survive as tested
+    libraries (the canary ledger types + latest-per-recipe fold were inlined into
+    coverage-report so old ledgers still classify — without a runner nothing new becomes
+    `autonomous_ready`, the honest degradation). `destination-recovery-plan` CLI stays.
+  - The claim gate's destination-provenance chain and ALL `source_navigation_*` /
+    `destination_*` evidence kinds are unchanged — historical runs still re-verify.
+  - The selector-era README is archived at `docs/archive/README-selector-era.md`.
+  - Coverage floors re-baselined (the planned P5 step): the deleted subsystem was covered
+    above the repo average, so totals dropped from 80/80/86/74 to the newly measured
+    74/74/76/67 (lines/statements/functions/branches). The ratchet (raise-only, capped at 80)
+    resumes from the new floor — same monotonic-upward discipline, honest denominator.
 
 ## [0.6.1] — 2026-06-05 — OCR engine auto-provision; accumulated origin-binding + multi-vantage work
 

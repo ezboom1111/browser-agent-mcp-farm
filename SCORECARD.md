@@ -13,11 +13,11 @@
 | Field | Value |
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.6.1 |
-| Commit | `2b549ce` |
-| Generated | 2026-06-10T01:10:11.271Z |
-| **Build-completeness** | **10/10** (mean of domain gate-wiring; not a quality grade) |
-| Weakest domain | `trust` (10/10) |
-| Coverage (lines) | 80.98% |
+| Commit | `e643bed` |
+| Generated | 2026-06-10T05:56:48.597Z |
+| **Build-completeness** | **9.7/10** (mean of domain gate-wiring; not a quality grade) |
+| Weakest domain | `engineering` (7.5/10) |
+| Coverage (lines) | 74.52% |
 
 | Domain | Score | Gates |
 | --- | --- | --- |
@@ -28,7 +28,7 @@
 | Dual-agent parity, MCP ergonomics & routing | 10/10 | 3/3 |
 | Safety & parallel-execution correctness | 10/10 | 3/3 |
 | Security-at-rest, legal posture & data lifecycle | 10/10 | 3/3 |
-| Engineering quality, observability & SLO | 10/10 | 4/4 |
+| Engineering quality, observability & SLO | 7.5/10 | 3/4 |
 
 ## Gate detail
 
@@ -71,8 +71,8 @@
   - [x] (wired) Per-source legal_basis posture
   - [x] (wired) purge-run / prune-runs lifecycle
 
-### Engineering quality, observability & SLO — 10/10
+### Engineering quality, observability & SLO — 7.5/10
   - [x] (measured) Full verify gate green
   - [x] (wired) Per-run metrics.json (p50/p95)
   - [x] (wired) Shared src/util helpers
-  - [x] (measured) Product line coverage ≥ 80% — 80.98%
+  - [ ] (measured) Product line coverage ≥ 80% — 74.52%

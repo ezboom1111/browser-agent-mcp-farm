@@ -1,8 +1,20 @@
 import type { ArtifactWriter, ArtifactRecord, ArtifactStatus } from "./artifact-writer.js";
 import { safeUrl } from "./util/url.js";
 import { resolveDestinationUrl, type DestinationUrlResolutionMethod } from "./destination-url.js";
-import type { SourceNavigationFollowUpRequest } from "./source-navigation-executor.js";
 import type { SourceFamily, SourcePlatform } from "./source-strategy.js";
+
+// Inlined from the removed source-navigation executor (docs/SELECTOR_STACK_EXCISION.md):
+// triage still scores destination requests authored by hand or by historical runs.
+export interface SourceNavigationFollowUpRequest {
+  actionKey: string;
+  url: string;
+  originalUrl?: string | undefined;
+  urlResolutionMethod?: DestinationUrlResolutionMethod | undefined;
+  selector?: string | undefined;
+  linkText?: string | undefined;
+  captureId?: string | undefined;
+  note?: string | undefined;
+}
 
 export type DestinationCandidateKind = "news" | "blog" | "official" | "map_place" | "review" | "community" | "commerce" | "media" | "generic";
 

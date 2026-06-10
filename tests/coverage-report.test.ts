@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, type CoverageReportInput, type CoverageReportSource } from "../src/coverage-report.js";
-import type { RecipeCanaryResult } from "../src/recipe-canary.js";
+import { buildCoverageReport, formatCoverageReportAsLines, formatCoverageReportAsMarkdown, type CoverageReportInput, type CoverageReportSource, type RecipeCanaryResult } from "../src/coverage-report.js";
 
 const NOW = "2026-05-30T00:00:00.000Z";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

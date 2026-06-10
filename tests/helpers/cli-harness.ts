@@ -8,11 +8,10 @@ import { ArtifactWriter } from "../../src/artifact-writer.js";
 
 // Shared in-process CLI test harness. Runs src/cli.ts main() with the given argv,
 // capturing console.log, console.error AND process.stdout.write (several commands —
-// source-coverage-readiness format=lines/markdown, source-coverage-retry-plan,
-// destination-recovery-plan, source-navigation-calibration-targets, selector-hints —
-// emit rendered output via process.stdout.write, not console.log). Returns the joined
-// output and the resulting process.exitCode. Mirrors the real CLI's top-level catch so
-// arg-validation throws are observable as out + exitCode 1.
+// e.g. destination-recovery-plan format=markdown/commands — emit rendered output via
+// process.stdout.write, not console.log). Returns the joined output and the resulting
+// process.exitCode. Mirrors the real CLI's top-level catch so arg-validation throws
+// are observable as out + exitCode 1.
 export async function runCli(args: string[]): Promise<{ out: string; exitCode: number | undefined }> {
   const savedArgv = process.argv;
   const savedExit = process.exitCode;

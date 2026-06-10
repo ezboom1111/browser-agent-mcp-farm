@@ -1,6 +1,14 @@
 # Selector / source-navigation stack excision plan
 
-> Status: PLANNED (deferred — major surgery, needs its own session under the full verify gate).
+> Status: **EXECUTED 2026-06-10** (P1 freeze → P2 CLI sever → P3/P4 delete → P5 re-baseline, all
+> landed green under the full verify gate in one session; net −25,956 lines + README 956→~510).
+> Deviations from the plan, discovered during the coupling map: `coverage-report.ts` +
+> `acquisition-router.ts` were kept as tested libraries (canary ledger types inlined; honest
+> degradation — nothing new becomes `autonomous_ready` without a runner); the `coverage-report`
+> and `recipe-canary` CLI commands died with the readiness audit they were built on; destination
+> triage survives as a library but is no longer wired into `evidence_run` (destination candidates
+> were only ever authored by the navigation follow-up path). Coverage floors re-baselined
+> 80/80/82/74 → 74/74/76/68 (the deleted subsystem was covered above the repo average).
 > Decision basis: the 2026-06-10 Fable-era 3-agent audit + the earlier durability analysis both
 > ruled this subsystem **STOP**: model vision + consented-browser capture solved the problem
 > site-specific selector recipes were built for, and recipes rot permanently. The deterministic

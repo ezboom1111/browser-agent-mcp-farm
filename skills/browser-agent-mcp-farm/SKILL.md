@@ -48,8 +48,7 @@ enough, and never to bypass authentication/paywalls or perform transactions.
 ## Fast path (recommended): one-shot evidence run
 
 For most research, a single tool call does everything — capture, derive
-evidence, run source strategy + bounded destination triage, and produce a
-claim-gated report:
+evidence, run source strategy, and produce a claim-gated report:
 
 1. Call `mcp__browser-agent-mcp-farm__farm_evidence_run` with `{ "url": "<page>" }`.
    - The result includes `runDir`, `reportPath`, `claims`, and `claimGate`.
@@ -66,11 +65,13 @@ Useful `farm_evidence_run` options:
   `optionalDeps.tesseractAvailable: false`), run `npm install tesseract.js`.
 - `denseSampling: { "enabled": true }` — denser frames around transcript / OCR /
   scene-change hits for video evidence.
-- `sourceNavigation` — an explicit, bounded, read-only recipe for portal pages
-  (Naver/Google/maps/etc.): only the supplied action-key steps run, and only
-  non-mutating operations are allowed.
 - `profileName` + `storagePolicy` — drive an authenticated/anti-bot-sensitive
   page with a saved profile (headed login is CLI-only).
+
+(The per-site `sourceNavigation` selector recipes were removed 2026-06-10 —
+selector recipes rot, and a consented browser + model vision reads portal pages
+without them; see `docs/SELECTOR_STACK_EXCISION.md`. Navigate with your own
+browser or the manual farm tools, then capture/register the bytes.)
 
 ## Manual path: step-by-step capture
 
@@ -181,9 +182,8 @@ cite. A blocked/login-walled page is recorded as an obstruction, not faked.
 
 - A claim is only as good as its citation: visual claims require a timestamped
   frame screenshot; transcript/audio claims require the matching artifact.
-- A search result is only a lead — destination triage follows bounded depth-1
-  child runs and judges usefulness against the user's question before relying on
-  a child page.
+- A search result is only a lead — open and capture the destination page itself
+  (judge its usefulness against the user's question) before citing anything from it.
 - If a page is blocked/paywalled/login-only/CAPTCHA, the run records that
   obstruction instead of faking evidence. Report it; do not bypass it.
 

@@ -1,16 +1,16 @@
 {
   "package": "browser-agent-mcp-farm",
   "version": "0.6.1",
-  "commit": "2b549ce",
-  "generatedAt": "2026-06-10T01:10:11.271Z",
-  "overallScore": 10,
+  "commit": "e643bed",
+  "generatedAt": "2026-06-10T05:56:48.597Z",
+  "overallScore": 9.7,
   "weakestDomain": {
-    "key": "trust",
-    "score10": 10
+    "key": "engineering",
+    "score10": 7.5
   },
   "measured": {
-    "coverageLines": 80.98,
-    "coverageBranches": 74.35,
+    "coverageLines": 74.52,
+    "coverageBranches": 68,
     "testsGreen": true
   },
   "domains": [
@@ -230,8 +230,8 @@
     {
       "key": "engineering",
       "title": "Engineering quality, observability & SLO",
-      "score10": 10,
-      "passed": 4,
+      "score10": 7.5,
+      "passed": 3,
       "total": 4,
       "gates": [
         {
@@ -256,8 +256,8 @@
           "id": "coverage_80",
           "kind": "measured",
           "desc": "Product line coverage ≥ 80%",
-          "pass": true,
-          "detail": "80.98%"
+          "pass": false,
+          "detail": "74.52%"
         }
       ]
     }

@@ -172,16 +172,6 @@ describe("cli", () => {
     expect(out.length).toBeGreaterThan(0);
   });
 
-  it("source-coverage-readiness audits the registry", async () => {
-    const { out } = await runCli(["source-coverage-readiness"]);
-    expect(out.length).toBeGreaterThan(0);
-  });
-
-  it("source-navigation-catalog builds the recipe catalog", async () => {
-    const { out } = await runCli(["source-navigation-catalog"]);
-    expect(out.length).toBeGreaterThan(0);
-  });
-
   it("export-bundle writes a manifest to --output-file", async () => {
     const run = await makeRun();
     const manifestFile = join(run, "manifest.json");
@@ -200,21 +190,6 @@ describe("cli", () => {
     const { out, exitCode } = await runCli(["scan-secrets", "--run-dir", join(tmpdir(), "definitely-missing-farm-run-xyz")]);
     expect(out).toContain('"ok": true');
     expect(exitCode).toBeFalsy();
-  });
-
-  it("describes a source-navigation recipe plan for a URL", async () => {
-    const { out } = await runCli(["source-navigation-recipes", "--url", "https://www.youtube.com/watch?v=abc"]);
-    expect(out.length).toBeGreaterThan(0);
-  });
-
-  it("prints source-navigation calibration targets", async () => {
-    const { out } = await runCli(["source-navigation-calibration-targets"]);
-    expect(out.length).toBeGreaterThan(0);
-  });
-
-  it("exports maintained source-navigation recipes", async () => {
-    const { out } = await runCli(["source-navigation-export-recipes"]);
-    expect(out.length).toBeGreaterThan(0);
   });
 
   it("official-api-readiness with --fail-not-ready signals via exit code", async () => {

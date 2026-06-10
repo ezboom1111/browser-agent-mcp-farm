@@ -285,129 +285,8 @@ export const OfficialApiCredentialsSchema = z.object({
   tiktokResearchTokenEnv: z.string().min(1).optional()
 });
 
-const SourceNavigationExecutableActionBaseSchema = z.object({
-  actionKey: z.string().min(1),
-  note: z.string().min(1).optional(),
-  expectedStates: z
-    .array(
-      z
-        .object({
-          selector: z.string().min(1).optional(),
-          textIncludes: z.string().min(1).optional(),
-          caseSensitive: z.boolean().optional(),
-          timeoutMs: z.number().int().positive().max(120_000).optional()
-        })
-        .refine((value) => value.selector !== undefined || value.textIncludes !== undefined, {
-          message: "expected state must include selector or textIncludes"
-        })
-    )
-    .max(20)
-    .optional(),
-  captureScopes: z
-    .array(
-      z.object({
-        key: z.string().min(1),
-        selector: z.string().min(1),
-        phase: z.enum(["before", "after"]).optional(),
-        note: z.string().min(1).optional()
-      })
-    )
-    .max(20)
-    .optional()
-});
-
-export const SourceNavigationExecutableActionSchema = z
-  .discriminatedUnion("operation", [
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("click"),
-      selector: z.string().min(1)
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("fill"),
-      selector: z.string().min(1),
-      value: z.string()
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("select"),
-      selector: z.string().min(1),
-      value: z.string().min(1)
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("press"),
-      key: z.string().min(1)
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("scroll"),
-      direction: z.enum(["down", "up", "bottom", "top"]).optional(),
-      pixels: z.number().int().positive().max(100_000).optional()
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("wait_for_selector"),
-      selector: z.string().min(1)
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("capture")
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("follow_up"),
-      selector: z.string().min(1).optional(),
-      url: z.string().min(1).optional(),
-      captureId: z.string().min(1).optional()
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("extract_destinations"),
-      selector: z.string().min(1),
-      maxLinks: z.number().int().positive().max(50).optional(),
-      captureId: z.string().min(1).optional()
-    }),
-    SourceNavigationExecutableActionBaseSchema.extend({
-      operation: z.literal("extract_client_state_destinations"),
-      selector: z.string().min(1).optional(),
-      stateKey: z
-        .string()
-        .regex(/^[A-Za-z_$][A-Za-z0-9_$]{0,120}$/)
-        .optional(),
-      extractor: z.literal("naver_place_apollo").optional(),
-      destinationPath: z.enum(["restaurant", "hospital", "place", "accommodation"]).optional(),
-      maxLinks: z.number().int().positive().max(50).optional(),
-      captureId: z.string().min(1).optional()
-    })
-  ])
-  .superRefine((value, ctx) => {
-    if (value.operation === "follow_up" && value.selector === undefined && value.url === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        message: "follow_up action must include selector or url"
-      });
-    }
-  });
-
-export const SourceNavigationRecipeInputSchema = z
-  .object({
-    enabled: z.boolean().default(false),
-    calibrate: z.boolean().default(false),
-    calibrationSelectorTimeoutMs: z.number().int().positive().max(10_000).optional(),
-    actions: z.array(SourceNavigationExecutableActionSchema).max(50).default([]),
-    maxActions: z.number().int().positive().max(50).optional(),
-    perActionTimeoutMs: z.number().int().positive().max(120_000).optional(),
-    captureBeforeAfter: z.boolean().optional(),
-    stopOnUnsupported: z.boolean().optional(),
-    maxFollowUps: z.number().int().nonnegative().max(5).optional(),
-    maxFollowUpsPerDomain: z.number().int().nonnegative().max(5).optional(),
-    followUpConcurrency: z.number().int().positive().max(5).optional(),
-    fallbackFollowUps: z.boolean().optional(),
-    maxFallbackFollowUps: z.number().int().nonnegative().max(5).optional(),
-    maxDepth: z.number().int().positive().max(2).optional(),
-    maxDeepeningRuns: z.number().int().nonnegative().max(5).optional(),
-    maxDeepeningRunsPerDomain: z.number().int().nonnegative().max(5).optional(),
-    deepeningConcurrency: z.number().int().positive().max(5).optional(),
-    deepeningTimeoutMs: z.number().int().positive().max(120_000).optional(),
-    maxDeepeningArtifacts: z.number().int().positive().max(1_000).optional()
-  })
-  .default({ enabled: false, calibrate: false, actions: [] });
-
 export const EvidenceRunInputSchema = z.object({
-  url: z.url().describe("The page to research. The farm captures the rendered page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy + bounded destination triage, and produces a claim-gated report."),
+  url: z.url().describe("The page to research. The farm captures the rendered page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy, and produces a claim-gated report."),
   runDir: z.string().min(1).optional().describe("Directory for this run's artifacts. Defaults to a temp directory; the chosen path is returned as `runDir`."),
   captureId: z.string().min(1).optional(),
   frameSelector: z.string().min(1).optional(),
@@ -469,8 +348,7 @@ export const EvidenceRunInputSchema = z.object({
       enabled: z.boolean().default(false),
       credentials: OfficialApiCredentialsSchema.default({})
     })
-    .default({ enabled: false, credentials: {} }),
-  sourceNavigation: SourceNavigationRecipeInputSchema.describe("Optional explicit, bounded portal-navigation recipe (actions, follow-ups, destination extraction). Disabled by default; only supplied action-key recipes run, and only read-only/non-mutating operations are allowed.")
+    .default({ enabled: false, credentials: {} })
 });
 
 export const ReadReportInputSchema = z.object({
@@ -654,8 +532,6 @@ export type OcrEvidenceMetadata = z.infer<typeof OcrEvidenceMetadataSchema>;
 export type OcrWord = z.infer<typeof OcrWordSchema>;
 export type OcrTextScript = z.infer<typeof OcrTextScriptSchema>;
 export type OcrTextProfile = z.infer<typeof OcrTextProfileSchema>;
-export type SourceNavigationExecutableActionInput = z.infer<typeof SourceNavigationExecutableActionSchema>;
-export type SourceNavigationRecipeInput = z.infer<typeof SourceNavigationRecipeInputSchema>;
 export type EvidenceRunInput = z.input<typeof EvidenceRunInputSchema>;
 export type NormalizedEvidenceRunInput = z.output<typeof EvidenceRunInputSchema>;
 export type ReadReportInput = z.input<typeof ReadReportInputSchema>;
