@@ -327,6 +327,59 @@ describe("FarmService non-browser methods and error branches", () => {
     expect(verified.merkleMatches).toBe(true);
   });
 
+  // ---- exportBundle auto-verifies (the "nobody re-runs the verifier" gap) ----
+
+  it("exportBundle auto-verifies the bundle it just built and reports verification on the result", async () => {
+    const { service, runDir } = await newRun();
+    await service.registerEvidence({
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "clean bytes",
+      evidenceKind: "page_text"
+    });
+
+    const exported = await service.exportBundle({ runDir });
+    expect(exported.ok).toBe(true);
+    expect(exported.verification.ok).toBe(true);
+    expect(exported.verification.tamperedArtifacts).toEqual([]);
+    expect(exported.verification.merkleMatches).toBe(true);
+  });
+
+  it("exportBundle FAILS (ok: false) when the run is already tampered at export time", async () => {
+    const { service, runDir } = await newRun();
+    const reg = await service.registerEvidence({
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "pristine bytes",
+      evidenceKind: "page_text"
+    });
+    // Tamper BEFORE export: previously this silently exported a poisoned manifest.
+    await writeFile(join(runDir, reg.path as string), "poisoned", "utf8");
+
+    const exported = await service.exportBundle({ runDir });
+    expect(exported.ok).toBe(false);
+    expect(exported.verification.ok).toBe(false);
+    expect(exported.verification.tamperedArtifacts.length).toBeGreaterThan(0);
+  });
+
+  it("exportBundle self-checks its own signature via the public key derived from the signing key", async () => {
+    const { privateKey } = generateKeyPairSync("ed25519");
+    process.env.FARM_TEST_PRIV_SELF = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+
+    const { service, runDir } = await newRun();
+    await service.registerEvidence({
+      runDir,
+      sourceUrl: "https://example.com/",
+      text: "signed evidence",
+      evidenceKind: "page_text"
+    });
+
+    const exported = await service.exportBundle({ runDir, privateKeyEnv: "FARM_TEST_PRIV_SELF" });
+    expect(exported.ok).toBe(true);
+    expect(exported.signed).toBe(true);
+    expect(exported.verification.signatureValid).toBe(true);
+  });
+
   // ---- heartbeat (no browser) ----
 
   it("heartbeat refreshes an acquired lease and returns a redacted lease", () => {

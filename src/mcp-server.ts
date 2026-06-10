@@ -152,7 +152,14 @@ export function createMcpServer(service = new FarmService()): McpServer {
   registerJsonTool(server, "farm_lens", LensInputSchema, (input) => service.lens(input));
   registerJsonTool(server, "farm_list_runs", ListRunsInputSchema, (input) => service.listRuns(input));
   registerJsonTool(server, "farm_extract_structured", ExtractStructuredInputSchema, (input) => service.extractStructured(input));
-  registerJsonTool(server, "farm_export_bundle", ExportBundleInputSchema, (input) => service.exportBundle(input));
+  registerJsonTool(
+    server,
+    "farm_export_bundle",
+    ExportBundleInputSchema,
+    (input) => service.exportBundle(input),
+    // Export auto-verifies the bundle it built; a tampered-at-export run is an error result.
+    (result) => resultHasFailedClaimGate(result)
+  );
   registerJsonTool(
     server,
     "farm_verify_bundle",

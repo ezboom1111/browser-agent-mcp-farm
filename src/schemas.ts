@@ -486,7 +486,8 @@ export const ListArtifactsInputSchema = z.object({
 export const RunClaimGateInputSchema = z.object({
   runDir: z.string().min(1).describe("Run directory (the `runDir` returned by farm_evidence_run) to validate."),
   mode: z.enum(["smoke", "final"]).default("final").describe("'final' enforces typed claims, citation provenance, and at least one cited claim; 'smoke' is lenient."),
-  minClaims: z.number().int().nonnegative().max(1000).optional().describe("Minimum number of claims required (defaults to 1 in final mode, 0 in smoke mode).")
+  minClaims: z.number().int().nonnegative().max(1000).optional().describe("Minimum number of claims required (defaults to 1 in final mode, 0 in smoke mode)."),
+  strictProvenance: z.boolean().optional().describe("When true, a claim citing AGENT-AUTHORED structured_data (self-asserted JSON, not farm-derived) is a hard error instead of a warning — closes the measured 'structured-in-disguise' repackaging hole for audits that demand witnessed provenance.")
 });
 
 export const ReadArtifactInputSchema = z

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { appendFile, readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -221,6 +221,9 @@ export class FarmService {
     const options: ClaimGateOptions = { mode: parsed.mode };
     if (parsed.minClaims !== undefined) {
       options.minClaims = parsed.minClaims;
+    }
+    if (parsed.strictProvenance !== undefined) {
+      options.strictProvenance = parsed.strictProvenance;
     }
     return runClaimGate(parsed.runDir, options);
   }
@@ -544,16 +547,28 @@ export class FarmService {
 
   // Export a verifiable bundle manifest (Merkle root over artifact hashes +
   // optional Ed25519 signature) for a run, so a second agent can re-verify it.
+  // The export AUTO-VERIFIES what it just built (re-hash + Merkle + signature
+  // self-check via the public key derived from the signing key): a run that is
+  // already tampered at export time fails the export instead of silently
+  // shipping a poisoned manifest, and every bundle leaves with the verifier
+  // having actually run at least once.
   async exportBundle(input: ExportBundleInput) {
     const parsed = ExportBundleInputSchema.parse(input);
     const manifest = await buildBundleManifest(parsed.runDir);
+    let selfCheckPublicKeyPem: string | undefined;
     if (parsed.privateKeyEnv !== undefined) {
       const pem = process.env[parsed.privateKeyEnv];
       if (pem !== undefined && pem.length > 0) {
         manifest.signature = signManifest(manifest, pem);
+        try {
+          selfCheckPublicKeyPem = createPublicKey(createPrivateKey(pem)).export({ type: "spki", format: "pem" }).toString();
+        } catch {
+          selfCheckPublicKeyPem = undefined;
+        }
       }
     }
-    return { ok: true as const, signed: manifest.signature !== undefined, manifest };
+    const verification = await verifyEvidenceBundle(parsed.runDir, manifest, selfCheckPublicKeyPem);
+    return { ok: verification.ok, signed: manifest.signature !== undefined, manifest, verification };
   }
 
   // Re-verify a bundle against the run's artifacts in place: re-hashes each file

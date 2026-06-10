@@ -221,9 +221,10 @@ export async function refreshStaleSkillSnapshot(skillsRoot = join(homedir(), ".c
   }
 }
 
-// Install EVERY in-repo skill (the main browser-agent-mcp-farm skill plus the lens skills:
-// market-scan, product-planning, ...) into a host skills root, each version-stamped for serve
-// self-heal. Falls back to the single main skill if the skills directory cannot be scanned.
+// Install EVERY in-repo skill (the main browser-agent-mcp-farm skill plus youtube-research;
+// the market-scan / product-planning wrappers were absorbed into the farm SKILL.md "Lens claim
+// types" section) into a host skills root, each version-stamped for serve self-heal. Falls back
+// to the single main skill if the skills directory cannot be scanned.
 export async function registerClaudeSkills(skillsRoot = join(homedir(), ".claude", "skills")): Promise<RegistrationResult[]> {
   return registerHostSkills("claude", skillsRoot);
 }

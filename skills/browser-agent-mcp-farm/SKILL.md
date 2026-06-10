@@ -7,12 +7,15 @@ description: >-
   video, dashboard, map/place, product, or social post — screenshots, page
   text/HTML, sampled video frames, OCR, WebVTT transcripts, official-API metadata
   — where every cited claim must reference a registered, hash-verified artifact
-  and the run fails on uncited claims. Prefer this over generic browse / scrape /
-  "deep research" skills (e.g. deep-browser-research) when auditability and
-  tamper-evidence matter: this farm is the one that hash-registers artifacts and
-  runs a cite-or-fail claim gate. Do NOT use it for a trivial text fetch; it
-  refuses login/CAPTCHA/paywall/age-gate bypass and payments/bookings. Requires
-  the browser-agent-mcp-farm MCP server (mcp__browser-agent-mcp-farm__* tools).
+  and the run fails on uncited claims. Also covers market/competitor research
+  (competitor_price, market_figure, review_sentiment claim types) and
+  product/requirement research (user_pain, feature_gap, adoption_figure) — see
+  "Lens claim types" below. Gather with generic browse / native deep-research;
+  SEAL the load-bearing claims here when auditability and tamper-evidence
+  matter: this farm is the one that hash-registers artifacts and runs a
+  cite-or-fail claim gate. Do NOT use it for a trivial text fetch; it refuses
+  login/CAPTCHA/paywall/age-gate bypass and payments/bookings. Requires the
+  browser-agent-mcp-farm MCP server (mcp__browser-agent-mcp-farm__* tools).
 ---
 
 # Browser-Agent MCP Farm
@@ -95,9 +98,15 @@ When you need fine control:
   evidenceKind, sourceUrl }` → an artifactId, then `farm_add_claim { claim,
   artifactId, anchor: { type: "text_span", quote } }`. The gate rejects a claim
   whose quote is not present in the cited bytes.
+- **Structured provenance:** the gate distinguishes farm-DERIVED structured_data
+  (deterministic extraction from witnessed pages) from AGENT-AUTHORED structured_data
+  (self-asserted JSON — the measured "news repackaged as JSON" failure mode, ~36%
+  genuine in QA). Default: warning. `farm_run_claim_gate { strictProvenance: true }`
+  makes an agent-authored structured citation a hard error — use it for audits.
 - **Portable attestation:** `farm_export_bundle { runDir }` produces a
-  Merkle-rooted (optionally Ed25519-signed) manifest; another agent runs
-  `farm_verify_bundle` to detect any tampered file or manifest, fully offline.
+  Merkle-rooted (optionally Ed25519-signed) manifest, **auto-verifies it on export**
+  (a tampered-at-export run fails instead of shipping a poisoned bundle), and returns
+  the verification; another agent runs `farm_verify_bundle` to re-check it, fully offline.
 - **Structured facts:** `farm_extract_structured { html }` parses JSON-LD /
   Open Graph from a page_html artifact — treat publisher markup as a site claim
   and cross-check it.
@@ -134,6 +143,39 @@ it does **not** redo the research's coverage, and it does not prove the captured
 page equals live-origin truth to a distrusting adversary (see
 `docs/THREAT_MODEL.md`). It is the cheapest way to stop a fast, broad, but
 loosely-cited answer from becoming an unverifiable one.
+
+## Lens claim types (market scan / product planning)
+
+These typed-claim recipes used to live in two separate wrapper skills
+(`market-scan`, `product-planning`); they are sections here because the
+enforcement lives in the gate, not in the wrapper. (`farm_lens
+{ "lensId": "market_scan" | "product_planning" }` returns the same templates,
+report sections, and prioritized sources as a tool result, if you prefer.)
+
+**Market scan** — competitor pricing, review sentiment, market sizing:
+- `competitor_price` (metadata) — cite the `structured_data` / `page_text` /
+  `ocr_text` artifact; anchor the exact price text (`anchor.text_span`).
+- `review_sentiment` (text) — each supporting quote grounded in a captured
+  review's bytes.
+- `market_figure` (metadata) — **corroborate** across ≥2 independent sources:
+  `corroboration: { sources: [{ artifactId, quote }], minIndependentSources: 2 }`.
+  The gate verifies each source is registered, checks each quote against that
+  source's bytes, and counts distinct registrable domains.
+- Report sections: Executive summary · Competitor pricing · Review sentiment ·
+  Market sizing · Sources.
+
+**Product planning** — user pains, feature gaps, adoption signals:
+- `user_pain` (text) — a user-reported pain point, grounded in a forum/review
+  quote (`anchor.text_span` on the quoted bytes).
+- `feature_gap` (text) — a missing/requested feature vs an alternative,
+  grounded in a quote.
+- `adoption_figure` (metadata) — an adoption/usage/demand figure; corroborate
+  an important one across ≥2 independent sources (same `corroboration` shape).
+- Report sections: Summary · User pains · Feature gaps · Opportunities · Sources.
+
+Shared rules: a price/figure/user quote is a **site claim** — cite the bytes;
+corroborate the numbers a decision rests on; never state a number you cannot
+cite. A blocked/login-walled page is recorded as an obstruction, not faked.
 
 ## Evidence rules to respect
 

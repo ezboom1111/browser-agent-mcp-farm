@@ -158,23 +158,41 @@ export async function main(): Promise<void> {
     const archiveFile = getArgValue("--archive-file");
     if (archiveFile !== undefined) {
       const archive = await exportBundleArchive(runDir, privateKeyPem !== undefined && privateKeyPem.length > 0 ? { privateKeyPem } : {});
+      // Auto-verify the archive we just built (offline re-hash + Merkle): a run that is
+      // already tampered at export time fails the export instead of shipping poisoned bytes.
+      // Deliberate size-cap omissions (recorded in archive.omitted) and path-less artifacts do
+      // NOT fail the export — they are by-design incomplete and already flagged for the verifier.
+      const verification = verifyBundleArchive(archive);
+      const omittedPaths = new Set(archive.omitted.map((entry) => entry.path));
+      const pathByArtifact = new Map(archive.manifest.artifacts.map((artifact) => [artifact.artifact_id, artifact.path]));
+      const unaccountedMissing = verification.missingArtifacts.filter((artifactId) => {
+        const path = pathByArtifact.get(artifactId);
+        return path !== undefined && !omittedPaths.has(path);
+      });
+      const exportOk = verification.tamperedArtifacts.length === 0 && verification.merkleMatches && verification.signatureValid !== false && unaccountedMissing.length === 0;
       await writeFile(archiveFile, `${JSON.stringify(archive)}\n`, "utf8");
-      await maybeAnchor(archive.manifest.merkleRoot);
+      if (exportOk) {
+        await maybeAnchor(archive.manifest.merkleRoot);
+      }
       console.log(
         JSON.stringify(
           {
-            ok: true,
+            ok: exportOk,
             archiveFile,
             merkleRoot: archive.manifest.merkleRoot,
             signed: archive.manifest.signature !== undefined,
             artifactCount: archive.manifest.artifactCount,
             embeddedFiles: Object.keys(archive.files).length,
-            omitted: archive.omitted.length
+            omitted: archive.omitted.length,
+            verification
           },
           null,
           2
         )
       );
+      if (!exportOk) {
+        process.exitCode = 1;
+      }
       return;
     }
 
@@ -182,13 +200,20 @@ export async function main(): Promise<void> {
     if (privateKeyPem !== undefined && privateKeyPem.length > 0) {
       manifest.signature = signManifest(manifest, privateKeyPem);
     }
-    await maybeAnchor(manifest.merkleRoot);
+    // Auto-verify the manifest against the run in place before anchoring/printing it.
+    const verification = await verifyBundle(runDir, manifest);
+    if (verification.ok) {
+      await maybeAnchor(manifest.merkleRoot);
+    }
     const outputFile = getArgValue("--output-file");
     if (outputFile !== undefined) {
       await writeFile(outputFile, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-      console.log(JSON.stringify({ ok: true, outputFile, merkleRoot: manifest.merkleRoot, signed: manifest.signature !== undefined, artifactCount: manifest.artifactCount }, null, 2));
+      console.log(JSON.stringify({ ok: verification.ok, outputFile, merkleRoot: manifest.merkleRoot, signed: manifest.signature !== undefined, artifactCount: manifest.artifactCount, verification }, null, 2));
     } else {
-      console.log(JSON.stringify({ ok: true, manifest }, null, 2));
+      console.log(JSON.stringify({ ok: verification.ok, manifest, verification }, null, 2));
+    }
+    if (!verification.ok) {
+      process.exitCode = 1;
     }
     return;
   }

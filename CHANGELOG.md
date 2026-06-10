@@ -6,6 +6,42 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+### Added
+
+- **Structured-provenance check in the claim gate** (closes the measured "structured-in-disguise"
+  hole — only ~36% of structured findings were genuine in QA; agents repackaged news text into
+  hand-assembled JSON). The gate now reads the ledger's `capture_method`: a claim citing
+  **agent-authored** `structured_data` (self-asserted JSON via `farm_register_evidence`) is flagged,
+  while farm-DERIVED structured_data (`structured-extractor` / `http-fetch-structured`) never is.
+  When the agent-authored JSON's source domain matches an already-registered page artifact in the
+  same run, the message names the likely repackaging and points at `farm_extract_structured`.
+  Default = warning (no pass/fail flip, same discipline as the 999999 hole);
+  `farm_run_claim_gate { strictProvenance: true }` makes it a hard error for audits.
+- **Export auto-verifies** (closes the "nobody re-runs the verifier" gap): `farm_export_bundle`
+  now re-verifies the manifest it just built (re-hash + Merkle + signature self-check via the
+  public key derived from the signing key) and returns the `verification`; a run that is already
+  tampered at export time **fails the export** (MCP result flagged `isError`) instead of silently
+  shipping a poisoned bundle. The CLI `export-bundle` does the same for both manifest and `.evb`
+  archive paths (deliberate size-cap omissions recorded in `omitted` do not fail the export), and
+  only anchors a verified Merkle root into the transparency log.
+
+### Changed
+
+- **Skill consolidation (Fable-era audit)**: the `market-scan` and `product-planning` wrapper
+  skills were absorbed into the farm SKILL.md as the "Lens claim types" section (enforcement lives
+  in the gate, not in wrappers); the operating principle is now stated as *gather natively, seal
+  the load-bearing few here*. `youtube-research` drops the external transcript-scraper path
+  (measured residential-IP ban vector; the Gemini native-URL + ASR-escalation paths cover the same
+  gap IP-immune) and date-stamps its platform-share snapshot instead of reciting it as a norm.
+
+### Deprecated
+
+- **Source-navigation selector/calibration subsystem frozen** (per the durability analysis and the
+  2026-06-10 3-agent audit: selector recipes rot; model vision + consented capture solved the
+  problem). No new recipes/calibration targets. Excision plan with measured scope (~8.5k of
+  13k LOC deletable, triage + tier routing kept):
+  [`docs/SELECTOR_STACK_EXCISION.md`](docs/SELECTOR_STACK_EXCISION.md).
+
 ## [0.6.1] — 2026-06-05 — OCR engine auto-provision; accumulated origin-binding + multi-vantage work
 
 ### Added

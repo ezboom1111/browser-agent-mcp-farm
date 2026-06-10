@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ClaimAnchorSchema, ClaimTypeSchema, EvidenceKindSchema, type ClaimType, type EvidenceKind } from "./schemas.js";
-import { independentSourceGroups } from "./source-independence.js";
+import { independentSourceGroups, registrableDomain } from "./source-independence.js";
 import { CAPTURE_TRANSCRIPT_SCHEMA } from "./capture-transcript.js";
 
 interface ArtifactLedgerRow {
@@ -12,6 +12,7 @@ interface ArtifactLedgerRow {
   kind?: string;
   evidence_kind?: EvidenceKind;
   source_url?: string;
+  capture_method?: string;
 }
 
 interface ClaimCorroboration {
@@ -76,6 +77,15 @@ export interface ClaimGateResult {
 export interface ClaimGateOptions {
   mode?: "smoke" | "final";
   minClaims?: number;
+  /**
+   * Structured-provenance enforcement. The measured "structured-in-disguise" hole: agents repackaged
+   * news text into hand-assembled JSON to satisfy a structured-evidence expectation (~36% genuine in
+   * QA). The gate reads the ledger's capture_method: `agent-authored` structured_data is self-asserted,
+   * while farm-derived structured_data ("structured-extractor" / "http-fetch-structured") was produced
+   * deterministically from witnessed bytes. Default false = warn only (no pass/fail flip for existing
+   * consumers); true = an agent-authored structured_data citation is a hard error.
+   */
+  strictProvenance?: boolean;
 }
 
 export async function runClaimGate(runDir: string, options: ClaimGateOptions = {}): Promise<ClaimGateResult> {
@@ -185,6 +195,7 @@ export async function runClaimGate(runDir: string, options: ClaimGateOptions = {
     if (mode === "final") {
       validateTypedClaim(claim, artifact, claimLabel, errors);
       validateDestinationProvenanceClaim(claim, citationsByClaimId.get(claim.claim_id ?? ""), claimLabel, errors);
+      validateStructuredProvenance(artifact, artifacts, claimLabel, options.strictProvenance === true ? errors : warnings);
       if (claim.anchor !== undefined) {
         await validateClaimGrounding(runDir, claim, artifact, claimLabel, errors, warnings);
       } else if (artifact !== undefined && (artifact.evidence_kind === "official_api_metadata" || artifact.evidence_kind === "metadata")) {
@@ -280,6 +291,36 @@ function validateTypedClaim(claim: ClaimLedgerRow, artifact: ArtifactLedgerRow |
     // farm never performs speech-to-text (non-goal). Captured captions are transcript_cue.
     errors.push(`audio claim must cite a lawful provider-supplied audio_transcription artifact (the farm performs no speech-to-text): ${claimLabel}`);
   }
+}
+
+/**
+ * Structured-provenance check (closes the measured "structured-in-disguise" hole, ~36% genuine in QA).
+ * A structured_data artifact registered via farm_register_evidence carries capture_method
+ * "agent-authored" — its JSON shape is self-asserted, not derived by the farm. Farm-derived
+ * structured_data ("structured-extractor", "http-fetch-structured") was produced deterministically
+ * from witnessed page bytes and is never flagged. When the agent-authored JSON's source domain matches
+ * an already-registered non-structured page artifact in the same run, the message names the likely
+ * repackaging and points at the deterministic alternative. Severity is the caller's: default mode
+ * passes `warnings`, strictProvenance passes `errors`. (A producer could forge capture_method in the
+ * ledger — this check raises the cost of the lazy failure mode from accidental to deliberate; it is
+ * not origin proof, see THREAT_MODEL.md.)
+ */
+function validateStructuredProvenance(artifact: ArtifactLedgerRow | undefined, artifacts: ArtifactLedgerRow[], claimLabel: string, sink: string[]): void {
+  if (artifact?.evidence_kind !== "structured_data" || artifact.capture_method !== "agent-authored") {
+    return;
+  }
+  const structuredDomain = artifact.source_url === undefined ? undefined : registrableDomain(artifact.source_url);
+  const repackagedFrom =
+    structuredDomain === undefined
+      ? undefined
+      : artifacts.find((candidate) => candidate !== artifact && candidate.evidence_kind !== undefined && candidate.evidence_kind !== "structured_data" && candidate.evidence_kind !== "metadata" && candidate.source_url !== undefined && registrableDomain(candidate.source_url) === structuredDomain);
+  if (repackagedFrom !== undefined) {
+    sink.push(
+      `claim cites agent-authored structured_data whose source domain (${structuredDomain}) matches an already-registered page artifact — likely repackaged from that page (the measured structured-in-disguise failure mode); derive it with the farm instead (farm_evidence_run structured extraction / farm_extract_structured on the registered page): ${claimLabel}`
+    );
+    return;
+  }
+  sink.push(`claim cites agent-authored structured_data (self-asserted provenance, not farm-witnessed): ${claimLabel} — the measured structured-in-disguise failure mode (~36% genuine in QA); prefer a farm-derived structured artifact (farm_evidence_run / official API capture) or corroborate across independent domains`);
 }
 
 function validateDestinationProvenanceClaim(claim: ClaimLedgerRow, citations: CitationEvidence[] | undefined, claimLabel: string, errors: string[]): void {
