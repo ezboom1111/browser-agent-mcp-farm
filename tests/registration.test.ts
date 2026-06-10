@@ -148,40 +148,40 @@ describe("registerClaudeSkill", () => {
 });
 
 describe("registerClaudeSkills (installs every in-repo skill)", () => {
-  it("installs the main farm skill plus the lens skills, each version-stamped", async () => {
+  it("installs the farm skill plus youtube-research, each version-stamped (lens skills absorbed into the farm SKILL.md)", async () => {
     const dir = await mkdtemp(join(tmpdir(), "farm-skills-"));
     dirs.push(dir);
 
     const results = await registerClaudeSkills(dir);
-    expect(results.length).toBeGreaterThanOrEqual(3); // browser-agent-mcp-farm + market-scan + product-planning
+    expect(results.length).toBeGreaterThanOrEqual(2); // browser-agent-mcp-farm + youtube-research
     expect(results.every((result) => result.ok)).toBe(true);
 
-    for (const skill of ["browser-agent-mcp-farm", "market-scan", "product-planning"]) {
+    for (const skill of ["browser-agent-mcp-farm", "youtube-research"]) {
       expect(existsSync(join(dir, skill, "SKILL.md"))).toBe(true);
       expect(existsSync(join(dir, skill, ".farm-skill-version"))).toBe(true);
     }
     expect(existsSync(join(dir, "youtube-research", "lib", "velocity.mjs"))).toBe(true);
-    const marketScan = await readFile(join(dir, "market-scan", "SKILL.md"), "utf8");
-    expect(marketScan).toContain("name: market-scan");
+    const farmSkill = await readFile(join(dir, "browser-agent-mcp-farm", "SKILL.md"), "utf8");
+    expect(farmSkill).toContain("Lens claim types"); // absorbed market-scan / product-planning recipes
+    expect(existsSync(join(dir, "market-scan"))).toBe(false); // retired wrapper is not installed
   });
 });
 
 describe("registerCodexSkills (installs every in-repo skill)", () => {
-  it("installs the main farm skill plus the lens skills into the Codex skills root", async () => {
+  it("installs the farm skill plus youtube-research into the Codex skills root", async () => {
     const dir = await mkdtemp(join(tmpdir(), "farm-codex-skills-"));
     dirs.push(dir);
 
     const results = await registerCodexSkills(dir);
-    expect(results.length).toBeGreaterThanOrEqual(3);
+    expect(results.length).toBeGreaterThanOrEqual(2);
     expect(results.every((result) => result.ok && result.target === "codex")).toBe(true);
 
-    for (const skill of ["browser-agent-mcp-farm", "market-scan", "product-planning"]) {
+    for (const skill of ["browser-agent-mcp-farm", "youtube-research"]) {
       expect(existsSync(join(dir, skill, "SKILL.md"))).toBe(true);
       expect(existsSync(join(dir, skill, ".farm-skill-version"))).toBe(true);
     }
     expect(existsSync(join(dir, "youtube-research", "lib", "velocity.mjs"))).toBe(true);
-    const marketScan = await readFile(join(dir, "market-scan", "SKILL.md"), "utf8");
-    expect(marketScan).toContain("name: market-scan");
+    expect(existsSync(join(dir, "market-scan"))).toBe(false); // retired wrapper is not installed
   });
 });
 

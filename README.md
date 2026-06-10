@@ -12,6 +12,14 @@ offline. It proves your citations are grounded in the captured bytes — **not**
 that the page equals live-origin truth (see
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)).
 
+> **Deprecation (2026-06-10): the source-navigation selector/calibration subsystem is frozen.**
+> Per-site selector recipes, their calibration loops, and promotion machinery are slated for
+> removal — model vision + consented-browser capture solved the problem they were built for, and
+> selector recipes rot permanently. Do not add new recipes or calibration targets. The deterministic
+> core (hash registration, cite-or-fail claim gate, caged judge, Merkle bundles, acquisition-tier
+> routing, bounded destination triage) is unaffected. Plan:
+> [`docs/SELECTOR_STACK_EXCISION.md`](docs/SELECTOR_STACK_EXCISION.md).
+
 ## Install & 60-second Quickstart
 
 Requirements: Node 24+. Install dependencies and the Chromium browser once:
