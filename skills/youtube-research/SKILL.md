@@ -6,10 +6,10 @@ description: >-
   Data API, already-served captions where reachable, TikTok Creative Center, Google Trends),
   ESCALATES no-caption / foreign-VO spoken tracks to leesearch-video-heavy for local ASR, and
   funnels only the load-bearing numbers through the farm's cite-or-fail gate for a tamper-evident
-  bundle. Gemini AI Studio is an optional visual-only lead, never sealed evidence. Transcript-first
-  (the spoken layer is ~100x cheaper than video tokens); the agent/Workflow is the orchestrator (an
-  MCP server cannot call skills); the farm is a VERIFIER, never the understanding engine. Ships no
-  scraper, downloads no audio/video, performs no ASR.
+  bundle. Transcript-first (the spoken layer is ~100x cheaper than video tokens); the agent/Workflow
+  is the orchestrator (an MCP server cannot call skills); the farm is a VERIFIER, never the
+  understanding engine. Ships no scraper, downloads no audio/video, performs no ASR. No external AI
+  model in the pipeline — spoken track = local whisper ASR (heavy path), on-screen text = local OCR.
 ---
 
 # YouTube Research (cheap, lawful, farm-verified)
@@ -28,16 +28,11 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
 
 - **Default to the SPOKEN layer** for spoken content (~90% of videos) — but **don't assume served captions
   are reachable for sealing**; route per the GET step (Data API for list/guide with zero scraping; for true
-  no-caption / foreign VO the spine is **local ASR via `leesearch-video-heavy`**, not Gemini). $0 either way.
-- **Use video tokens only for genuinely on-screen content** (charts, demos, on-screen labels ASR
-  can't read) — **NOT the spoken track of a no-caption video** (that's local ASR via
-  `leesearch-video-heavy`, GET step (c)). Gemini's native YouTube-URL input (**free AI Studio tier**,
-  preview, ≤8h YouTube/day; not the paid API) is an **optional LEAD only, never sealed evidence** —
-  re-ground any number via frame screenshot + OCR.
-- **Screen-share (Gemini Live) is a $0 manual _microscope_, not a pipeline.** Use it only for
-  an ad-hoc look at one thing you are actively viewing (e.g. a bot-walled TikTok Creative
-  Center chart). It samples ~1 fps, is real-time, cannot batch, and leaves no hash-trail —
-  never route research or reporting through it.
+  no-caption / foreign VO the spine is **local ASR via `leesearch-video-heavy`**). $0 either way.
+- **For genuinely on-screen content** (charts, demos, on-screen labels ASR can't read) the *visual*
+  track carries the meaning — capture a frame in the farm and OCR it (`ocr_text`), or **escalate to
+  `leesearch-video-heavy`** (refcap: frame sampling + local OCR). **NOT the spoken track of a no-caption
+  video** (that's local ASR via `leesearch-video-heavy`, GET step (c)). Re-ground any number in OCR'd bytes.
 
 ## The pipeline (DISCOVER → GET → UNDERSTAND → QUANTIFY → VERIFY)
 
@@ -65,20 +60,15 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
      ToS boundary) fetches **0 caption tracks** (`timedtext`/`transcript_cue` count = 0). So this yields a
      transcript only in the rare case a public video genuinely autoplays a served track AND the farm captures
      the body — never count on it. Need the spoken track → go to (c)/heavy. Subject to the ToS note below.
-   - **(c) No served captions → LOCAL ASR is the spine; Gemini is an OPTIONAL lead.** For the spoken track of
-     a no-caption / foreign-VO narrative, **escalate to `leesearch-video-heavy`** (refcap: yt-dlp + local
-     whisper ASR — youtube-research itself still downloads nothing and runs no ASR). That path yields a
-     **registrable, hash-sealable `transcript_cue` with real timestamps** — witnessed bytes that pass
-     cite-or-fail, **no vendor quota or lock-in**. It owns model choice: a clean-VO fast knob
-     (`REFCAP_ASR_MODEL=large-v3-turbo`, ≈3 min / 10 min on CPU, CER 0.019 on clean Korean VO, n=1 clip) **set in the heavy path, not here**
-     — *turbo is opt-in for CLEAN VO ONLY; it hallucinates MORE on hard audio, so never the blind default*
-     (its coverage gate auto-escalates to large-v3, but don't lean on that as a rescue). **Gemini native
-     YouTube-URL** is an *optional* lead only — a quick gist, or to read **on-screen text** ASR can't
-     (charts/labels). Treat Gemini as a lead, never sealed evidence (quota/preview; inputs may train Google's
-     models); **treat any timestamp Gemini reports as unreliable** (measured garbage 2026-06-18 — get
-     timestamps from local ASR); for a number it read off a *frame*, re-ground via a frame screenshot + OCR
-     (`ocr_text`), never by registering Gemini prose. On-screen text is also recoverable locally via refcap's
-     frame-OCR fusion.
+   - **(c) No served captions → LOCAL ASR only (no external AI model).** For the spoken track of a
+     no-caption / foreign-VO narrative, **escalate to `leesearch-video-heavy`** (refcap: yt-dlp + local
+     whisper ASR — youtube-research itself downloads nothing and runs no ASR). It yields a **registrable,
+     hash-sealable `transcript_cue` with real timestamps** — witnessed bytes that pass cite-or-fail, **no
+     vendor quota or lock-in**. The heavy path owns model choice (incl. the clean-VO
+     `REFCAP_ASR_MODEL=large-v3-turbo` knob — see `leesearch-video-heavy`). For **on-screen text** ASR can't
+     read (charts/labels), capture a frame and OCR it (`ocr_text`) — natively in the farm, or via refcap
+     frame-OCR in the heavy pass. Never register model prose as evidence; re-ground every number in OCR'd /
+     transcribed bytes.
    - **(d) Honest gap:** if none reach it, say so — do not fill with guesses.
    - **External transcript scrapers (e.g. `youtube-transcript-api`) are OUT OF SCOPE — removed
      2026-06-10.** They scrape the internal `timedtext` endpoint and are behavioral-bot-detected
@@ -90,9 +80,9 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
      escalate to (c)/heavy — never hand-roll a scraper.
    Obey the Security rules below.
 3. **UNDERSTAND**: the agent reads the transcript ($0) — a served caption, or the **local-ASR
-   `transcript_cue` from `leesearch-video-heavy`** for no-caption / foreign-VO video (GET step (c)). Use
-   Gemini only when the *visual* track carries the meaning; treat Gemini output as a **lead, never cited
-   evidence** (and never trust its timestamps).
+   `transcript_cue` from `leesearch-video-heavy`** for no-caption / foreign-VO video (GET step (c)). When the
+   *visual* track carries the meaning, read sampled frames (farm screenshot + OCR, or refcap frame-OCR in the
+   heavy pass) — re-ground numbers in OCR'd bytes, never model prose.
 4. **QUANTIFY**: compute view-velocity from two timestamped `videos.list` statistics snapshots
    with [`lib/velocity.mjs`](lib/velocity.mjs) (`viewVelocityPerHour`). Stamp every reading with
    a captured-at time — short-form trend half-life is days.
@@ -118,7 +108,7 @@ model choice. A 30-min transcript is ~5–8K tokens; the same video as pixels is
      artifact PLUS an independent registrable domain (the creator's official site / a news page / a
      press kit), each with a `quote` present in THAT source's bytes. The gate fails the claim below 2
      distinct domains, so a single-source YouTube number cannot pose as corroborated. (Engine already
-     wired; this is the one guarantee no gather tool — Gemini, NotebookLM, Supadata — offers.)
+     wired; this is the one guarantee no generic gather/transcript tool offers.)
    Put **captured-at** and a **freshness note** on the claim as fields, not prose. Do NOT verify
    everything — the gate is a microscope on the load-bearing few. A failed claim still appends to
    the run ledger (no delete) — if a run is contaminated, start a **fresh `runDir`**.
@@ -161,13 +151,12 @@ CAPTCHA, or age gates.
 
 ## Security rules (machine-followable — do NOT deviate)
 
-- **Secrets are env-only.** `YOUTUBE_API_KEY` and `GEMINI_API_KEY` come from environment
-  variables. NEVER write a key into a transcript, a fixture, a committed file, or any exported
-  bundle. The velocity helper redacts the key (`AIza…` → `AIza********`) from the request URL,
-  from any thrown error message, and from the JSON snapshot **before** `farm_register_evidence`.
-  The repo's `scan-secrets` will redact/flag any `AIza…` at rest; run
-  `scan-secrets --run-dir <run>` after export as a backstop (note: it is NOT in the verify gate —
-  the redaction is the real control).
+- **Secrets are env-only.** `YOUTUBE_API_KEY` comes from an environment variable. NEVER write a key
+  into a transcript, a fixture, a committed file, or any exported bundle. The velocity helper redacts
+  the key (`AIza…` → `AIza********`) from the request URL, from any thrown error message, and from the
+  JSON snapshot **before** `farm_register_evidence`. The repo's `scan-secrets` will redact/flag any
+  `AIza…` at rest; run `scan-secrets --run-dir <run>` after export as a backstop (note: it is NOT in
+  the verify gate — the redaction is the real control).
 - **No external transcript scrapers** (removed 2026-06-10, see GET step). If one is ever
   reintroduced deliberately: separate process only, **never** `--cookies`, never the farm browser
   context / `storage-state.json` / any persistent profile, and never an authenticated session to
@@ -183,10 +172,10 @@ CAPTCHA, or age gates.
   **no speech-to-text itself** — ASR is out of scope for THIS skill and is reached only by escalating to
   `leesearch-video-heavy` (GET step (c)), whose whisper transcript is still registered as a `transcript_cue`,
   never `audio_transcription`.
-- **Gemini output is a LEAD, not evidence.** AI Studio's free tier is preview, quota-limited,
-  non-commercial, and its inputs may be used to improve Google's products (do not paste anything
-  sensitive); the native-YouTube-URL feature is preview/region-gated and can change. Re-ground
-  every load-bearing number through the farm before citing it.
+- **No external AI model in the pipeline.** The spoken track is local whisper ASR (heavy path); on-screen
+  text is local OCR. Do not route understanding or reporting through any hosted model API (no cloud
+  video/transcription service) — they are un-sealable leads with quota/lock-in, contrary to this skill's
+  cite-or-fail, vendor-neutral design.
 
 ## Honest limits
 
@@ -195,7 +184,7 @@ CAPTCHA, or age gates.
   (local ASR), not the farm browser. See GET (b)/(c).
 - TikTok/Instagram are bot-walled — capture is public-browser-visible only (often a login wall =
   nothing); their research APIs are institution-gated (a solo researcher is ineligible). Read
-  those surfaces by eye / the screen-share microscope.
+  those surfaces by eye (or a consented logged-in browser).
 - A personalized "For You" / recommendations feed is **not** the global trend (filter bubble).
   Read aggregate signals (Creative Center, Data API); label any personal feed as a sample.
 - The farm proves *what was registered and that it was not altered after registration* — never that
