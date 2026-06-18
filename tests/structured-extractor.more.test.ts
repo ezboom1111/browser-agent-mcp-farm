@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  attachTypedFacts,
-  crossCheckStructured,
-  extractHeadings,
-  extractStructuredData,
-  extractTables,
-  type StructuredData
-} from "../src/structured-extractor.js";
+import { attachTypedFacts, crossCheckStructured, extractHeadings, extractStructuredData, extractTables, type StructuredData } from "../src/structured-extractor.js";
 
 const HTML = `<!doctype html><html><head>
 <title>  Best Hotel  </title>
@@ -41,7 +34,10 @@ describe("extractStructuredData", () => {
     expect(data.hydration).toEqual([{ props: { x: 1 } }]);
   });
   it("extracts headings and a captioned, header-rowed table", () => {
-    expect(data.headings).toEqual([{ level: 1, text: "Main Title" }, { level: 2, text: "Section" }]);
+    expect(data.headings).toEqual([
+      { level: 1, text: "Main Title" },
+      { level: 2, text: "Section" }
+    ]);
     expect(data.tables).toEqual([{ caption: "Rooms", headers: ["Type", "Price"], rows: [["Deluxe", "$230"]] }]);
   });
 });
@@ -88,12 +84,18 @@ describe("crossCheckStructured / attachTypedFacts", () => {
 
 describe("extractHeadings / extractTables edge cases", () => {
   it("captures levels h1-h6 and skips empty headings", () => {
-    expect(extractHeadings("<h1>A</h1><h3>B</h3><h2>   </h2>")).toEqual([{ level: 1, text: "A" }, { level: 3, text: "B" }]);
+    expect(extractHeadings("<h1>A</h1><h3>B</h3><h2>   </h2>")).toEqual([
+      { level: 1, text: "A" },
+      { level: 3, text: "B" }
+    ]);
   });
   it("treats a table with no th header row as all-rows, no headers", () => {
     const [table] = extractTables("<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>");
     expect(table.headers).toEqual([]);
-    expect(table.rows).toEqual([["a", "b"], ["c", "d"]]);
+    expect(table.rows).toEqual([
+      ["a", "b"],
+      ["c", "d"]
+    ]);
   });
   it("decodes entities and collapses whitespace in cells", () => {
     const [table] = extractTables("<table><tr><td>a &amp;  b</td></tr></table>");

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  destinationQueryFromUrl,
-  detectedTextScriptFamilies,
-  hasDominantTextScriptMismatch,
-  matchingTextTokens,
-  normalizeEvidenceText
-} from "../src/evidence-runner-text.js";
+import { destinationQueryFromUrl, detectedTextScriptFamilies, hasDominantTextScriptMismatch, matchingTextTokens, normalizeEvidenceText } from "../src/evidence-runner-text.js";
 
 describe("detectedTextScriptFamilies", () => {
   it("detects latin and digit, preserving family order", () => {

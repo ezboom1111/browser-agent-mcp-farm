@@ -32,10 +32,7 @@ function placeApollo(id: string, name: string, extra: Record<string, unknown> = 
 
 describe("extractClientStateDestinationCandidates", () => {
   it("extracts a naver place candidate with resolved urls and joined text", () => {
-    const result = extractClientStateDestinationCandidates(
-      stateOf([frame(placeApollo("1234567", "호텔 아주레", { category: "호텔", roadAddress: "해변로 12" }))]),
-      opts
-    );
+    const result = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("1234567", "호텔 아주레", { category: "호텔", roadAddress: "해변로 12" }))]), opts);
     expect(result.parsedFrameCount).toBe(1);
     expect(result.candidates).toHaveLength(1);
     const c = result.candidates[0];
@@ -47,81 +44,42 @@ describe("extractClientStateDestinationCandidates", () => {
   });
 
   it("requires a place signal beyond id+name", () => {
-    const noSignal = extractClientStateDestinationCandidates(
-      stateOf([frame({ ROOT: { id: "7654321", name: "Just A Name" } })]),
-      opts
-    );
+    const noSignal = extractClientStateDestinationCandidates(stateOf([frame({ ROOT: { id: "7654321", name: "Just A Name" } })]), opts);
     expect(noSignal.candidates).toHaveLength(0);
-    const withSignal = extractClientStateDestinationCandidates(
-      stateOf([frame({ ROOT: { id: "7654321", name: "Has Coords", x: "127.0", y: "37.5" } })]),
-      opts
-    );
+    const withSignal = extractClientStateDestinationCandidates(stateOf([frame({ ROOT: { id: "7654321", name: "Has Coords", x: "127.0", y: "37.5" } })]), opts);
     expect(withSignal.candidates).toHaveLength(1);
   });
 
   it("rejects ids that are not 5-20 digits", () => {
-    const result = extractClientStateDestinationCandidates(
-      stateOf([
-        frame({ ROOT: { id: "123", name: "Too Short", category: "x" } }),
-        frame({ ROOT: { id: "abc12345", name: "Not Digits", category: "x" } })
-      ]),
-      opts
-    );
+    const result = extractClientStateDestinationCandidates(stateOf([frame({ ROOT: { id: "123", name: "Too Short", category: "x" } }), frame({ ROOT: { id: "abc12345", name: "Not Digits", category: "x" } })]), opts);
     expect(result.candidates).toHaveLength(0);
   });
 
   it("resolves the place path from option, frame url, then default", () => {
-    const byOption = extractClientStateDestinationCandidates(
-      stateOf([frame(placeApollo("1111111", "A"))]),
-      { ...opts, destinationPath: "hospital" }
-    );
+    const byOption = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("1111111", "A"))]), { ...opts, destinationPath: "hospital" });
     expect(byOption.candidates[0].originalUrl).toBe("https://place.naver.com/hospital/1111111");
 
-    const byFrameUrl = extractClientStateDestinationCandidates(
-      stateOf([frame(placeApollo("2222222", "B"), { frameUrl: "https://m.place.naver.com/accommodation/list?x=1" })]),
-      opts
-    );
+    const byFrameUrl = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("2222222", "B"), { frameUrl: "https://m.place.naver.com/accommodation/list?x=1" })]), opts);
     expect(byFrameUrl.candidates[0].originalUrl).toBe("https://place.naver.com/accommodation/2222222");
 
-    const byDefault = extractClientStateDestinationCandidates(
-      stateOf([frame(placeApollo("3333333", "C"), { frameUrl: "https://m.place.naver.com/unknownpath" })]),
-      { ...opts, destinationPath: "not-a-known-path" }
-    );
+    const byDefault = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("3333333", "C"), { frameUrl: "https://m.place.naver.com/unknownpath" })]), { ...opts, destinationPath: "not-a-known-path" });
     expect(byDefault.candidates[0].originalUrl).toBe("https://place.naver.com/restaurant/3333333");
   });
 
   it("counts truncated frames and skips invalid/empty json", () => {
-    const result = extractClientStateDestinationCandidates(
-      stateOf([
-        frame(placeApollo("4444444", "Valid")),
-        frame(undefined, { truncated: true, json: "{}" }),
-        { frameIndex: 2, frameUrl: "x", found: true, truncated: false, json: "{not json" },
-        { frameIndex: 3, frameUrl: "x", found: false, truncated: false }
-      ]),
-      opts
-    );
+    const result = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("4444444", "Valid")), frame(undefined, { truncated: true, json: "{}" }), { frameIndex: 2, frameUrl: "x", found: true, truncated: false, json: "{not json" }, { frameIndex: 3, frameUrl: "x", found: false, truncated: false }]), opts);
     expect(result.parsedFrameCount).toBe(1);
     expect(result.truncatedFrameCount).toBe(1);
     expect(result.candidates).toHaveLength(1);
   });
 
   it("dedupes the same place across frames and honors maxLinks", () => {
-    const deduped = extractClientStateDestinationCandidates(
-      stateOf([frame(placeApollo("5555555", "Dup")), frame(placeApollo("5555555", "Dup"))]),
-      opts
-    );
+    const deduped = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("5555555", "Dup")), frame(placeApollo("5555555", "Dup"))]), opts);
     expect(deduped.rawCandidateCount).toBe(2);
     expect(deduped.uniqueCandidateCount).toBe(1);
     expect(deduped.candidates).toHaveLength(1);
 
-    const capped = extractClientStateDestinationCandidates(
-      stateOf([
-        frame(placeApollo("6000001", "P1")),
-        frame(placeApollo("6000002", "P2")),
-        frame(placeApollo("6000003", "P3"))
-      ]),
-      { ...opts, maxLinks: 2 }
-    );
+    const capped = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("6000001", "P1")), frame(placeApollo("6000002", "P2")), frame(placeApollo("6000003", "P3"))]), { ...opts, maxLinks: 2 });
     expect(capped.uniqueCandidateCount).toBe(3);
     expect(capped.candidates).toHaveLength(2);
   });
