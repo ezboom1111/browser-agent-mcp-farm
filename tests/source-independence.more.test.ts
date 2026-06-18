@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  contentShingles,
-  independentSourceCount,
-  independentSourceGroups,
-  jaccardSimilarity,
-  registrableDomain
-} from "../src/source-independence.js";
+import { contentShingles, independentSourceCount, independentSourceGroups, jaccardSimilarity, registrableDomain } from "../src/source-independence.js";
 
 describe("registrableDomain", () => {
   it("strips www and reduces to eTLD+1", () => {
@@ -26,18 +20,14 @@ describe("registrableDomain", () => {
 
 describe("independentSourceCount", () => {
   it("counts distinct registrable domains, ignoring undefined and www duplicates", () => {
-    expect(
-      independentSourceCount(["https://a.com", "https://www.a.com/x", "https://b.com", undefined, "nonsense"])
-    ).toBe(2);
+    expect(independentSourceCount(["https://a.com", "https://www.a.com/x", "https://b.com", undefined, "nonsense"])).toBe(2);
     expect(independentSourceCount([])).toBe(0);
   });
 });
 
 describe("contentShingles / jaccardSimilarity", () => {
   it("builds k-word shingles and collapses short text to one", () => {
-    expect(contentShingles("the quick brown fox jumps over", 5)).toEqual(
-      new Set(["the quick brown fox jumps", "quick brown fox jumps over"])
-    );
+    expect(contentShingles("the quick brown fox jumps over", 5)).toEqual(new Set(["the quick brown fox jumps", "quick brown fox jumps over"]));
     expect(contentShingles("only three words", 5)).toEqual(new Set(["only three words"]));
     expect(contentShingles("   ")).toEqual(new Set());
   });

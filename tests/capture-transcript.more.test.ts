@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildCaptureTranscript,
-  CAPTURE_TRANSCRIPT_SCHEMA,
-  captureTranscriptEnabled,
-  sha256Hex
-} from "../src/capture-transcript.js";
+import { buildCaptureTranscript, CAPTURE_TRANSCRIPT_SCHEMA, captureTranscriptEnabled, sha256Hex } from "../src/capture-transcript.js";
 
 describe("captureTranscriptEnabled", () => {
   it("is opt-in via FARM_CAPTURE_TRANSCRIPT=1 only", () => {
