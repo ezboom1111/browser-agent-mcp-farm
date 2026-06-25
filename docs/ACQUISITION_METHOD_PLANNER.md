@@ -47,10 +47,13 @@ external bridge.
 ## Evidence Runner Link
 
 Every `runEvidenceWorkflow` now writes an `acquisition_method_plan` artifact
-before browser capture. When the browser-obstruction classifier later detects a
-login wall, challenge, app interstitial, region/age gate, or unavailable media,
-the runner maps those obstruction kinds into an `observedFailure` signal and
-writes an `acquisition_method_runtime_plan` artifact. This closes the first
+before browser capture. It also evaluates official API credential readiness for
+supported platforms before the browser opens; this is a no-provider-call
+planning artifact unless live official API collection is explicitly enabled.
+When the browser-obstruction classifier later detects a login wall, challenge,
+app interstitial, region/age gate, or unavailable media, the runner maps those
+obstruction kinds into an `observedFailure` signal and writes an
+`acquisition_method_runtime_plan` artifact. This closes the first
 `classify-but-don't-act` gap: obstruction evidence now drives a second method
 plan instead of remaining only a partial-status note.
 

@@ -119,7 +119,9 @@ describe("runEvidenceWorkflow", () => {
       });
       expect(result.assessment.frameSampling.status).toBe("ok");
       expect(result.frameRecords.some((record) => record.kind === "screenshot")).toBe(true);
-      expect(result.stageTimings.map((timing) => timing.stage)).toEqual(expect.arrayContaining(["setup", "platform_capability_artifact", "source_registry_artifact", "browser_open_page", "browser_page_capture", "frame_sampling", "claim_gate"]));
+      const stageNames = result.stageTimings.map((timing) => timing.stage);
+      expect(stageNames).toEqual(expect.arrayContaining(["setup", "platform_capability_artifact", "source_registry_artifact", "official_api_readiness", "browser_open_page", "browser_page_capture", "frame_sampling", "claim_gate"]));
+      expect(stageNames.indexOf("official_api_readiness")).toBeLessThan(stageNames.indexOf("browser_open_page"));
       expect(result.stageTimings.every((timing) => timing.durationMs >= 0)).toBe(true);
 
       const report = await readFile(result.reportPath, "utf8");

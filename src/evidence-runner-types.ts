@@ -10,6 +10,7 @@ import type { ClaimGateResult } from "./claim-gate.js";
 import type { DenseSamplingEvent, SceneChangeDetectionDiagnostics } from "./frame-sampler.js";
 import type { LeaseManager, StoragePolicy } from "./lease-manager.js";
 import type { OcrOptions, OcrWorkerFactory } from "./ocr.js";
+import type { OfficialApiReadinessReport } from "./official-api.js";
 import type { PlatformCapabilityMap } from "./platform-adapters/index.js";
 import type { PublicGatewayAssessment, PublicGatewayCapture } from "./public-gateway-capture.js";
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
@@ -114,6 +115,7 @@ export interface EvidenceWorkflowAssessment {
   browserOverlayDismissal: BrowserOverlayDismissalReport;
   browserObstructions: BrowserObstructionReport;
   publicGateway: PublicGatewayAssessment;
+  officialApiReadiness: OfficialApiReadinessReport;
   stageTimings: EvidenceWorkflowStageTiming[];
   transcript: {
     officialCaptionBodyCapability: string;
@@ -166,6 +168,8 @@ export interface EvidenceWorkflowResult {
   frameRecords: ArtifactRecord[];
   ocrRecords: ArtifactRecord[];
   officialApiRecords: ArtifactRecord[];
+  officialApiReadiness: OfficialApiReadinessReport;
+  officialApiReadinessRecords: ArtifactRecord[];
   overlayDismissalRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];

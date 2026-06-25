@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildOfficialApiReadiness, collectOfficialApiEvidence } from "../src/official-api.js";
+import { buildOfficialApiReadiness, collectOfficialApiEvidence, writeOfficialApiReadinessArtifact } from "../src/official-api.js";
 import { describePlatformCapabilities } from "../src/platform-adapters/index.js";
 
 let runDirs: string[] = [];
@@ -81,6 +81,30 @@ describe("collectOfficialApiEvidence", () => {
       ])
     );
     expect(JSON.stringify(report)).not.toContain("SECRET_TEST_KEY");
+  });
+
+  it("writes credential readiness as a source-strategy artifact without provider API calls", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-api-readiness-artifact-"));
+    runDirs.push(runDir);
+
+    const result = await writeOfficialApiReadinessArtifact({
+      runDir,
+      sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      contextToken: "ctx_test",
+      pageId: "api-readiness",
+      baseCaptureId: "api",
+      platformCapabilities: describePlatformCapabilities("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+      credentials: { youtubeApiKeyEnv: "FARM_TEST_YOUTUBE_KEY" }
+    });
+
+    expect(result.report.executionPolicy).toBe("credential_readiness_only_no_api_calls");
+    expect(result.records.some((record) => record.tool_name === "evidence_run_official_api_readiness" && record.evidence_kind === "source_strategy")).toBe(true);
+    const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
+    expect(ledger).toContain("official-api-readiness");
+    const textRecord = result.records.find((record) => record.kind === "text");
+    expect(textRecord).toBeDefined();
+    const text = await readFile(join(runDir, textRecord?.path as string), "utf8");
+    expect(text).toContain("FARM_TEST_YOUTUBE_KEY");
   });
 
   it("reports unsupported official API readiness for generic URLs", () => {
