@@ -102,6 +102,18 @@ describe("httpTier0Capture (A1)", () => {
     const ok = await httpTier0Capture({ runDir: okRun.runDir, url: `${baseUrl}/p`, allowedDomains: [host], writer: okRun.writer, captureId: "cap", contextToken: "ctx", pageId: "pg" });
     expect(ok.ok).toBe(true);
   });
+
+  it("declines a thin Naver desktop blog iframe shell so auto routing escalates to browser frame text", async () => {
+    const NAVER_BLOG_SHELL = `<!doctype html><html><head><title>다에의 여행일기 : 네이버 블로그</title></head><body><iframe id="mainFrame" name="mainFrame" src="/PostView.naver?blogId=daae0206&logNo=224313319058"></iframe></body></html>`;
+    const { baseUrl, host } = await startServer(() => ({ body: NAVER_BLOG_SHELL }));
+    const { writer, runDir } = await newRun();
+
+    const result = await httpTier0Capture({ runDir, url: `${baseUrl}/blog-shell`, allowedDomains: [host], writer, captureId: "cap", contextToken: "ctx", pageId: "pg" });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/client-rendered shell/i);
+    expect(result.records).toEqual([]);
+  });
 });
 
 describe("looksLikeClientRenderedShell (D2 decline gate)", () => {
@@ -109,6 +121,7 @@ describe("looksLikeClientRenderedShell (D2 decline gate)", () => {
     expect(looksLikeClientRenderedShell('<div id="root"></div>', "")).toBe(true);
     expect(looksLikeClientRenderedShell('<div id="__next"></div><script id="__NEXT_DATA__"></script>', "loading")).toBe(true);
     expect(looksLikeClientRenderedShell("<body></body>", "")).toBe(true); // no readable text at all
+    expect(looksLikeClientRenderedShell('<html><body><iframe id="mainFrame" src="/PostView.naver"></iframe></body></html>', "다에의 여행일기 : 네이버 블로그")).toBe(true);
   });
 
   it("keeps a short server-rendered page (real text, no mount/hydration marker)", () => {

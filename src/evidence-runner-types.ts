@@ -16,6 +16,7 @@ import type { PublicGatewayAssessment, PublicGatewayCapture } from "./public-gat
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import type { SourceRegistryMatch, SourceRegistrySummary } from "./source-registry.js";
 import type { SourceStrategy } from "./source-strategy.js";
+import type { TrendAnalysisReport } from "./trend-analysis.js";
 
 export interface EvidenceWorkflowOptions {
   url: string;
@@ -114,6 +115,7 @@ export interface EvidenceWorkflowAssessment {
   frameSampling: FrameSamplingAssessment;
   browserOverlayDismissal: BrowserOverlayDismissalReport;
   browserObstructions: BrowserObstructionReport;
+  trendAnalysis: TrendAnalysisReport;
   publicGateway: PublicGatewayAssessment;
   officialApiReadiness: OfficialApiReadinessReport;
   stageTimings: EvidenceWorkflowStageTiming[];
@@ -172,6 +174,7 @@ export interface EvidenceWorkflowResult {
   officialApiReadinessRecords: ArtifactRecord[];
   overlayDismissalRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
+  trendAnalysisRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   assessment: EvidenceWorkflowAssessment;

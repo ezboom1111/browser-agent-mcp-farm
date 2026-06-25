@@ -26,6 +26,7 @@ export const EvidenceKindSchema = z.enum([
   "api_cache",
   "source_strategy",
   "source_registry",
+  "trend_analysis",
   "source_navigation_plan",
   "source_navigation_execution_plan",
   "source_navigation_recipe_plan",

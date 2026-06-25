@@ -37,6 +37,21 @@ describe("planAcquisitionMethods", () => {
     expect(enabled.decision).toContain("caged BYO/external-bridge");
   });
 
+  it("documents Naver Blog as a public browser-visible surface before BYO", () => {
+    const plan = planAcquisitionMethods({ url: "https://blog.naver.com/daae0206/224313319058" });
+
+    expect(plan.platform).toBe("naver_blog");
+    expect(plan.methods).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "naver_blog_public_browser_surface",
+          tier: "headed",
+          trust: "farm_direct"
+        })
+      ])
+    );
+  });
+
   it("does not suggest an external bridge for login, paywall, or captcha boundaries", () => {
     const plan = planAcquisitionMethods({
       url: "https://example.com/private",

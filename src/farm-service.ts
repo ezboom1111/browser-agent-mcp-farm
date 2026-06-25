@@ -607,6 +607,7 @@ export class FarmService {
         family: result.sourceStrategy.sourceFamily
       },
       sourceRegistry: result.assessment.sourceRegistry,
+      trendAnalysis: result.assessment.trendAnalysis,
       mediaId: result.platformCapabilities.mediaId,
       claims: result.claims.length,
       claimGate: result.claimGate,
@@ -616,6 +617,7 @@ export class FarmService {
         capability: result.capabilityRecords.length,
         sourceStrategy: result.sourceStrategyRecords.length,
         sourceRegistry: result.sourceRegistryRecords.length,
+        trendAnalysis: result.trendAnalysisRecords.length,
         page: result.pageCaptureRecords.length,
         frames: result.frameRecords.length,
         ocr: result.ocrRecords.length,
@@ -670,7 +672,7 @@ function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "text/html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "trend_analysis") {
     return "application/json";
   }
   return "application/octet-stream";
@@ -683,7 +685,7 @@ function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "trend_analysis") {
     return "json";
   }
   return "bin";
