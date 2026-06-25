@@ -305,7 +305,7 @@ ${input.obstructions.length === 0 ? `| ${date} | ${input.plan.observedFailure} |
 
 ## Next Upgrade
 
-- Expand legal gateway arms beyond the current Jina Reader retry: Wayback/archive and AMP discovery.
+- Expand legal gateway arms beyond the current Jina Reader + Wayback retry: AMP discovery and archive.today-style gateways.
 - Add byte-faithful BYO ingest before enabling external bridge bytes for non-text artifacts.
 - Update this recipe after at least 20 comparable runs; before that, treat scores as anecdotal.
 `;

@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
 
-export type PublicGatewayKey = "jina_reader";
+export type PublicGatewayKey = "jina_reader" | "wayback_latest";
 
 export interface PublicGatewayCandidate {
   key: PublicGatewayKey;
@@ -59,6 +59,12 @@ export function buildPublicGatewayCandidates(sourceUrl: string): PublicGatewayCa
       url: `https://r.jina.ai/${sourceUrl}`,
       sourceUrl,
       reason: "Read the public URL through Jina Reader's no-key URL-prefix gateway and register the returned markdown/text bytes as untrusted gateway evidence."
+    },
+    {
+      key: "wayback_latest",
+      url: `https://archive.org/wayback/available?url=${encodeURIComponent(sourceUrl)}`,
+      sourceUrl,
+      reason: "Ask the Internet Archive Wayback availability endpoint for the latest public snapshot, then register the returned archived page bytes when available."
     }
   ];
 }
@@ -134,6 +140,9 @@ async function tryGatewayCandidate(input: PublicGatewayCaptureInput, candidate: 
   }
 
   try {
+    if (candidate.key === "wayback_latest") {
+      return await tryWaybackCandidate(input, candidate, controller.signal);
+    }
     const fetcher = input.fetch ?? fetch;
     const response = await fetcher(candidate.url, {
       signal: controller.signal,
@@ -175,25 +184,10 @@ async function tryGatewayCandidate(input: PublicGatewayCaptureInput, candidate: 
       };
     }
 
-    const contentType = response.headers.get("content-type") ?? "text/plain";
-    const records = await input.writer.writeCaptureBundle({
-      runDir: input.runDir,
-      sourceUrl: input.url,
-      contextToken: input.contextToken,
-      pageId: input.pageId,
-      captureId: `${input.captureId}-${candidate.key}`,
-      metadata: {
-        captureTier: "feed",
-        gateway: candidate.key,
-        gatewayUrl: candidate.url,
-        gatewayStatus: response.status,
-        contentType
-      },
+    const records = await writeGatewayBundle(input, candidate, {
       text,
-      captureMethod: `public-gateway:${candidate.key}`,
-      toolName: "public_gateway_capture",
-      evidenceKind: "page_text",
-      note: candidate.reason
+      gatewayStatus: response.status,
+      contentType: response.headers.get("content-type") ?? "text/plain"
     });
     return {
       attempt: {
@@ -221,6 +215,154 @@ async function tryGatewayCandidate(input: PublicGatewayCaptureInput, candidate: 
   }
 }
 
+async function tryWaybackCandidate(input: PublicGatewayCaptureInput, candidate: PublicGatewayCandidate, signal: AbortSignal): Promise<{ attempt: PublicGatewayAttempt; records?: ArtifactRecord[] }> {
+  const fetcher = input.fetch ?? fetch;
+  const availabilityResponse = await fetcher(candidate.url, {
+    signal,
+    headers: { accept: "application/json" }
+  });
+  const availabilityText = await availabilityResponse.text();
+  if (!availabilityResponse.ok) {
+    return {
+      attempt: {
+        key: candidate.key,
+        gatewayUrl: candidate.url,
+        status: "declined",
+        statusCode: availabilityResponse.status,
+        reason: `wayback availability declined: http ${availabilityResponse.status}`
+      }
+    };
+  }
+  const snapshotUrl = parseWaybackSnapshotUrl(availabilityText);
+  if (snapshotUrl === undefined) {
+    return {
+      attempt: {
+        key: candidate.key,
+        gatewayUrl: candidate.url,
+        status: "declined",
+        statusCode: availabilityResponse.status,
+        reason: "wayback availability declined: no usable closest snapshot"
+      }
+    };
+  }
+
+  const snapshotResponse = await fetcher(snapshotUrl, {
+    signal,
+    headers: { accept: "text/html,text/plain,*/*" }
+  });
+  const snapshotBody = await snapshotResponse.text();
+  if (!snapshotResponse.ok) {
+    return {
+      attempt: {
+        key: candidate.key,
+        gatewayUrl: candidate.url,
+        status: "declined",
+        statusCode: snapshotResponse.status,
+        reason: `wayback snapshot declined: http ${snapshotResponse.status}`
+      }
+    };
+  }
+  if (Buffer.byteLength(snapshotBody, "utf8") > (input.maxBytes ?? DEFAULT_MAX_BYTES)) {
+    return {
+      attempt: {
+        key: candidate.key,
+        gatewayUrl: candidate.url,
+        status: "declined",
+        statusCode: snapshotResponse.status,
+        reason: `wayback snapshot declined: body exceeds maxBytes ${input.maxBytes ?? DEFAULT_MAX_BYTES}`
+      }
+    };
+  }
+
+  const contentType = snapshotResponse.headers.get("content-type") ?? "text/plain";
+  const isHtml = contentType.toLowerCase().includes("text/html");
+  const visibleText = isHtml ? htmlToVisibleText(snapshotBody) : snapshotBody;
+  const validation = validateGatewayText(visibleText);
+  if (validation !== undefined) {
+    return {
+      attempt: {
+        key: candidate.key,
+        gatewayUrl: candidate.url,
+        status: "declined",
+        statusCode: snapshotResponse.status,
+        reason: validation.replace("gateway declined", "wayback snapshot declined")
+      }
+    };
+  }
+
+  const records = await writeGatewayBundle(input, candidate, {
+    text: visibleText,
+    ...(isHtml ? { html: snapshotBody } : {}),
+    gatewayStatus: snapshotResponse.status,
+    contentType,
+    gatewaySnapshotUrl: snapshotUrl
+  });
+  return {
+    attempt: {
+      key: candidate.key,
+      gatewayUrl: candidate.url,
+      status: "ok",
+      statusCode: snapshotResponse.status
+    },
+    records
+  };
+}
+
+async function writeGatewayBundle(
+  input: PublicGatewayCaptureInput,
+  candidate: PublicGatewayCandidate,
+  captured: {
+    text: string;
+    html?: string;
+    gatewayStatus: number;
+    contentType: string;
+    gatewaySnapshotUrl?: string;
+  }
+): Promise<ArtifactRecord[]> {
+  return input.writer.writeCaptureBundle({
+    runDir: input.runDir,
+    sourceUrl: input.url,
+    contextToken: input.contextToken,
+    pageId: input.pageId,
+    captureId: `${input.captureId}-${candidate.key}`,
+    metadata: {
+      captureTier: "feed",
+      gateway: candidate.key,
+      gatewayUrl: candidate.url,
+      gatewayStatus: captured.gatewayStatus,
+      contentType: captured.contentType,
+      ...(captured.gatewaySnapshotUrl === undefined ? {} : { gatewaySnapshotUrl: captured.gatewaySnapshotUrl })
+    },
+    ...(captured.html === undefined ? {} : { html: captured.html }),
+    text: captured.text,
+    captureMethod: `public-gateway:${candidate.key}`,
+    toolName: "public_gateway_capture",
+    evidenceKind: "page_text",
+    note: candidate.reason
+  });
+}
+
+function parseWaybackSnapshotUrl(raw: string): string | undefined {
+  try {
+    const parsed = JSON.parse(raw) as {
+      archived_snapshots?: {
+        closest?: {
+          available?: boolean;
+          url?: string;
+        };
+      };
+    };
+    const closest = parsed.archived_snapshots?.closest;
+    if (closest?.available !== true || typeof closest.url !== "string") {
+      return undefined;
+    }
+    const snapshotUrl = new URL(closest.url);
+    return snapshotUrl.protocol === "https:" && snapshotUrl.hostname === "web.archive.org" ? snapshotUrl.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function validateGatewayText(text: string): string | undefined {
   const trimmed = text.replace(/\s+/g, " ").trim();
   if (trimmed.length < MIN_GATEWAY_TEXT_CHARS) {
@@ -230,6 +372,21 @@ function validateGatewayText(text: string): string | undefined {
     return "gateway declined: recovered text still appears to be an access or challenge surface";
   }
   return undefined;
+}
+
+function htmlToVisibleText(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|template|svg)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function parseHttpUrl(value: string): URL | undefined {
