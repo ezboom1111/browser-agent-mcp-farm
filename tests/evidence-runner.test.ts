@@ -272,6 +272,83 @@ describe("runEvidenceWorkflow", () => {
     }
   });
 
+  it("runs a legal public gateway capture after a non-terminal browser obstruction", async () => {
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping gateway escalation workflow test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-evidence-gateway-"));
+    runDirs.push(runDir);
+    let gatewayCalled = false;
+
+    try {
+      const result = await runEvidenceWorkflow(
+        {
+          url: `${fixture.baseUrl}/media-unavailable`,
+          runDir,
+          captureId: "fixture-media-unavailable",
+          waitMs: 0,
+          sampleFrames: false
+        },
+        {
+          publicGatewayCapture: async (input) => {
+            gatewayCalled = true;
+            const records = await input.writer.writeCaptureBundle({
+              runDir: input.runDir,
+              sourceUrl: input.url,
+              contextToken: input.contextToken,
+              pageId: input.pageId,
+              captureId: `${input.captureId}-fake-gateway`,
+              metadata: {
+                captureTier: "feed",
+                gateway: "jina_reader",
+                gatewayUrl: "https://r.jina.ai/example"
+              },
+              text: "Gateway recovered enough public page text to register as legal gateway evidence.",
+              captureMethod: "public-gateway:jina_reader",
+              toolName: "public_gateway_capture",
+              evidenceKind: "page_text"
+            });
+            return {
+              ok: true,
+              status: "ok",
+              records,
+              attempts: [
+                {
+                  key: "jina_reader",
+                  gatewayUrl: "https://r.jina.ai/example",
+                  status: "ok",
+                  statusCode: 200
+                }
+              ]
+            };
+          }
+        }
+      );
+
+      expect(gatewayCalled).toBe(true);
+      expect(result.runtimeAcquisitionPlan?.observedFailure).toBe("browser_blocked");
+      expect(result.publicGatewayRecords.some((record) => record.capture_method === "public-gateway:jina_reader")).toBe(true);
+      expect(result.claims.some((claim) => claim.evidence_kind === "page_text" && claim.verification_level === "grounded")).toBe(true);
+
+      const report = await readFile(result.reportPath, "utf8");
+      expect(report).toContain("Public gateway: ok");
+      expect(report).toContain("jina_reader:ok");
+    } finally {
+      await fixture.close();
+    }
+  });
+
   it("dismisses benign overlays before evidence page capture", async () => {
     const executableAvailable = await chromium
       .launch({ headless: true })
@@ -480,6 +557,16 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
         <main>
           <h1>Log in to continue</h1>
           <p>Sign in to view this content.</p>
+        </main>
+      </body></html>`);
+      return;
+    }
+    if (path === "/media-unavailable") {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(`<!doctype html><html><head><title>Video unavailable</title></head><body>
+        <main>
+          <h1>Video unavailable</h1>
+          <p>This video is unavailable. Something went wrong.</p>
         </main>
       </body></html>`);
       return;
