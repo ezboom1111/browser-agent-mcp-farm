@@ -47,7 +47,15 @@ external bridge.
 ## Evidence Runner Link
 
 Every `runEvidenceWorkflow` now writes an `acquisition_method_plan` artifact
-before browser capture. The plan is planning context, not proof. Final claims
+before browser capture. When the browser-obstruction classifier later detects a
+login wall, challenge, app interstitial, region/age gate, or unavailable media,
+the runner maps those obstruction kinds into an `observedFailure` signal and
+writes an `acquisition_method_runtime_plan` artifact. This closes the first
+`classify-but-don't-act` gap: obstruction evidence now drives a second method
+plan instead of remaining only a partial-status note.
+
+The runtime plan is still planning context, not proof, and it currently records
+the next legal tier rather than executing new gateway fetchers. Final claims
 still need page text, HTML, screenshots, OCR, transcript cues, official API
 metadata, or BYO bytes registered in the artifact ledger.
 

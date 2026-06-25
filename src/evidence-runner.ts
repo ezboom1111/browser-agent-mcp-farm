@@ -4,7 +4,7 @@ import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { computeCaptureCacheKey, isEngineResolved, lookupCachedCapture, playwrightPackageVersion, readEngineIdentity, stalenessAgeMs, storeCachedCapture, writeEngineIdentity, type CachedCaptureArtifact, type CaptureCacheProfile } from "./capture-cache.js";
 import { attachTypedFacts, crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
-import { planAcquisitionMethods } from "./acquisition-method-planner.js";
+import { observedFailureFromBrowserObstructionKinds, planAcquisitionMethods, type AcquisitionMethodPlan } from "./acquisition-method-planner.js";
 import { httpTier0Capture } from "./http-tier0-capture.js";
 import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
@@ -188,6 +188,39 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   );
   throwIfAborted(options.abortSignal);
 
+  const runtimeAcquisitionPlan = planRuntimeAcquisitionMethods(options.url, obstructionResult.report);
+  const runtimeAcquisitionPlanRecords =
+    runtimeAcquisitionPlan === undefined
+      ? []
+      : await runStage("acquisition_method_runtime_plan_artifact", () =>
+          withAbort(
+            writer.writeCaptureBundle({
+              ...common,
+              pageId: "acquisition-method-runtime-plan",
+              captureId: `${baseCaptureId}-acquisition-method-runtime-plan`,
+              status: "partial",
+              metadata: {
+                acquisitionPlan: runtimeAcquisitionPlan,
+                triggeringObstructions: obstructionResult.report
+              },
+              text: JSON.stringify(
+                {
+                  triggeringObstructions: obstructionResult.report,
+                  acquisitionPlan: runtimeAcquisitionPlan
+                },
+                null,
+                2
+              ),
+              captureMethod: "browser-agent-mcp-farm acquisition-method-runtime-plan",
+              toolName: "acquisition_method_runtime_plan",
+              evidenceKind: "source_strategy",
+              note: `runtime acquisition re-plan from ${obstructionResult.report.detections.map((detection) => detection.kind).join(",")}`
+            }),
+            options.abortSignal
+          )
+        );
+  throwIfAborted(options.abortSignal);
+
   const frameSampling = summarizeFrameSampling(browserResult.frameResult, browserResult.frameError, options.sampleFrames === false);
   const assessment: EvidenceWorkflowAssessment = {
     url: options.url,
@@ -195,6 +228,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     ...(platformCapabilities.mediaId === undefined ? {} : { mediaId: platformCapabilities.mediaId }),
     sourceStrategy,
     acquisitionPlan,
+    ...(runtimeAcquisitionPlan === undefined ? {} : { runtimeAcquisitionPlan }),
     sourceRegistry: summarizeSourceRegistryMatch(sourceRegistry),
     browserCaptureRecords: browserResult.pageCaptureRecords.length,
     frameSampling,
@@ -270,10 +304,12 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     platformCapabilities,
     sourceStrategy,
     acquisitionPlan,
+    ...(runtimeAcquisitionPlan === undefined ? {} : { runtimeAcquisitionPlan }),
     sourceRegistry,
     capabilityRecords,
     sourceStrategyRecords,
     acquisitionPlanRecords,
+    runtimeAcquisitionPlanRecords,
     sourceRegistryRecords,
     pageCaptureRecords: browserResult.pageCaptureRecords,
     frameRecords,
@@ -287,6 +323,21 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     claims,
     ...(claimGate === undefined ? {} : { claimGate })
   };
+}
+
+function planRuntimeAcquisitionMethods(url: string, report: BrowserObstructionReport): AcquisitionMethodPlan | undefined {
+  if (report.status === "clear") {
+    return undefined;
+  }
+  const observedFailure = observedFailureFromBrowserObstructionKinds(report.detections.map((detection) => detection.kind));
+  if (observedFailure === "none") {
+    return undefined;
+  }
+  return planAcquisitionMethods({
+    url,
+    observedFailure,
+    allowExternalBridge: false
+  });
 }
 
 async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner }): Promise<{
@@ -1425,6 +1476,7 @@ async function writeReport(
     `- Platform: ${input.assessment.platform}`,
     `- Source strategy: ${input.assessment.sourceStrategy.platform} / ${input.assessment.sourceStrategy.sourceFamily}`,
     `- Acquisition plan: ${formatAcquisitionPlanSummary(input.assessment.acquisitionPlan)}`,
+    ...(input.assessment.runtimeAcquisitionPlan === undefined ? [] : [`- Runtime acquisition re-plan: ${formatAcquisitionPlanSummary(input.assessment.runtimeAcquisitionPlan)}`]),
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,
@@ -1449,7 +1501,12 @@ async function writeReport(
 function formatAcquisitionPlanSummary(plan: EvidenceWorkflowAssessment["acquisitionPlan"]): string {
   const first = plan.methods[0]?.key ?? "none";
   const last = plan.methods.at(-1)?.key ?? "none";
-  return `${plan.methods.length} methods, first=${first}, last=${last}, decision=${plan.decision}`;
+  const boundaryMethods = plan.methods
+    .filter((method) => method.status === "terminal" || method.tier === "external_bridge")
+    .map((method) => method.key)
+    .join(", ");
+  const boundarySummary = boundaryMethods.length === 0 ? "" : `, boundary=${boundaryMethods}`;
+  return `${plan.methods.length} methods, observedFailure=${plan.observedFailure}, first=${first}, last=${last}${boundarySummary}, decision=${plan.decision}`;
 }
 
 function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): string[] {

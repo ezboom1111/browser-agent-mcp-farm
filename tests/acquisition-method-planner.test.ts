@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { planAcquisitionMethods } from "../src/acquisition-method-planner.js";
+import { observedFailureFromBrowserObstructionKinds, planAcquisitionMethods } from "../src/acquisition-method-planner.js";
 
 describe("planAcquisitionMethods", () => {
   it("routes YouTube through official/public metadata before generic capture", () => {
@@ -64,5 +64,15 @@ describe("planAcquisitionMethods", () => {
       tier: "byo_capture"
     });
     expect(plan.knowledgeBaseTags).toEqual(expect.arrayContaining(["leesearch", "insane-search-dna", "claim-gate"]));
+  });
+
+  it("turns browser obstruction kinds into acquisition failure signals", () => {
+    expect(observedFailureFromBrowserObstructionKinds([])).toBe("none");
+    expect(observedFailureFromBrowserObstructionKinds(["login_wall"])).toBe("login_or_paywall");
+    expect(observedFailureFromBrowserObstructionKinds(["age_gate"])).toBe("login_or_paywall");
+    expect(observedFailureFromBrowserObstructionKinds(["region_gate"])).toBe("login_or_paywall");
+    expect(observedFailureFromBrowserObstructionKinds(["bot_block"])).toBe("captcha_or_challenge");
+    expect(observedFailureFromBrowserObstructionKinds(["app_interstitial"])).toBe("browser_blocked");
+    expect(observedFailureFromBrowserObstructionKinds(["media_unavailable"])).toBe("browser_blocked");
   });
 });

@@ -249,12 +249,24 @@ describe("runEvidenceWorkflow", () => {
       expect(result.ok).toBe(true);
       expect(result.assessment.browserObstructions.status).toBe("detected");
       expect(result.assessment.browserObstructions.detections).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "login_wall" })]));
+      expect(result.runtimeAcquisitionPlan?.observedFailure).toBe("login_or_paywall");
+      expect(result.runtimeAcquisitionPlan?.methods).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: "consented_profile_or_human_byo_only",
+            status: "terminal"
+          })
+        ])
+      );
+      expect(result.runtimeAcquisitionPlanRecords.some((record) => record.evidence_kind === "source_strategy")).toBe(true);
       expect(result.obstructionRecords.some((record) => record.evidence_kind === "browser_obstruction")).toBe(true);
       expect(result.claims.some((claim) => claim.evidence_kind === "browser_obstruction")).toBe(true);
 
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Browser obstructions: detected");
       expect(report).toContain("login_wall");
+      expect(report).toContain("Runtime acquisition re-plan:");
+      expect(report).toContain("consented_profile_or_human_byo_only");
     } finally {
       await fixture.close();
     }
