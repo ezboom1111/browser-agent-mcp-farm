@@ -15,7 +15,7 @@ import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
 import type { DestinationVisibleLink } from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
 import { LeaseManager } from "./lease-manager.js";
-import { collectOfficialApiEvidence } from "./official-api.js";
+import { collectOfficialApiEvidence, writeOfficialApiReadinessArtifact } from "./official-api.js";
 import { runOcrForFrameArtifacts } from "./ocr.js";
 import { describePlatformCapabilities, type PlatformCapabilityMap } from "./platform-adapters/index.js";
 import { publicGatewayCapture, skippedPublicGatewayCapture, type PublicGatewayCaptureResult } from "./public-gateway-capture.js";
@@ -76,6 +76,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   const sourceStrategy = describeSourceStrategy(options.url);
   const acquisitionPlan = planAcquisitionMethods({ url: options.url, allowExternalBridge: false });
   const sourceRegistry = selectSourceRegistryEntriesForUrl(options.url);
+  const officialApiConfig = options.officialApi ?? { enabled: false, credentials: {} };
   const baseCaptureId = sanitizeFileBase(options.captureId ?? `evidence-${platformCapabilities.platform}-${parsedUrl.hostname}`);
   const common = {
     runDir: options.runDir,
@@ -151,14 +152,21 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   );
   throwIfAborted(options.abortSignal);
 
-  const browserResult = await captureBrowserEvidence({
-    options,
-    parsedUrl,
-    baseCaptureId,
-    writer,
-    deps,
-    runStage
-  });
+  const officialApiReadiness = await runStage("official_api_readiness", () =>
+    writeOfficialApiReadinessArtifact({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      contextToken: common.contextToken,
+      pageId: "official-api-readiness",
+      baseCaptureId,
+      platformCapabilities,
+      credentials: officialApiConfig.credentials,
+      writer,
+      ...(options.abortSignal === undefined ? {} : { signal: options.abortSignal })
+    })
+  );
+  throwIfAborted(options.abortSignal);
+
   const officialApi = await runStage("official_api", () =>
     collectOfficialApiEvidence({
       runDir: options.runDir,
@@ -167,12 +175,21 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
       pageId: "official-api",
       baseCaptureId,
       platformCapabilities,
-      officialApi: options.officialApi ?? { enabled: false, credentials: {} },
+      officialApi: officialApiConfig,
       writer,
-      signal: options.abortSignal
+      ...(options.abortSignal === undefined ? {} : { signal: options.abortSignal })
     })
   );
   throwIfAborted(options.abortSignal);
+
+  const browserResult = await captureBrowserEvidence({
+    options,
+    parsedUrl,
+    baseCaptureId,
+    writer,
+    deps,
+    runStage
+  });
 
   const obstructionResult = await runStage("browser_obstruction_classification", () =>
     classifyBrowserObstructionArtifacts({
@@ -251,6 +268,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     browserOverlayDismissal: browserResult.overlayDismissal,
     browserObstructions: obstructionResult.report,
     publicGateway: publicGatewayAssessment(publicGatewayResult),
+    officialApiReadiness: officialApiReadiness.report,
     stageTimings,
     transcript: {
       officialCaptionBodyCapability: platformCapabilities.capabilities.captionBody.status,
@@ -285,6 +303,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     frameRecords,
     ocrRecords: browserResult.ocrRecords,
     officialApiRecords: officialApi.records,
+    officialApiReadinessRecords: officialApiReadiness.records,
     obstructionRecords: obstructionResult.records,
     publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
@@ -333,6 +352,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     frameRecords,
     ocrRecords: browserResult.ocrRecords,
     officialApiRecords: officialApi.records,
+    officialApiReadiness: officialApiReadiness.report,
+    officialApiReadinessRecords: officialApiReadiness.records,
     overlayDismissalRecords: browserResult.overlayDismissalRecords,
     obstructionRecords: obstructionResult.records,
     publicGatewayRecords: publicGatewayResult.records,
@@ -1337,6 +1358,7 @@ function buildClaims(input: {
   frameRecords: ArtifactRecord[];
   ocrRecords: ArtifactRecord[];
   officialApiRecords: ArtifactRecord[];
+  officialApiReadinessRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
@@ -1355,6 +1377,7 @@ function buildClaims(input: {
   const fallbackFrameEvidence = selectEvidenceRecord(input.frameRecords) ?? selectEvidenceRecord(input.assessmentRecords);
   const assessmentEvidence = selectEvidenceRecord(input.assessmentRecords);
   const officialApiEvidence = selectEvidenceRecord(input.officialApiRecords, undefined, "official_api_metadata");
+  const officialApiReadinessEvidence = selectEvidenceRecord(input.officialApiReadinessRecords, undefined, "source_strategy");
   const obstructionEvidence = selectEvidenceRecord(input.obstructionRecords, undefined, "browser_obstruction");
   const publicGatewayEvidence = selectEvidenceRecord(input.publicGatewayRecords, "text", "page_text", "ok");
   const ocrTextEvidence = selectEvidenceRecord(input.ocrRecords, "text", "ocr_text", "ok");
@@ -1447,6 +1470,14 @@ function buildClaims(input: {
       claim: "A legal public gateway returned readable source text and the exact gateway bytes were registered in the artifact ledger.",
       record: publicGatewayEvidence,
       verificationLevel: "grounded"
+    }),
+    claimFromRecord({
+      baseCaptureId: input.baseCaptureId,
+      ordinal: 9,
+      claimType: "metadata",
+      claim: "Official API credential readiness was evaluated before browser capture without calling provider APIs.",
+      record: officialApiReadinessEvidence,
+      verificationLevel: "grounded"
     })
   ];
   return claims.filter((claim): claim is EvidenceWorkflowClaim => claim !== undefined);
@@ -1524,6 +1555,7 @@ async function writeReport(
     `- Source strategy: ${input.assessment.sourceStrategy.platform} / ${input.assessment.sourceStrategy.sourceFamily}`,
     `- Acquisition plan: ${formatAcquisitionPlanSummary(input.assessment.acquisitionPlan)}`,
     ...(input.assessment.runtimeAcquisitionPlan === undefined ? [] : [`- Runtime acquisition re-plan: ${formatAcquisitionPlanSummary(input.assessment.runtimeAcquisitionPlan)}`]),
+    `- Official API readiness: ${input.assessment.officialApiReadiness.platform}, supported=${input.assessment.officialApiReadiness.supportedLookupCount}, ready=${input.assessment.officialApiReadiness.readyLookupCount}, missing_env=${input.assessment.officialApiReadiness.missingEnvCount}, missing_reference=${input.assessment.officialApiReadiness.missingReferenceCount}, missing_media_id=${input.assessment.officialApiReadiness.missingMediaIdCount}`,
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,

@@ -1,11 +1,20 @@
 # Official API Setup
 
-Official API collection is opt-in. The farm records credential requirements and
-permission failures as artifacts, but it does not treat official API data as
-available unless explicit environment-variable references are provided.
+Official API collection is opt-in. Evidence runs may record credential
+readiness for supported platforms before browser capture, but provider API calls
+only happen when `--official-api` or the equivalent API/MCP option is explicitly
+enabled. The farm records credential requirements and permission failures as
+artifacts, but it does not treat official API data as available unless explicit
+environment-variable references are provided.
 
 The token value itself must be stored in the environment. CLI/MCP/HTTP inputs
 should pass only the environment variable name.
+
+Readiness artifacts use `capture_method=browser-agent-mcp-farm
+official-api-readiness` and `evidence_kind=source_strategy`. They are planning
+evidence: they show which official lookups are possible, which credential env
+var references are missing or unset, and whether a stable media ID is available.
+They do not prove provider metadata and do not call provider APIs.
 
 ## YouTube
 

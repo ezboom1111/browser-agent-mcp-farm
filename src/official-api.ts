@@ -8,6 +8,12 @@ export interface OfficialApiRunResult {
   warnings: string[];
 }
 
+export interface OfficialApiReadinessArtifactResult {
+  report: OfficialApiReadinessReport;
+  records: ArtifactRecord[];
+  warnings: string[];
+}
+
 export type OfficialApiFailureKind = "permission_denied" | "ownership_required" | "quota_exceeded" | "rate_limited" | "not_found" | "unknown";
 
 interface ApiLookup {
@@ -222,6 +228,43 @@ export async function collectOfficialApiEvidence(input: {
   );
 
   return { records, warnings };
+}
+
+export async function writeOfficialApiReadinessArtifact(input: {
+  runDir: string;
+  sourceUrl: string;
+  contextToken: string;
+  pageId: string;
+  baseCaptureId: string;
+  platformCapabilities: PlatformCapabilityMap;
+  credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"];
+  writer?: ArtifactWriter;
+  signal?: AbortSignal | undefined;
+}): Promise<OfficialApiReadinessArtifactResult> {
+  throwIfAborted(input.signal);
+  const report = buildOfficialApiReadiness({
+    platformCapabilities: input.platformCapabilities,
+    credentials: input.credentials
+  });
+  if (report.supportedLookupCount === 0) {
+    return { report, records: [], warnings: report.warnings };
+  }
+  const writer = input.writer ?? new ArtifactWriter();
+  const records = await writer.writeCaptureBundle({
+    runDir: input.runDir,
+    sourceUrl: input.sourceUrl,
+    contextToken: input.contextToken,
+    pageId: input.pageId,
+    captureId: `${input.baseCaptureId}-official-api-readiness`,
+    status: report.ok ? "ok" : "partial",
+    metadata: { officialApiReadiness: report },
+    text: JSON.stringify(report, null, 2),
+    captureMethod: "browser-agent-mcp-farm official-api-readiness",
+    toolName: "evidence_run_official_api_readiness",
+    evidenceKind: "source_strategy",
+    note: "credential_readiness_only_no_api_calls"
+  });
+  return { report, records, warnings: report.warnings };
 }
 
 export function buildOfficialApiReadiness(input: { platformCapabilities: PlatformCapabilityMap; credentials: NormalizedEvidenceRunInput["officialApi"]["credentials"] }): OfficialApiReadinessReport {
