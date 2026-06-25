@@ -60,15 +60,17 @@ plan instead of remaining only a partial-status note.
 The runtime plan is still planning context, not proof, and it currently records
 the next legal tier before any recovered bytes can be cited. For non-terminal
 public-page failures such as app interstitial or unavailable-media surfaces, the
-runner can now execute a farm-native public gateway capture through Jina Reader
-(`https://r.jina.ai/<url>`), register the returned text bytes, and cite that
-registered artifact through the normal claim gate. Local, private, localhost,
+runner can now execute farm-native public gateway capture through Jina Reader
+(`https://r.jina.ai/<url>`) and then the Internet Archive Wayback availability
+API/latest snapshot fallback. Returned gateway bytes are registered and cited
+through the normal claim gate. Local, private, localhost,
 login/paywall/CAPTCHA, age-gate, and region-gate targets are not sent to
 third-party readers.
 
-Wayback/archive and AMP discovery are still separate future gateway arms. Final
-claims still need page text, HTML, screenshots, OCR, transcript cues, official
-API metadata, gateway text, or BYO bytes registered in the artifact ledger.
+AMP discovery and archive.today-style gateways are still separate future arms.
+Final claims still need page text, HTML, screenshots, OCR, transcript cues,
+official API metadata, gateway text, or BYO bytes registered in the artifact
+ledger.
 
 ## Knowledge-Base Bridge
 

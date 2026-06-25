@@ -72,4 +72,58 @@ describe("publicGatewayCapture", () => {
       captureTier: "feed"
     });
   });
+
+  it("falls back to the latest Wayback snapshot when the reader output is too thin", async () => {
+    const { writer, runDir } = await newRun();
+    const calls: string[] = [];
+    const snapshotUrl = "https://web.archive.org/web/20200101000000/https://example.com/article";
+
+    const result = await publicGatewayCapture({
+      runDir,
+      url: "https://example.com/article",
+      writer,
+      captureId: "cap",
+      contextToken: "ctx",
+      pageId: "pg",
+      fetch: async (url) => {
+        calls.push(url);
+        if (url.startsWith("https://r.jina.ai/")) {
+          return new Response("thin", { status: 200, headers: { "content-type": "text/plain" } });
+        }
+        if (url.startsWith("https://archive.org/wayback/available")) {
+          return new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, status: "200", url: snapshotUrl } } }), {
+            status: 200,
+            headers: { "content-type": "application/json" }
+          });
+        }
+        if (url === snapshotUrl) {
+          return new Response("<!doctype html><html><body><h1>Archived Article</h1><p>This archived page contains enough recovered public article text for registration and later claim-gate anchoring.</p></body></html>", {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8" }
+          });
+        }
+        throw new Error(`unexpected URL ${url}`);
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(calls).toEqual(["https://r.jina.ai/https://example.com/article", "https://archive.org/wayback/available?url=https%3A%2F%2Fexample.com%2Farticle", snapshotUrl]);
+    expect(result.attempts.map((attempt) => `${attempt.key}:${attempt.status}`)).toEqual(["jina_reader:declined", "wayback_latest:ok"]);
+    expect(result.records.some((record) => record.capture_method === "public-gateway:wayback_latest" && record.evidence_kind === "page_text")).toBe(true);
+
+    const textRecord = result.records.find((record) => record.kind === "text");
+    expect(textRecord).toBeDefined();
+    const text = await readFile(join(runDir, textRecord?.path as string), "utf8");
+    expect(text).toContain("Archived Article");
+
+    const metadataRecord = result.records.find((record) => record.path.endsWith(".metadata.json"));
+    const metadata = JSON.parse(await readFile(join(runDir, metadataRecord?.path as string), "utf8")) as {
+      gateway?: string;
+      gatewaySnapshotUrl?: string;
+    };
+    expect(metadata).toMatchObject({
+      gateway: "wayback_latest",
+      gatewaySnapshotUrl: snapshotUrl
+    });
+  });
 });
