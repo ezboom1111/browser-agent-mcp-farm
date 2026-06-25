@@ -11,6 +11,8 @@ export { listProfiles, profilePaths, profileRoot, removeProfile } from "./profil
 export { createHttpServer } from "./http-server.js";
 export { registerAll, registerClaude, registerCodex } from "./registration.js";
 export * from "./abort.js";
+export * from "./acquisition-method-planner.js";
+export * from "./acquisition-method-memory-bridge.js";
 export * from "./browser-obstructions.js";
 export * from "./destination-recovery-plan.js";
 export * from "./destination-triage.js";

@@ -93,6 +93,28 @@ describe("FarmService cite-or-fail authoring surface", () => {
     expect(ungrounded.ok).toBe(false); // quote absent from the cited bytes
   });
 
+  it("registers BYO base64 bytes without converting them through text", async () => {
+    const { service, runDir } = await newRun();
+    const bytes = Buffer.from([0, 255, 1, 2, 3, 254]);
+    const reg = await service.registerEvidence({
+      runDir,
+      sourceUrl: "https://example.com/screenshot.png",
+      bytesBase64: bytes.toString("base64"),
+      mime: "image/png",
+      format: "png",
+      evidenceKind: "page_screenshot",
+      captureMethod: "byo-bridge",
+      capturedBy: "external-byte-supplier"
+    });
+
+    expect(reg.registered).toBe(true);
+    expect(reg.evidenceKind).toBe("page_screenshot");
+    const read = await service.readArtifact({ runDir, artifactId: reg.artifactId as string, asText: false });
+    expect(read.encoding).toBe("base64");
+    expect(read.content).toBe(bytes.toString("base64"));
+    expect(read.tampered).toBe(false);
+  });
+
   it("rejects a claim citing an unregistered artifact", async () => {
     const { service, runDir } = await newRun();
     const result = await service.addClaim({

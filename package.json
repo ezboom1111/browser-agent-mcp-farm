@@ -46,6 +46,7 @@
     "docs/PORTAL_NAVIGATION_IMPLEMENTATION_GUIDE.md",
     "docs/OCR.md",
     "docs/OFFICIAL_API.md",
+    "docs/ACQUISITION_METHOD_PLANNER.md",
     "docs/SOURCE_STRATEGY.md"
   ],
   "scripts": {

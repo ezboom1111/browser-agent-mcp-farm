@@ -4,7 +4,7 @@ import { appendFile, readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ArtifactWriter, type CaptureBundleInput } from "./artifact-writer.js";
+import { ArtifactWriter, type ArtifactKind, type CaptureBundleInput } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
 import { runClaimGate, type ClaimGateOptions } from "./claim-gate.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
@@ -276,12 +276,19 @@ export class FarmService {
       sourceUrl: parsed.sourceUrl,
       contextToken: "agent-authored",
       pageId: "agent",
-      text: parsed.text,
       evidenceKind: parsed.evidenceKind,
       // Bring-your-own-capture: honor caller-supplied provenance (an external capturer records
       // its own method/id/time); default to agent-authored for the existing cite-or-fail path.
       captureMethod: parsed.captureMethod ?? "agent-authored"
     };
+    if (parsed.text !== undefined) {
+      bundleInput.text = parsed.text;
+    } else if (parsed.bytesBase64 !== undefined) {
+      bundleInput.rawBytes = decodeBase64Evidence(parsed.bytesBase64);
+      bundleInput.rawBytesKind = artifactKindForRegisteredBytes(parsed.evidenceKind);
+      bundleInput.rawBytesMime = parsed.mime ?? mimeForRegisteredBytes(parsed.evidenceKind);
+      bundleInput.rawBytesFormat = parsed.format ?? formatForRegisteredBytes(parsed.evidenceKind);
+    }
     if (parsed.captureId !== undefined) {
       bundleInput.captureId = parsed.captureId;
     }
@@ -293,8 +300,8 @@ export class FarmService {
     }
     const records = await writer.writeCaptureBundle(bundleInput);
     // Select the raw text artifact (the one whose bytes hold the registered
-    // text), not the sibling metadata.json that writeCaptureBundle also emits.
-    const record = records.find((item) => item.kind === "text") ?? records[0];
+    // text/bytes), not the sibling metadata.json that writeCaptureBundle also emits.
+    const record = parsed.bytesBase64 !== undefined ? (records.find((item) => item.kind !== "structured") ?? records[0]) : (records.find((item) => item.kind === "text") ?? records[0]);
     if (record === undefined) {
       return { ok: false as const, registered: false as const };
     }
@@ -627,6 +634,59 @@ export class FarmService {
 
 function isTextLikeEvidenceKind(kind: string | undefined): boolean {
   return kind !== "page_screenshot" && kind !== "frame_screenshot" && kind !== "media";
+}
+
+function decodeBase64Evidence(value: string): Buffer {
+  const normalized = value.replace(/\s+/g, "");
+  if (normalized.length === 0 || normalized.length % 4 === 1 || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) {
+    throw new Error("bytesBase64 must be valid standard base64");
+  }
+  const bytes = Buffer.from(normalized, "base64");
+  if (bytes.length === 0) {
+    throw new Error("bytesBase64 decoded to empty bytes");
+  }
+  const canonical = bytes.toString("base64").replace(/=+$/u, "");
+  const supplied = normalized.replace(/=+$/u, "");
+  if (canonical !== supplied) {
+    throw new Error("bytesBase64 must be canonical standard base64");
+  }
+  return bytes;
+}
+
+function artifactKindForRegisteredBytes(evidenceKind: EvidenceKind): ArtifactKind {
+  if (evidenceKind === "page_screenshot" || evidenceKind === "frame_screenshot") {
+    return "screenshot";
+  }
+  if (evidenceKind === "media") {
+    return "media";
+  }
+  return "raw";
+}
+
+function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
+  if (evidenceKind === "page_screenshot" || evidenceKind === "frame_screenshot") {
+    return "image/png";
+  }
+  if (evidenceKind === "page_html") {
+    return "text/html";
+  }
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry") {
+    return "application/json";
+  }
+  return "application/octet-stream";
+}
+
+function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
+  if (evidenceKind === "page_screenshot" || evidenceKind === "frame_screenshot") {
+    return "png";
+  }
+  if (evidenceKind === "page_html") {
+    return "html";
+  }
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry") {
+    return "json";
+  }
+  return "bin";
 }
 
 function countJsonlLines(text: string): number {

@@ -99,6 +99,10 @@ When you need fine control:
   evidenceKind, sourceUrl }` → an artifactId, then `farm_add_claim { claim,
   artifactId, anchor: { type: "text_span", quote } }`. The gate rejects a claim
   whose quote is not present in the cited bytes.
+- **Byte-faithful BYO:** when an external bridge, human capture, HAR, image, or
+  other non-text supplier gives exact bytes, use
+  `farm_register_evidence { bytesBase64, mime, format, evidenceKind, sourceUrl,
+  captureMethod }` instead of retyping the content as `text`.
 - **Structured provenance:** the gate distinguishes farm-DERIVED structured_data
   (deterministic extraction from witnessed pages) from AGENT-AUTHORED structured_data
   (self-asserted JSON — the measured "news repackaged as JSON" failure mode, ~36%
@@ -114,6 +118,30 @@ When you need fine control:
 
 See [`docs/THREAT_MODEL.md`](../../docs/THREAT_MODEL.md) for exactly what these
 prove and do not prove.
+
+## Lee-vault method memory bridge
+
+When a run changes how future acquisition should work — for example a new
+blocked-page fallback, a reusable public endpoint, or a method-selection lesson
+like the insane-search ladder — do not leave it only as a farm bundle. The farm
+bundle is a derived artifact; reusable method memory lives in the vault.
+
+After exporting or recording the bundle root, run the repo CLI:
+
+```powershell
+node .\dist\cli.js kb-acquisition-bridge `
+  --run-dir <evidence-run-dir> `
+  --url <source-url> `
+  --vault-root C:\lee-vault `
+  --merkle-root <bundle-root> `
+  --apply
+```
+
+This writes/updates `SYSTEM_DNA.md`, an acquisition recipe, a frontier ledger, a
+bridge note, and `LOG.md`. `--url` is needed only for older sealed runs that
+predate `acquisition_method_plan` artifacts. It is dry-run without `--apply`.
+The farm core does not depend on the vault; this is a personal KB adapter over
+completed evidence runs.
 
 ## Pattern: be the verification layer for a "deep research" answer
 

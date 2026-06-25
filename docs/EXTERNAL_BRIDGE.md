@@ -8,9 +8,12 @@
 `storagePolicy: "external-bridge"` is a lease tier for a **powerful but untrusted** capturer — an
 external/aggressive agent or tool that may behave unpredictably. It exists so that capability can be
 used **without** weakening the farm's trust model. The bytes it produces are registered through the
-normal `register_evidence` path (tag `captureMethod: "byo-bridge"`) and **re-verified by the same
-deterministic claim gate** as every other source. The tier is never the trusted capture path; it is
-provenance-tagged, gate-checked evidence.
+normal `register_evidence` path (tag `captureMethod: "byo-bridge"`). Text
+captures use `text`; non-text or byte-sensitive captures use `bytesBase64` with
+`mime` and `format`, so the farm hashes the supplier's exact bytes instead of a
+retyped courier copy. The result is **re-verified by the same deterministic
+claim gate** as every other source. The tier is never the trusted capture path;
+it is provenance-tagged, gate-checked evidence.
 
 ## Why the cage holds (the security boundary is the gate, not an AI)
 

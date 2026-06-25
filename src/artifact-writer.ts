@@ -42,6 +42,10 @@ export interface CaptureBundleInput {
   html?: string;
   text?: string;
   screenshot?: Uint8Array;
+  rawBytes?: Uint8Array;
+  rawBytesMime?: string;
+  rawBytesFormat?: string;
+  rawBytesKind?: ArtifactKind;
   metadata?: Record<string, unknown>;
   networkEvents?: unknown[];
   consoleEvents?: unknown[];
@@ -97,6 +101,13 @@ export class ArtifactWriter {
 
     if (input.screenshot !== undefined) {
       records.push(await this.writeBytes(input.runDir, `screenshots/${captureId}.png`, input.screenshot, "screenshot", "png", "image/png", input, status));
+    }
+
+    if (input.rawBytes !== undefined) {
+      const kind = input.rawBytesKind ?? "raw";
+      const format = sanitizeRawFormat(input.rawBytesFormat ?? "bin");
+      const relPath = rawBytesRelPath(captureId, kind, format);
+      records.push(await this.writeBytes(input.runDir, relPath, input.rawBytes, kind, format, input.rawBytesMime ?? "application/octet-stream", input, status));
     }
 
     if (input.networkEvents !== undefined) {
@@ -351,6 +362,25 @@ function transcriptForMedia(media: MediaArtifactInput): ReturnType<typeof parseW
   }
   const transcript = parseWebVtt(Buffer.from(media.bytes).toString("utf8"));
   return transcript.cueCount > 0 ? transcript : undefined;
+}
+
+function rawBytesRelPath(captureId: string, kind: ArtifactKind, format: string): string {
+  if (kind === "screenshot") {
+    return `screenshots/${captureId}.${format}`;
+  }
+  if (kind === "media") {
+    return `media/${captureId}/001-byo.${format}`;
+  }
+  return `raw/${captureId}.${format}`;
+}
+
+function sanitizeRawFormat(value: string): string {
+  const cleaned = value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "")
+    .replace(/^\.+/, "")
+    .slice(0, 16);
+  return cleaned || "bin";
 }
 
 function urlPathname(url: string): string {
