@@ -129,6 +129,22 @@ describe("registerCodex", () => {
     // The pre-existing config must be preserved.
     expect(content).toContain("[existing]");
   });
+
+  it("replaces an existing unmarked farm MCP table instead of appending a duplicate", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "farm-reg-legacy-"));
+    dirs.push(dir);
+    const configPath = join(dir, "config.toml");
+    await writeFile(configPath, ["[existing]", "key = 1", "", "[mcp_servers.browser-agent-mcp-farm]", 'command = "cmd"', 'args = ["/c","node","C:\\\\old\\\\dist\\\\cli.js","serve"]', "startup_timeout_sec = 20.0", "", "[mcp_servers.other]", 'command = "node"', 'args = ["other.js"]', ""].join("\n"), "utf8");
+
+    await registerCodex(configPath);
+    const content = await readFile(configPath, "utf8");
+    const occurrences = content.split("[mcp_servers.browser-agent-mcp-farm]").length - 1;
+    expect(occurrences).toBe(1);
+    expect(content).toContain("# BEGIN browser-agent-mcp-farm");
+    expect(content).toContain("[existing]");
+    expect(content).toContain("[mcp_servers.other]");
+    expect(content).not.toContain("C:\\old\\dist\\cli.js");
+  });
 });
 
 describe("registerClaudeSkill", () => {
