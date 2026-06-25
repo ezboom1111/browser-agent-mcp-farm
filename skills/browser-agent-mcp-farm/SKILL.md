@@ -48,7 +48,7 @@ enough, and never to bypass authentication/paywalls or perform transactions.
 ## Fast path (recommended): one-shot evidence run
 
 For most research, a single tool call does everything — capture, derive
-evidence, run source strategy, and produce a claim-gated report:
+evidence, run source/acquisition strategy, and produce a claim-gated report:
 
 1. Call `mcp__browser-agent-mcp-farm__farm_evidence_run` with `{ "url": "<page>" }`.
    - The result includes `runDir`, `reportPath`, `claims`, and `claimGate`.
@@ -59,6 +59,9 @@ evidence, run source strategy, and produce a claim-gated report:
    optional `evidenceKind` filter) and re-validate with `farm_run_claim_gate`.
 
 Useful `farm_evidence_run` options:
+- `captureRouting: "auto"` — try tier-0 browserless HTTP first, then escalate to
+  browser capture when the HTTP path declines. This is the preferred default for
+  text-heavy public pages when you do not need an initial screenshot.
 - `ocr: { "enabled": true }` — OCR over sampled frames for image-rendered
   prices/labels/map pins. The `tesseract.js` engine auto-installs as an optional
   dependency; if a lean/offline install skipped it (`farm_capabilities` →
@@ -67,6 +70,19 @@ Useful `farm_evidence_run` options:
   scene-change hits for video evidence.
 - `profileName` + `storagePolicy` — drive an authenticated/anti-bot-sensitive
   page with a saved profile (headed login is CLI-only).
+
+Acquisition behavior to rely on:
+- Every evidence run writes an `acquisition_method_plan` artifact. Supported
+  official API readiness is evaluated before browser capture without calling
+  provider APIs; live provider calls still require explicit `officialApi.enabled`.
+- If browser-visible obstruction is detected, the run writes an
+  `acquisition_method_runtime_plan` artifact from the obstruction signal.
+- For non-terminal public-page failures such as app interstitial or unavailable
+  media, the run may try lawful public gateway capture (Jina Reader first,
+  then Wayback latest snapshot) and register returned bytes as normal evidence.
+- Login, paywall, CAPTCHA/challenge, age gate, and region gate stay terminal:
+  record the obstruction or use consented profile/headed/human BYO, do not
+  bypass.
 
 (The per-site `sourceNavigation` selector recipes were removed 2026-06-10 —
 selector recipes rot, and a consented browser + model vision reads portal pages

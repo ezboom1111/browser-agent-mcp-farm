@@ -282,6 +282,12 @@ Useful `evidence-run` options:
   (client-rendered shell / non-HTML / off-domain / bot-block), so it is never a
   worse capture than the browser. A server-rendered page is captured without
   launching Chromium and labelled `http_fetch`.
+- Every evidence run also writes acquisition artifacts: initial
+  `acquisition_method_plan`, official API readiness before the browser opens
+  (no provider calls unless `--official-api` is set), obstruction-driven
+  `acquisition_method_runtime_plan`, and, for non-terminal public-page
+  failures, legal public gateway capture through Jina Reader and Wayback latest
+  snapshot. Login/paywall/CAPTCHA/age/region gates stay terminal.
 - `--text-only` text capture profile: blocks image/media/font + ad-host
   subrequests and skips the page screenshot (faster text/structure-only runs).
 - `--capture-cache` opt-in replay: reuse a fresh (≤ 1 h) prior bare-ephemeral
