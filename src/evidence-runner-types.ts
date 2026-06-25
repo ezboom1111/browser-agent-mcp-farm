@@ -11,6 +11,7 @@ import type { DenseSamplingEvent, SceneChangeDetectionDiagnostics } from "./fram
 import type { LeaseManager, StoragePolicy } from "./lease-manager.js";
 import type { OcrOptions, OcrWorkerFactory } from "./ocr.js";
 import type { PlatformCapabilityMap } from "./platform-adapters/index.js";
+import type { PublicGatewayAssessment, PublicGatewayCapture } from "./public-gateway-capture.js";
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import type { SourceRegistryMatch, SourceRegistrySummary } from "./source-registry.js";
 import type { SourceStrategy } from "./source-strategy.js";
@@ -112,6 +113,7 @@ export interface EvidenceWorkflowAssessment {
   frameSampling: FrameSamplingAssessment;
   browserOverlayDismissal: BrowserOverlayDismissalReport;
   browserObstructions: BrowserObstructionReport;
+  publicGateway: PublicGatewayAssessment;
   stageTimings: EvidenceWorkflowStageTiming[];
   transcript: {
     officialCaptionBodyCapability: string;
@@ -166,6 +168,7 @@ export interface EvidenceWorkflowResult {
   officialApiRecords: ArtifactRecord[];
   overlayDismissalRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
+  publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   assessment: EvidenceWorkflowAssessment;
   stageTimings: EvidenceWorkflowStageTiming[];
@@ -178,4 +181,5 @@ export interface EvidenceWorkflowDeps {
   browserPool?: BrowserPool | undefined;
   artifactWriter?: ArtifactWriter | undefined;
   ocrWorkerFactory?: OcrWorkerFactory | undefined;
+  publicGatewayCapture?: PublicGatewayCapture | undefined;
 }

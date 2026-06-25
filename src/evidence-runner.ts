@@ -18,6 +18,7 @@ import { LeaseManager } from "./lease-manager.js";
 import { collectOfficialApiEvidence } from "./official-api.js";
 import { runOcrForFrameArtifacts } from "./ocr.js";
 import { describePlatformCapabilities, type PlatformCapabilityMap } from "./platform-adapters/index.js";
+import { publicGatewayCapture, skippedPublicGatewayCapture, type PublicGatewayCaptureResult } from "./public-gateway-capture.js";
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
 import { describeSourceStrategy } from "./source-strategy.js";
@@ -221,6 +222,21 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
         );
   throwIfAborted(options.abortSignal);
 
+  const publicGatewayResult = shouldAttemptPublicGateway(runtimeAcquisitionPlan)
+    ? await runStage("public_gateway_capture", () =>
+        (deps.publicGatewayCapture ?? publicGatewayCapture)({
+          runDir: options.runDir,
+          url: options.url,
+          writer,
+          captureId: `${baseCaptureId}-public-gateway`,
+          contextToken: common.contextToken,
+          pageId: "public-gateway",
+          ...(options.abortSignal === undefined ? {} : { signal: options.abortSignal })
+        })
+      )
+    : skippedPublicGatewayCapture(runtimeAcquisitionPlan === undefined ? "no runtime acquisition re-plan" : `runtime plan observedFailure=${runtimeAcquisitionPlan.observedFailure} is terminal or not gateway-eligible`);
+  throwIfAborted(options.abortSignal);
+
   const frameSampling = summarizeFrameSampling(browserResult.frameResult, browserResult.frameError, options.sampleFrames === false);
   const assessment: EvidenceWorkflowAssessment = {
     url: options.url,
@@ -234,6 +250,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     frameSampling,
     browserOverlayDismissal: browserResult.overlayDismissal,
     browserObstructions: obstructionResult.report,
+    publicGateway: publicGatewayAssessment(publicGatewayResult),
     stageTimings,
     transcript: {
       officialCaptionBodyCapability: platformCapabilities.capabilities.captionBody.status,
@@ -269,6 +286,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     ocrRecords: browserResult.ocrRecords,
     officialApiRecords: officialApi.records,
     obstructionRecords: obstructionResult.records,
+    publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     frameSampling,
     ...(browserResult.capturedViaHttp === true ? { capturedViaHttp: true } : {}),
@@ -317,6 +335,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     officialApiRecords: officialApi.records,
     overlayDismissalRecords: browserResult.overlayDismissalRecords,
     obstructionRecords: obstructionResult.records,
+    publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     assessment,
     stageTimings,
@@ -338,6 +357,24 @@ function planRuntimeAcquisitionMethods(url: string, report: BrowserObstructionRe
     observedFailure,
     allowExternalBridge: false
   });
+}
+
+function shouldAttemptPublicGateway(plan: AcquisitionMethodPlan | undefined): boolean {
+  if (plan === undefined) {
+    return false;
+  }
+  if (plan.observedFailure === "login_or_paywall" || plan.observedFailure === "captcha_or_challenge" || plan.observedFailure === "none") {
+    return false;
+  }
+  return plan.methods.some((method) => method.tier === "feed" && method.status === "try");
+}
+
+function publicGatewayAssessment(result: PublicGatewayCaptureResult): EvidenceWorkflowAssessment["publicGateway"] {
+  return {
+    status: result.status,
+    attempts: result.attempts,
+    ...(result.reason === undefined ? {} : { reason: result.reason })
+  };
 }
 
 async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions; parsedUrl: URL; baseCaptureId: string; writer: ArtifactWriter; deps: EvidenceWorkflowDeps; runStage: StageRunner }): Promise<{
@@ -1301,6 +1338,7 @@ function buildClaims(input: {
   ocrRecords: ArtifactRecord[];
   officialApiRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
+  publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   frameSampling: FrameSamplingAssessment;
   /** When true, the page capture came from the tier-0 browserless HTTP fetch — the page-capture
@@ -1318,6 +1356,7 @@ function buildClaims(input: {
   const assessmentEvidence = selectEvidenceRecord(input.assessmentRecords);
   const officialApiEvidence = selectEvidenceRecord(input.officialApiRecords, undefined, "official_api_metadata");
   const obstructionEvidence = selectEvidenceRecord(input.obstructionRecords, undefined, "browser_obstruction");
+  const publicGatewayEvidence = selectEvidenceRecord(input.publicGatewayRecords, "text", "page_text", "ok");
   const ocrTextEvidence = selectEvidenceRecord(input.ocrRecords, "text", "ocr_text", "ok");
   const ocrStatusEvidence = selectEvidenceRecord(input.ocrRecords, undefined, "ocr_text");
   const claims = [
@@ -1400,6 +1439,14 @@ function buildClaims(input: {
       claim: "A browser-visible access/interstitial obstruction was detected and recorded as structured evidence.",
       record: obstructionEvidence,
       verificationLevel: "browser_visible"
+    }),
+    claimFromRecord({
+      baseCaptureId: input.baseCaptureId,
+      ordinal: 8,
+      claimType: "text",
+      claim: "A legal public gateway returned readable source text and the exact gateway bytes were registered in the artifact ledger.",
+      record: publicGatewayEvidence,
+      verificationLevel: "grounded"
     })
   ];
   return claims.filter((claim): claim is EvidenceWorkflowClaim => claim !== undefined);
@@ -1485,6 +1532,8 @@ async function writeReport(
     `- Browser overlay dismissal: ${input.assessment.browserOverlayDismissal.status} (${input.assessment.browserOverlayDismissal.dismissedCount} dismissed, ${input.assessment.browserOverlayDismissal.skippedCount} skipped)`,
     `- Browser obstructions: ${input.assessment.browserObstructions.status}`,
     ...(input.assessment.browserObstructions.status === "detected" ? [`- Browser obstruction detections: ${input.assessment.browserObstructions.detections.map((detection) => `${detection.kind}:${detection.confidence}`).join(", ")}`] : []),
+    `- Public gateway: ${input.assessment.publicGateway.status}${input.assessment.publicGateway.reason === undefined ? "" : ` (${input.assessment.publicGateway.reason})`}`,
+    ...(input.assessment.publicGateway.attempts.length === 0 ? [] : [`- Public gateway attempts: ${input.assessment.publicGateway.attempts.map((attempt) => `${attempt.key}:${attempt.status}${attempt.statusCode === undefined ? "" : `:${attempt.statusCode}`}`).join(", ")}`]),
     `- Audio verified: ${input.assessment.audioVerified}`,
     `- Raw video bytes collected: ${input.assessment.rawVideoBytesCollected}`,
     `- Transcript verified in this run: ${input.assessment.transcript.verifiedInThisRun}`,
