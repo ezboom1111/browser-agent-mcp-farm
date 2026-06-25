@@ -1117,6 +1117,7 @@ async function runEvidenceRunCommand(): Promise<void> {
         sourceRegistry: result.assessment.sourceRegistry,
         intentProfile: result.assessment.intentProfile,
         trendAnalysis: result.assessment.trendAnalysis,
+        searchResultCandidates: result.assessment.searchResultCandidates,
         mediaId: result.platformCapabilities.mediaId,
         claims: result.claims.length,
         claimGate: result.claimGate,
@@ -1129,6 +1130,7 @@ async function runEvidenceRunCommand(): Promise<void> {
           sourceRegistry: result.sourceRegistryRecords.length,
           intentProfile: result.intentProfileRecords.length,
           trendAnalysis: result.trendAnalysisRecords.length,
+          searchResultCandidates: result.searchResultCandidateRecords.length,
           overlayDismissal: result.overlayDismissalRecords.length,
           obstruction: result.obstructionRecords.length
         }

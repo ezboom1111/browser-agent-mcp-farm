@@ -156,6 +156,116 @@ describe("runEvidenceWorkflow", () => {
     }
   });
 
+  it("routes visual research intent through browser capture and page screenshot OCR", async () => {
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping visual intent workflow test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-evidence-visual-intent-"));
+    runDirs.push(runDir);
+    let recognizeCalls = 0;
+
+    try {
+      const result = await runEvidenceWorkflow(
+        {
+          url: `${fixture.baseUrl}/structured`,
+          runDir,
+          captureId: "fixture-visual-intent",
+          captureRouting: "auto",
+          captureProfile: "text",
+          captureCache: true,
+          sampleFrames: false,
+          waitMs: 0,
+          finalClaimGate: false,
+          researchIntent: {
+            decisionNeeded: "Need UI screenshot and image text evidence from the rendered review/search page.",
+            targetScope: "fixture rendered page",
+            evidenceShapes: ["page_text", "ui_screenshot", "ocr_image_text"],
+            successCriteria: "A browser-visible page screenshot and OCR text are registered.",
+            boundaries: "public only; no login/paywall/CAPTCHA bypass"
+          }
+        },
+        {
+          ocrWorkerFactory: async () => {
+            const worker: OcrWorker = {
+              recognize: async () => {
+                recognizeCalls += 1;
+                return { data: { text: "Rendered visual evidence", confidence: 96, words: [{ text: "Rendered", confidence: 96 }] } };
+              },
+              terminate: async () => undefined
+            };
+            return worker;
+          }
+        }
+      );
+
+      const stageNames = result.stageTimings.map((timing) => timing.stage);
+      expect(stageNames).not.toContain("http_tier0_capture");
+      expect(stageNames).not.toContain("capture_cache_replay");
+      expect(stageNames).toEqual(expect.arrayContaining(["browser_open_page", "browser_page_capture", "ocr"]));
+      expect(result.pageCaptureRecords.some((record) => record.evidence_kind === "page_screenshot")).toBe(true);
+      expect(recognizeCalls).toBe(1);
+      expect(result.ocrRecords.some((record) => record.kind === "text" && record.evidence_kind === "ocr_text" && record.status === "ok")).toBe(true);
+      expect(result.claims.some((claim) => claim.verification_level === "ocr_extracted")).toBe(true);
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  it("writes search result candidate artifacts from captured search surfaces", async () => {
+    const executableAvailable = await chromium
+      .launch({ headless: true })
+      .then(async (browser) => {
+        await browser.close();
+        return true;
+      })
+      .catch(() => false);
+
+    if (!executableAvailable) {
+      console.warn("Skipping search-result candidate workflow test because Playwright Chromium is not installed.");
+      return;
+    }
+
+    const fixture = await startFixtureServer();
+    const runDir = await mkdtemp(join(tmpdir(), "farm-evidence-search-candidates-"));
+    runDirs.push(runDir);
+
+    try {
+      const result = await runEvidenceWorkflow({
+        url: `${fixture.baseUrl}/search?query=%EB%A1%9C%EB%9D%BC%EB%B0%94%EC%9A%B4%EC%8A%A4%20%EB%82%B4%EB%8F%88%EB%82%B4%EC%82%B0`,
+        runDir,
+        captureId: "fixture-search-candidates",
+        sampleFrames: false,
+        waitMs: 0,
+        finalClaimGate: false
+      });
+
+      expect(result.searchResultCandidateRecords.some((record) => record.evidence_kind === "search_result_candidates")).toBe(true);
+      expect(result.assessment.searchResultCandidates.status).toBe("ok");
+      expect(result.assessment.searchResultCandidates.candidates[0]).toMatchObject({
+        title: "로라바운스 천호점: 주차 가격 놀이시설 음식 리뷰 (내돈내산)",
+        url: `${fixture.baseUrl}/blog/lorabounce-review`
+      });
+      const textRecord = result.searchResultCandidateRecords.find((record) => record.kind === "text" && record.evidence_kind === "search_result_candidates");
+      expect(textRecord).toBeDefined();
+      const report = JSON.parse(await readFile(join(runDir, textRecord?.path ?? ""), "utf8")) as { candidates?: Array<{ title?: string }> };
+      expect(report.candidates?.map((candidate) => candidate.title)).toContain("7살 내돈내산 키즈카페 추천 : 로라바운스 서울 천호점");
+      expect(await readFile(result.reportPath, "utf8")).toContain("Search result candidates: ok, candidates=2");
+    } finally {
+      await fixture.close();
+    }
+  });
+
   it("adds dense frame sampling around OCR text hits", async () => {
     const executableAvailable = await chromium
       .launch({ headless: true })
@@ -591,6 +701,17 @@ async function startFixtureServer(): Promise<{ baseUrl: string; close: () => Pro
           <p>newsletter overlay</p>
           <button id="dismiss" onclick="document.querySelector('#newsletter-modal').remove()">No thanks</button>
         </div>
+      </body></html>`);
+      return;
+    }
+    if (path === "/search") {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(`<!doctype html><html><head><title>검색 결과 fixture</title></head><body>
+        <main>
+          <h1>검색 결과</h1>
+          <a href="/blog/lorabounce-review">로라바운스 천호점: 주차 가격 놀이시설 음식 리뷰 (내돈내산)</a>
+          <a href="/blog/lorabounce-seven">7살 내돈내산 키즈카페 추천 : 로라바운스 서울 천호점</a>
+        </main>
       </body></html>`);
       return;
     }

@@ -14,7 +14,7 @@ import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
 import type { DestinationVisibleLink } from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
-import { planIntentProfile } from "./intent-profile.js";
+import { planIntentProfile, type IntentProfileReport } from "./intent-profile.js";
 import { LeaseManager } from "./lease-manager.js";
 import { collectOfficialApiEvidence, writeOfficialApiReadinessArtifact } from "./official-api.js";
 import { runOcrForFrameArtifacts } from "./ocr.js";
@@ -22,6 +22,7 @@ import { describePlatformCapabilities, type PlatformCapabilityMap } from "./plat
 import { publicGatewayCapture, skippedPublicGatewayCapture, type PublicGatewayCaptureResult } from "./public-gateway-capture.js";
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
+import { extractSearchResultCandidates, type SearchResultCandidatesReport } from "./search-result-candidates.js";
 import { describeSourceStrategy } from "./source-strategy.js";
 import { analyzeTrendSignals, type TrendAnalysisReport } from "./trend-analysis.js";
 import type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageTiming, FrameSamplingAssessment } from "./evidence-runner-types.js";
@@ -177,6 +178,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     )
   );
   throwIfAborted(options.abortSignal);
+  const runtimeOptions = applyIntentProfileRuntimeOptions(options, intentProfile);
 
   const officialApiReadiness = await runStage("official_api_readiness", () =>
     writeOfficialApiReadinessArtifact({
@@ -209,7 +211,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   throwIfAborted(options.abortSignal);
 
   const browserResult = await captureBrowserEvidence({
-    options,
+    options: runtimeOptions,
     parsedUrl,
     baseCaptureId,
     writer,
@@ -226,6 +228,20 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
       pageCaptureRecords: browserResult.pageCaptureRecords,
       contextToken: common.contextToken,
       pageId: "trend-analysis",
+      writer,
+      signal: options.abortSignal
+    })
+  );
+
+  const searchResultCandidateResult = await runStage("search_result_candidates", () =>
+    writeSearchResultCandidatesArtifact({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      baseCaptureId,
+      sourceStrategy,
+      pageCaptureRecords: browserResult.pageCaptureRecords,
+      contextToken: common.contextToken,
+      pageId: "search-result-candidates",
       writer,
       signal: options.abortSignal
     })
@@ -294,7 +310,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     : skippedPublicGatewayCapture(runtimeAcquisitionPlan === undefined ? "no runtime acquisition re-plan" : `runtime plan observedFailure=${runtimeAcquisitionPlan.observedFailure} is terminal or not gateway-eligible`);
   throwIfAborted(options.abortSignal);
 
-  const frameSampling = summarizeFrameSampling(browserResult.frameResult, browserResult.frameError, options.sampleFrames === false);
+  const frameSampling = summarizeFrameSampling(browserResult.frameResult, browserResult.frameError, runtimeOptions.sampleFrames === false);
   const assessment: EvidenceWorkflowAssessment = {
     url: options.url,
     platform: platformCapabilities.platform,
@@ -309,6 +325,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     browserOverlayDismissal: browserResult.overlayDismissal,
     browserObstructions: obstructionResult.report,
     trendAnalysis: trendAnalysisResult.report,
+    searchResultCandidates: searchResultCandidateResult.report,
     publicGateway: publicGatewayAssessment(publicGatewayResult),
     officialApiReadiness: officialApiReadiness.report,
     stageTimings,
@@ -400,6 +417,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     overlayDismissalRecords: browserResult.overlayDismissalRecords,
     obstructionRecords: obstructionResult.records,
     trendAnalysisRecords: trendAnalysisResult.records,
+    searchResultCandidateRecords: searchResultCandidateResult.records,
     publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     assessment,
@@ -407,6 +425,57 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     claims,
     ...(claimGate === undefined ? {} : { claimGate })
   };
+}
+
+function applyIntentProfileRuntimeOptions(options: EvidenceWorkflowOptions, profile: IntentProfileReport): EvidenceWorkflowOptions {
+  const shapes = new Set(profile.inferredShapes);
+  const needsBrowserVisual = shapes.has("ui_screenshot") || shapes.has("ocr_image_text") || shapes.has("map_place_state");
+  const needsOcr = shapes.has("ocr_image_text") || shapes.has("map_place_state");
+  const needsFrames = shapes.has("video_frames");
+  if (!needsBrowserVisual && !needsOcr && !needsFrames) {
+    return options;
+  }
+
+  const runtimeOptions: EvidenceWorkflowOptions = { ...options };
+  if (needsBrowserVisual) {
+    runtimeOptions.captureRouting = "browser";
+    runtimeOptions.httpFetch = false;
+    runtimeOptions.captureProfile = "full";
+    runtimeOptions.captureCache = false;
+  }
+  if (needsOcr) {
+    runtimeOptions.ocr = {
+      enabled: true,
+      maxFrames: options.ocr?.maxFrames ?? 20,
+      timeoutMs: options.ocr?.timeoutMs ?? 10_000,
+      language: effectiveOcrLanguage(options),
+      minConfidence: options.ocr?.minConfidence ?? 0
+    };
+  }
+  if (needsFrames && options.sampleFrames === undefined) {
+    runtimeOptions.sampleFrames = true;
+  }
+  return runtimeOptions;
+}
+
+function effectiveOcrLanguage(options: EvidenceWorkflowOptions): string {
+  const explicitLanguage = options.ocr?.language?.trim();
+  if (explicitLanguage !== undefined && explicitLanguage.length > 0 && (options.ocr?.enabled === true || explicitLanguage !== "eng")) {
+    return explicitLanguage;
+  }
+  return defaultOcrLanguageForUrl(options.url);
+}
+
+function defaultOcrLanguageForUrl(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    if (hostname.endsWith(".kr") || hostname.includes("naver.") || hostname.includes("daum.")) {
+      return "kor+eng";
+    }
+  } catch {
+    // fall through to the general bilingual default
+  }
+  return "eng+kor";
 }
 
 function planRuntimeAcquisitionMethods(url: string, report: BrowserObstructionReport): AcquisitionMethodPlan | undefined {
@@ -716,6 +785,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       }
     }
     const ocrFrameRecords = frameRecordsForOcr(frameResult, frameFailureRecords);
+    const pageScreenshotRecords = capture.records.filter((record) => record.kind === "screenshot" && record.evidence_kind === "page_screenshot");
     const ocrResult = await input.runStage("ocr", () =>
       runOcrForFrameArtifacts({
         runDir: input.options.runDir,
@@ -724,6 +794,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
         pageId: "ocr",
         baseCaptureId: input.baseCaptureId,
         frameRecords: ocrFrameRecords,
+        imageRecords: pageScreenshotRecords,
         options: input.options.ocr ?? { enabled: false, maxFrames: 20, timeoutMs: 10_000 },
         writer: input.writer,
         ...(input.deps.ocrWorkerFactory === undefined ? {} : { workerFactory: input.deps.ocrWorkerFactory }),
@@ -1132,6 +1203,46 @@ async function writeTrendAnalysisArtifact(input: {
   return { report, records };
 }
 
+async function writeSearchResultCandidatesArtifact(input: {
+  runDir: string;
+  sourceUrl: string;
+  baseCaptureId: string;
+  sourceStrategy: ReturnType<typeof describeSourceStrategy>;
+  pageCaptureRecords: ArtifactRecord[];
+  contextToken: string;
+  pageId: string;
+  writer: ArtifactWriter;
+  signal?: AbortSignal | undefined;
+}): Promise<{ report: SearchResultCandidatesReport; records: ArtifactRecord[] }> {
+  const captureText = await pageCaptureTextFromRecords(input.runDir, input.pageCaptureRecords, input.signal);
+  const pageScreenshotCount = input.pageCaptureRecords.filter((record) => record.kind === "screenshot" && record.evidence_kind === "page_screenshot").length;
+  const report = extractSearchResultCandidates({
+    sourceUrl: input.sourceUrl,
+    platform: input.sourceStrategy.platform,
+    ...(captureText.text === undefined ? {} : { text: captureText.text }),
+    ...(captureText.visibleLinks === undefined ? {} : { visibleLinks: captureText.visibleLinks }),
+    pageScreenshotCount
+  });
+  if (report.status === "not_search_surface") {
+    return { report, records: [] };
+  }
+  const records = await input.writer.writeCaptureBundle({
+    runDir: input.runDir,
+    sourceUrl: input.sourceUrl,
+    contextToken: input.contextToken,
+    pageId: input.pageId,
+    captureId: `${input.baseCaptureId}-search-result-candidates`,
+    status: report.status === "ok" ? "ok" : "partial",
+    metadata: { searchResultCandidates: report },
+    text: JSON.stringify(report, null, 2),
+    captureMethod: "browser-agent-mcp-farm search-result-candidates",
+    toolName: "search_result_candidates",
+    evidenceKind: "search_result_candidates",
+    note: "deterministic candidate index derived from captured search-result text/link metadata; cite original page_text/page_screenshot for load-bearing claims"
+  });
+  return { report, records };
+}
+
 async function pageCaptureTextFromRecords(runDir: string, records: ArtifactRecord[], signal: AbortSignal | undefined): Promise<{ text?: string; html?: string; finalUrl?: string; title?: string; visibleLinks?: DestinationVisibleLink[] }> {
   let text: string | undefined;
   let html: string | undefined;
@@ -1523,7 +1634,7 @@ function buildClaims(input: {
           baseCaptureId: input.baseCaptureId,
           ordinal: 6,
           claimType: "inference",
-          claim: "OCR over sampled frames did not produce verified text evidence; the run only recorded OCR status.",
+          claim: "OCR over sampled frames or page screenshots did not produce verified text evidence; the run only recorded OCR status.",
           record: ocrStatusEvidence,
           verificationLevel: "unverified"
         })
@@ -1531,7 +1642,7 @@ function buildClaims(input: {
           baseCaptureId: input.baseCaptureId,
           ordinal: 6,
           claimType: "text",
-          claim: "OCR over sampled frames produced registered visible text evidence.",
+          claim: "OCR over sampled frames or page screenshots produced registered visible text evidence.",
           record: ocrTextEvidence,
           verificationLevel: "ocr_extracted"
         }),
@@ -1639,6 +1750,7 @@ async function writeReport(
     `- Official API readiness: ${input.assessment.officialApiReadiness.platform}, supported=${input.assessment.officialApiReadiness.supportedLookupCount}, ready=${input.assessment.officialApiReadiness.readyLookupCount}, missing_env=${input.assessment.officialApiReadiness.missingEnvCount}, missing_reference=${input.assessment.officialApiReadiness.missingReferenceCount}, missing_media_id=${input.assessment.officialApiReadiness.missingMediaIdCount}`,
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Trend analysis: ${formatTrendAnalysisSummary(input.assessment.trendAnalysis)}`,
+    `- Search result candidates: ${input.assessment.searchResultCandidates.status}, candidates=${input.assessment.searchResultCandidates.candidates.length}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,
     `- Frame sampling: ${input.assessment.frameSampling.status}`,

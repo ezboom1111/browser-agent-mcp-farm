@@ -81,6 +81,14 @@ engagement words, and local/commerce/finance indicators from captured text. It
 is a method/navigation signal, not independent proof of popularity; cite the
 underlying `page_text` or other source artifacts for factual claims.
 
+Search-result surfaces also write a deterministic `search_result_candidates`
+artifact when captured text/link metadata yields candidates. It preserves ranked
+candidate titles, URLs, source hosts, matched query terms, review/detail
+signals, and whether a page screenshot exists for thumbnail/UI grounding. This
+is an index over witnessed bytes, not a factual claim by itself; cite the
+original `page_text`/`page_screenshot`/`ocr_text` artifacts for load-bearing
+claims.
+
 ## Intent / Modality Soft Lock
 
 `src/intent-profile.ts` is the companion wiring for the user's "what exactly
@@ -102,6 +110,14 @@ TTS/audio, or byte-faithful BYO evidence. The supported shape vocabulary is:
 `ui_screenshot`, `ocr_image_text`, `video_frames`, `captions_transcript`,
 `stt_asr`, `tts_detection`, `audio_events`, `map_place_state`, and
 `byte_faithful_byo`.
+
+The soft lock now drives capture options, not just documentation. If the intent
+needs `ui_screenshot`, `ocr_image_text`, or `map_place_state`, the runner skips
+tier-0 HTTP/cache replay, uses full browser capture, and enables OCR. OCR first
+uses timestamped frame screenshots when video/frame evidence exists; otherwise
+it falls back to the registered page screenshot. Korean/Naver URLs default to
+`kor+eng` OCR when OCR was enabled by intent rather than by an explicit CLI
+flag.
 
 The farm-native side covers page text/HTML, structured extraction, screenshots,
 OCR, frame sampling, captions when lawfully served, map/place browser surfaces,

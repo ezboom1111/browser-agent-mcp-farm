@@ -17,6 +17,7 @@ import type { ClaimType, EvidenceKind, NormalizedEvidenceRunInput, VerificationL
 import type { SourceRegistryMatch, SourceRegistrySummary } from "./source-registry.js";
 import type { SourceStrategy } from "./source-strategy.js";
 import type { IntentProfileReport } from "./intent-profile.js";
+import type { SearchResultCandidatesReport } from "./search-result-candidates.js";
 import type { TrendAnalysisReport } from "./trend-analysis.js";
 
 export interface EvidenceWorkflowOptions {
@@ -119,6 +120,7 @@ export interface EvidenceWorkflowAssessment {
   browserOverlayDismissal: BrowserOverlayDismissalReport;
   browserObstructions: BrowserObstructionReport;
   trendAnalysis: TrendAnalysisReport;
+  searchResultCandidates: SearchResultCandidatesReport;
   publicGateway: PublicGatewayAssessment;
   officialApiReadiness: OfficialApiReadinessReport;
   stageTimings: EvidenceWorkflowStageTiming[];
@@ -179,6 +181,7 @@ export interface EvidenceWorkflowResult {
   overlayDismissalRecords: ArtifactRecord[];
   obstructionRecords: ArtifactRecord[];
   trendAnalysisRecords: ArtifactRecord[];
+  searchResultCandidateRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   assessment: EvidenceWorkflowAssessment;

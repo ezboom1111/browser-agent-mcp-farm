@@ -38,6 +38,54 @@ describe("runOcrForFrameArtifacts", () => {
     expect(metadata.ocr.language).toBe("eng");
   });
 
+  it("OCRs page screenshots when no frame screenshots exist", async () => {
+    const runDir = await mkdtemp(join(tmpdir(), "farm-ocr-page-screenshot-"));
+    runDirs.push(runDir);
+    const screenshotPath = "screenshots/page-capture.png";
+    await writeFrameImage(runDir, screenshotPath);
+
+    let recognizeCalls = 0;
+    const worker: OcrWorker = {
+      recognize: async () => {
+        recognizeCalls += 1;
+        return {
+          data: {
+            text: "로라바운스 내돈내산 이미지 리뷰",
+            confidence: 93,
+            words: [{ text: "로라바운스", confidence: 94 }]
+          }
+        };
+      },
+      terminate: async () => undefined
+    };
+
+    const result = await runOcrForFrameArtifacts({
+      runDir,
+      sourceUrl: "https://search.naver.com/search.naver?query=%EB%A1%9C%EB%9D%BC%EB%B0%94%EC%9A%B4%EC%8A%A4",
+      contextToken: "ctx_test",
+      pageId: "ocr",
+      baseCaptureId: "ocr-page-test",
+      frameRecords: [],
+      imageRecords: [pageScreenshotRecord("page-1", screenshotPath, "page-sha")],
+      options: { enabled: true, maxFrames: 20, timeoutMs: 1_000, language: "kor+eng", minConfidence: 50 },
+      workerFactory: async () => worker
+    });
+
+    expect(recognizeCalls).toBe(1);
+    const textRecord = result.records.find((record) => record.kind === "text");
+    expect(textRecord?.status).toBe("ok");
+    expect(await readFile(join(runDir, textRecord?.path ?? ""), "utf8")).toBe("로라바운스 내돈내산 이미지 리뷰");
+    const metadata = await readOcrMetadata(runDir, result.records);
+    expect(metadata.ocr).toMatchObject({
+      status: "ok",
+      language: "kor+eng",
+      sourceArtifactId: "page-1",
+      sourcePath: screenshotPath,
+      textLength: "로라바운스 내돈내산 이미지 리뷰".length
+    });
+    expect(metadata.ocr.timestampSec).toBeUndefined();
+  });
+
   it("records OCR language, confidence, word boxes, and cache hits", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-ocr-ok-"));
     runDirs.push(runDir);
@@ -354,6 +402,25 @@ function frameRecord(artifactId: string, relPath: string, sha256: string): Artif
     backend: "playwright-mcp",
     tool_name: "farm_sample_frames",
     evidence_kind: "frame_screenshot"
+  };
+}
+
+function pageScreenshotRecord(artifactId: string, relPath: string, sha256: string): ArtifactRecord {
+  return {
+    artifact_id: artifactId,
+    path: relPath,
+    bytes: 8,
+    sha256,
+    kind: "screenshot",
+    format: "png",
+    mime: "image/png",
+    source_url: "https://search.naver.com/search.naver?query=%EB%A1%9C%EB%9D%BC%EB%B0%94%EC%9A%B4%EC%8A%A4",
+    capture_method: "browser-agent-mcp-farm capture",
+    role: "evidence",
+    status: "ok",
+    backend: "playwright-mcp",
+    tool_name: "farm_capture",
+    evidence_kind: "page_screenshot"
   };
 }
 

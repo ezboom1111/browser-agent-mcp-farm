@@ -115,4 +115,38 @@ describe("acquisition method memory bridge", () => {
     expect(await readFile(join(vaultRoot, "vault", "sessions", "2026-06-25-browser-agent-mcp-farm-acquisition-frontier.md"), "utf8")).toContain("## Blocker Checks");
     expect(await readFile(join(vaultRoot, "vault", "sessions", "2026-06-25-browser-agent-mcp-farm-kb-bridge.md"), "utf8")).toContain("plan-artifact");
   });
+
+  it("reads acquisition plans from writeCaptureBundle metadata wrappers", async () => {
+    const { runDir, vaultRoot } = await fixture();
+    const plan = planAcquisitionMethods({
+      url: "https://search.naver.com/search.naver?query=lorabounce",
+      allowExternalBridge: false
+    });
+    await mkdir(join(runDir, "structured"), { recursive: true });
+    await writeFile(join(runDir, "structured", "plan.metadata.json"), `${JSON.stringify({ sourceUrl: plan.inputUrl, acquisitionPlan: plan }, null, 2)}\n`, "utf8");
+    await writeFile(
+      join(runDir, "artifacts.jsonl"),
+      `${JSON.stringify({
+        artifact_id: "plan-metadata-artifact",
+        path: "structured/plan.metadata.json",
+        kind: "structured",
+        evidence_kind: "source_strategy",
+        tool_name: "acquisition_method_plan",
+        source_url: plan.inputUrl,
+        sha256: "2".repeat(64),
+        capture_method: "browser-agent-mcp-farm acquisition-method-plan"
+      })}\n`,
+      "utf8"
+    );
+
+    const result = await buildAcquisitionMethodMemoryBridge({
+      runDir,
+      vaultRoot,
+      merkleRoot: "c".repeat(64),
+      now: "2026-06-25T00:00:00.000Z"
+    });
+
+    expect(result.sourceUrl).toBe(plan.inputUrl);
+    expect(result.notes.find((note) => note.kind === "method_recipe")?.content).toContain("naver_public_search_surface");
+  });
 });

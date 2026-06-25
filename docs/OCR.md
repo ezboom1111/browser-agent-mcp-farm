@@ -23,13 +23,18 @@ Then run evidence collection with OCR enabled:
 node .\dist\cli.js evidence-run --url <url> --ocr --ocr-language eng --ocr-min-confidence 50
 ```
 
+Focused runs can also enable OCR through `--intent-shapes ocr_image_text`
+without a separate `--ocr` flag. If no sampled frame screenshots exist, the
+workflow runs OCR over the registered page screenshot instead.
+
 ## Evidence Semantics
 
 OCR output is a derivative of a registered screenshot artifact. It does not
 replace the screenshot. The workflow records:
 
 - source screenshot artifact ID and path
-- timestamp when the screenshot filename encodes one
+- timestamp when the screenshot filename encodes one; page screenshot OCR has
+  no timestamp
 - OCR language
 - minimum confidence threshold
 - reported confidence and `confidenceMet`
