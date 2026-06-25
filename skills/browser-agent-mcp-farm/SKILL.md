@@ -72,6 +72,10 @@ Useful `farm_evidence_run` options:
   - Ask the user only when the missing intent changes capture modality, source
     universe, or refusal boundary. Otherwise proceed and label assumptions as
     provisional.
+  - The soft lock is consumed by the runner: `ui_screenshot`,
+    `ocr_image_text`, and `map_place_state` force browser full capture instead
+    of tier-0 HTTP/cache replay; OCR falls back to the registered page
+    screenshot when no frame screenshots exist.
   - STT/ASR, TTS detection, music/sound-event analysis, and raw audio claims are
     not farm-native. Route them to `leesearch-video-heavy` or another lawful
     heavy/BYO path, then register exact transcript/diagnostic bytes here.
@@ -101,6 +105,11 @@ Acquisition behavior to rely on:
   terms, recency markers, engagement words, local/commerce/finance indicators,
   and search-result surfaces. Treat it as a signal summary; cite the underlying
   `page_text`/`page_html` for load-bearing facts.
+- Search-result surfaces can also write a `search_result_candidates` artifact:
+  ranked candidate titles, URLs, source hosts, matched query terms, review/detail
+  signals, and whether a page screenshot exists for UI/thumbnail grounding. It is
+  a lead index; cite the original `page_text`, `page_screenshot`, destination
+  page, or `ocr_text` for load-bearing claims.
 - If browser-visible obstruction is detected, the run writes an
   `acquisition_method_runtime_plan` artifact from the obstruction signal.
 - For non-terminal public-page failures such as app interstitial or unavailable

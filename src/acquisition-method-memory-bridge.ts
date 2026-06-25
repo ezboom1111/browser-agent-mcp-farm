@@ -163,7 +163,12 @@ async function readAcquisitionPlan(runDir: string, rows: ArtifactLedgerRow[], fa
     const text = await readOptionalText(join(runDir, artifact.path));
     if (text !== undefined) {
       try {
-        return { plan: JSON.parse(text) as AcquisitionMethodPlan, artifact };
+        const parsed = JSON.parse(text) as unknown;
+        const plan = parseAcquisitionPlanObject(parsed);
+        if (plan !== undefined) {
+          return { plan, artifact };
+        }
+        warnings.push(`invalid_acquisition_plan_shape:${artifact.path}`);
       } catch {
         warnings.push(`failed_to_parse_acquisition_plan:${artifact.path}`);
       }
@@ -185,7 +190,8 @@ async function readObstructionSummaries(runDir: string, rows: ArtifactLedgerRow[
     }
     const text = await readOptionalText(join(runDir, row.path));
     const parsed = parseJsonObject(text);
-    const detections = Array.isArray(parsed?.detections) ? parsed.detections : [];
+    const report = parseBrowserObstructionObject(parsed);
+    const detections = Array.isArray(report?.detections) ? report.detections : [];
     const blockers = detections.map((detection) => objectString(detection, "kind")).filter((item): item is string => item !== undefined && item.length > 0);
     const symptom = detections
       .map((detection) => arrayStrings(detection, "evidence").join("; "))
@@ -194,12 +200,39 @@ async function readObstructionSummaries(runDir: string, rows: ArtifactLedgerRow[
     summaries.push({
       artifactId: row.artifact_id ?? row.path,
       path: row.path,
-      status: objectString(parsed, "status") ?? "unknown",
+      status: objectString(report, "status") ?? "unknown",
       blockers,
       symptom
     });
   }
   return summaries;
+}
+
+function parseAcquisitionPlanObject(value: unknown): AcquisitionMethodPlan | undefined {
+  const object = objectRecord(value);
+  if (object === undefined) {
+    return undefined;
+  }
+  if (isAcquisitionPlanShape(object)) {
+    return object as unknown as AcquisitionMethodPlan;
+  }
+  const wrapped = objectRecord(object.acquisitionPlan);
+  return wrapped !== undefined && isAcquisitionPlanShape(wrapped) ? (wrapped as unknown as AcquisitionMethodPlan) : undefined;
+}
+
+function isAcquisitionPlanShape(value: Record<string, unknown>): boolean {
+  return typeof value.inputUrl === "string" && typeof value.platform === "string" && typeof value.sourceFamily === "string" && typeof value.observedFailure === "string" && Array.isArray(value.methods);
+}
+
+function parseBrowserObstructionObject(value: unknown): Record<string, unknown> | undefined {
+  const object = objectRecord(value);
+  if (object === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(object.detections)) {
+    return object;
+  }
+  return objectRecord(object.browserObstructions);
 }
 
 function renderMethodRecipe(input: { now: Date; methodId: string; decisionId: string; runDir: string; sourceUrl: string; merkleRoot?: string | undefined; plan: AcquisitionMethodPlan; planArtifactId?: string | undefined; obstructions: BrowserObstructionSummary[] }): string {
@@ -546,10 +579,14 @@ function parseJsonObject(text: string | undefined): Record<string, unknown> | un
   }
   try {
     const value = JSON.parse(text) as unknown;
-    return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+    return objectRecord(value);
   } catch {
     return undefined;
   }
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
 function objectString(value: unknown, key: string): string | undefined {

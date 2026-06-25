@@ -70,6 +70,7 @@ export async function runOcrForFrameArtifacts(input: {
   pageId: string;
   baseCaptureId: string;
   frameRecords: ArtifactRecord[];
+  imageRecords?: ArtifactRecord[] | undefined;
   options: OcrOptions;
   writer?: ArtifactWriter;
   workerFactory?: OcrWorkerFactory;
@@ -84,9 +85,11 @@ export async function runOcrForFrameArtifacts(input: {
   const writer = input.writer ?? new ArtifactWriter();
   const records: ArtifactRecord[] = [];
   const warnings: string[] = [];
-  const frameScreenshots = input.frameRecords.filter((record) => record.kind === "screenshot" && record.evidence_kind === "frame_screenshot").slice(0, options.maxFrames);
+  const frameScreenshots = input.frameRecords.filter((record) => record.kind === "screenshot" && record.evidence_kind === "frame_screenshot");
+  const pageScreenshots = (input.imageRecords ?? []).filter((record) => record.kind === "screenshot" && record.evidence_kind === "page_screenshot");
+  const ocrScreenshots = (frameScreenshots.length > 0 ? frameScreenshots : pageScreenshots).slice(0, options.maxFrames);
 
-  if (frameScreenshots.length === 0) {
+  if (ocrScreenshots.length === 0) {
     records.push(
       ...(await writer.writeCaptureBundle({
         runDir: input.runDir,
@@ -101,13 +104,13 @@ export async function runOcrForFrameArtifacts(input: {
             language: options.language,
             minConfidence: options.minConfidence,
             requestedFrames: 0,
-            reason: "no sampled frame screenshots were available for OCR"
+            reason: "no sampled frame or page screenshots were available for OCR"
           } satisfies OcrEvidenceMetadata
         },
         captureMethod: "browser-agent-mcp-farm ocr",
         toolName: "evidence_run_ocr",
         evidenceKind: "ocr_text",
-        note: "OCR skipped; no sampled frame screenshots were available."
+        note: "OCR skipped; no sampled frame or page screenshots were available."
       }))
     );
     return { records, warnings };
@@ -130,7 +133,7 @@ export async function runOcrForFrameArtifacts(input: {
             language: options.language,
             minConfidence: options.minConfidence,
             reason: "optional OCR engine 'tesseract.js' is not installed or could not initialize; it normally auto-installs as an optional dependency, otherwise run 'npm install tesseract.js' to enable OCR",
-            requestedFrames: frameScreenshots.length
+            requestedFrames: ocrScreenshots.length
           } satisfies OcrEvidenceMetadata
         },
         captureMethod: "browser-agent-mcp-farm ocr",
@@ -144,7 +147,7 @@ export async function runOcrForFrameArtifacts(input: {
 
   const cache = new Map<string, OcrExtraction>();
   try {
-    for (const [index, frame] of frameScreenshots.entries()) {
+    for (const [index, frame] of ocrScreenshots.entries()) {
       throwIfAborted(input.signal);
       const cachedExtraction = cache.get(frame.sha256);
       const cacheHit = cachedExtraction !== undefined;

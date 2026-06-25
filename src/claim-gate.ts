@@ -599,7 +599,7 @@ async function validateCaptureTranscript(runDir: string, artifact: ArtifactLedge
 }
 
 function isTextGroundableKind(kind: EvidenceKind | undefined): boolean {
-  return kind === "page_text" || kind === "page_html" || kind === "ocr_text" || kind === "transcript_cue" || kind === "audio_transcription" || kind === "structured_data";
+  return kind === "page_text" || kind === "page_html" || kind === "ocr_text" || kind === "transcript_cue" || kind === "audio_transcription" || kind === "structured_data" || kind === "search_result_candidates";
 }
 
 async function readArtifactText(runDir: string, artifact: ArtifactLedgerRow | undefined): Promise<string | undefined> {

@@ -609,6 +609,7 @@ export class FarmService {
       sourceRegistry: result.assessment.sourceRegistry,
       intentProfile: result.assessment.intentProfile,
       trendAnalysis: result.assessment.trendAnalysis,
+      searchResultCandidates: result.assessment.searchResultCandidates,
       mediaId: result.platformCapabilities.mediaId,
       claims: result.claims.length,
       claimGate: result.claimGate,
@@ -620,6 +621,7 @@ export class FarmService {
         sourceRegistry: result.sourceRegistryRecords.length,
         intentProfile: result.intentProfileRecords.length,
         trendAnalysis: result.trendAnalysisRecords.length,
+        searchResultCandidates: result.searchResultCandidateRecords.length,
         page: result.pageCaptureRecords.length,
         frames: result.frameRecords.length,
         ocr: result.ocrRecords.length,
@@ -674,7 +676,7 @@ function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "text/html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis" || evidenceKind === "search_result_candidates") {
     return "application/json";
   }
   return "application/octet-stream";
@@ -687,7 +689,7 @@ function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis" || evidenceKind === "search_result_candidates") {
     return "json";
   }
   return "bin";
