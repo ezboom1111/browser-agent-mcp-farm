@@ -75,11 +75,20 @@ Acquisition behavior to rely on:
 - Every evidence run writes an `acquisition_method_plan` artifact. Supported
   official API readiness is evaluated before browser capture without calling
   provider APIs; live provider calls still require explicit `officialApi.enabled`.
+- Every evidence run writes a `trend_analysis` artifact derived from captured
+  page text/title. It extracts deterministic trend signals such as recurring
+  terms, recency markers, engagement words, local/commerce/finance indicators,
+  and search-result surfaces. Treat it as a signal summary; cite the underlying
+  `page_text`/`page_html` for load-bearing facts.
 - If browser-visible obstruction is detected, the run writes an
   `acquisition_method_runtime_plan` artifact from the obstruction signal.
 - For non-terminal public-page failures such as app interstitial or unavailable
   media, the run may try lawful public gateway capture (Jina Reader first,
   then Wayback latest snapshot) and register returned bytes as normal evidence.
+- For public Naver Blog post text, prefer `captureRouting: "auto"` with
+  `captureProfile: "text"` (`--auto-capture --text-only` in the CLI). The
+  browserless tier rejects thin desktop iframe shells and escalates to the
+  browser-visible frame text instead of falsely accepting the title-only shell.
 - Login, paywall, CAPTCHA/challenge, age gate, and region gate stay terminal:
   record the obstruction or use consented profile/headed/human BYO, do not
   bypass.

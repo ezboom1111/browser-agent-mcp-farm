@@ -98,6 +98,12 @@ const PUBLIC_ENDPOINTS: Partial<Record<SourcePlatform, PlatformPublicEndpoint>> 
     tier: "feed",
     reason: "Start from public news/search surfaces, then open destination articles as separate evidence when claims depend on them.",
     captureMethod: "feed"
+  },
+  naver_blog: {
+    key: "naver_blog_public_browser_surface",
+    tier: "headed",
+    reason: "Naver desktop blog posts may serve a thin iframe shell to browserless HTTP; escalate to the public browser-visible frame or mobile surface before asking for BYO.",
+    captureMethod: "browser-agent-mcp-farm capture"
   }
 };
 

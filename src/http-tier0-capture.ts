@@ -326,6 +326,9 @@ const SHELL_VISIBLE_TEXT_MAX = 200;
 const EMPTY_ROOT_MOUNT_RE = /<div\b[^>]*\bid\s*=\s*("|')(root|__next|__nuxt|app|q-app|svelte)\1[^>]*>\s*<\/div>/i;
 // Framework hydration globals that signal the real content arrives via client-side render.
 const HYDRATION_HINT_RE = /__NEXT_DATA__|window\.__NUXT__|__remixContext|__APOLLO_STATE__|__sveltekit/;
+// Naver desktop blog post URLs can serve only a title plus an iframe shell to browserless HTTP.
+// The isolated browser path can read the public same-origin frame text, so tier-0 should decline.
+const PROVIDER_IFRAME_SHELL_RE = /<iframe\b[^>]*(?:id|name)\s*=\s*("|')mainFrame\1[^>]*>|(?:PostView|screenFrame)\.nhn|blog\.naver\.com\/PostView/i;
 
 /**
  * True when the fetched HTML is a client-rendered shell: (almost) no visible server-rendered text
@@ -341,7 +344,7 @@ export function looksLikeClientRenderedShell(html: string, visibleText: string):
   if (length >= SHELL_VISIBLE_TEXT_MAX) {
     return false; // enough server-rendered text to cite, even if the page also hydrates
   }
-  return EMPTY_ROOT_MOUNT_RE.test(html) || HYDRATION_HINT_RE.test(html);
+  return EMPTY_ROOT_MOUNT_RE.test(html) || HYDRATION_HINT_RE.test(html) || PROVIDER_IFRAME_SHELL_RE.test(html);
 }
 
 function parseHttpUrl(url: string): URL | undefined {

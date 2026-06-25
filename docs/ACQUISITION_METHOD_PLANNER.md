@@ -25,6 +25,9 @@ method selection:
 - try public API/feed/syndication paths before browser work
 - classify empty shells, challenge pages, and obstructions as acquisition
   states
+- treat provider shells, such as Naver Blog desktop iframe pages with only
+  title-level text, as tier-0 declines so auto routing reaches the public
+  browser-visible article text
 - when a direct farm capture cannot reach a public page, let a lawful external
   capturer supply exact bytes, but tag it as BYO/external provenance and make
   the claim gate verify the anchors
@@ -71,6 +74,12 @@ AMP discovery and archive.today-style gateways are still separate future arms.
 Final claims still need page text, HTML, screenshots, OCR, transcript cues,
 official API metadata, gateway text, or BYO bytes registered in the artifact
 ledger.
+
+Every run also writes a deterministic `trend_analysis` artifact after page
+capture. It summarizes recurring terms, surface type, recency markers,
+engagement words, and local/commerce/finance indicators from captured text. It
+is a method/navigation signal, not independent proof of popularity; cite the
+underlying `page_text` or other source artifacts for factual claims.
 
 ## Knowledge-Base Bridge
 

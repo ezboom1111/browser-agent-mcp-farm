@@ -22,6 +22,7 @@ import { publicGatewayCapture, skippedPublicGatewayCapture, type PublicGatewayCa
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
 import { describeSourceStrategy } from "./source-strategy.js";
+import { analyzeTrendSignals, type TrendAnalysisReport } from "./trend-analysis.js";
 import type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageTiming, FrameSamplingAssessment } from "./evidence-runner-types.js";
 export type {
   EvidenceWorkflowAssessment,
@@ -191,6 +192,20 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     runStage
   });
 
+  const trendAnalysisResult = await runStage("trend_analysis", () =>
+    writeTrendAnalysisArtifact({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      baseCaptureId,
+      sourceStrategy,
+      pageCaptureRecords: browserResult.pageCaptureRecords,
+      contextToken: common.contextToken,
+      pageId: "trend-analysis",
+      writer,
+      signal: options.abortSignal
+    })
+  );
+
   const obstructionResult = await runStage("browser_obstruction_classification", () =>
     classifyBrowserObstructionArtifacts({
       runDir: options.runDir,
@@ -267,6 +282,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     frameSampling,
     browserOverlayDismissal: browserResult.overlayDismissal,
     browserObstructions: obstructionResult.report,
+    trendAnalysis: trendAnalysisResult.report,
     publicGateway: publicGatewayAssessment(publicGatewayResult),
     officialApiReadiness: officialApiReadiness.report,
     stageTimings,
@@ -356,6 +372,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     officialApiReadinessRecords: officialApiReadiness.records,
     overlayDismissalRecords: browserResult.overlayDismissalRecords,
     obstructionRecords: obstructionResult.records,
+    trendAnalysisRecords: trendAnalysisResult.records,
     publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     assessment,
@@ -1052,6 +1069,42 @@ async function classifyBrowserObstructionArtifacts(input: {
   return { report, records };
 }
 
+async function writeTrendAnalysisArtifact(input: {
+  runDir: string;
+  sourceUrl: string;
+  baseCaptureId: string;
+  sourceStrategy: ReturnType<typeof describeSourceStrategy>;
+  pageCaptureRecords: ArtifactRecord[];
+  contextToken: string;
+  pageId: string;
+  writer: ArtifactWriter;
+  signal?: AbortSignal | undefined;
+}): Promise<{ report: TrendAnalysisReport; records: ArtifactRecord[] }> {
+  const captureText = await pageCaptureTextFromRecords(input.runDir, input.pageCaptureRecords, input.signal);
+  const report = analyzeTrendSignals({
+    sourceUrl: input.sourceUrl,
+    platform: input.sourceStrategy.platform,
+    sourceFamily: input.sourceStrategy.sourceFamily,
+    ...(captureText.text === undefined ? {} : { text: captureText.text }),
+    ...(captureText.title === undefined ? {} : { title: captureText.title })
+  });
+  const records = await input.writer.writeCaptureBundle({
+    runDir: input.runDir,
+    sourceUrl: input.sourceUrl,
+    contextToken: input.contextToken,
+    pageId: input.pageId,
+    captureId: `${input.baseCaptureId}-trend-analysis`,
+    status: report.status === "empty" ? "partial" : "ok",
+    metadata: { trendAnalysis: report },
+    text: JSON.stringify(report, null, 2),
+    captureMethod: "browser-agent-mcp-farm trend-analysis",
+    toolName: "trend_analysis",
+    evidenceKind: "trend_analysis",
+    note: "deterministic trend-signal summary derived from captured page_text/title; cite source page_text for load-bearing factual claims"
+  });
+  return { report, records };
+}
+
 async function pageCaptureTextFromRecords(runDir: string, records: ArtifactRecord[], signal: AbortSignal | undefined): Promise<{ text?: string; html?: string; finalUrl?: string; title?: string; visibleLinks?: DestinationVisibleLink[] }> {
   let text: string | undefined;
   let html: string | undefined;
@@ -1557,6 +1610,7 @@ async function writeReport(
     ...(input.assessment.runtimeAcquisitionPlan === undefined ? [] : [`- Runtime acquisition re-plan: ${formatAcquisitionPlanSummary(input.assessment.runtimeAcquisitionPlan)}`]),
     `- Official API readiness: ${input.assessment.officialApiReadiness.platform}, supported=${input.assessment.officialApiReadiness.supportedLookupCount}, ready=${input.assessment.officialApiReadiness.readyLookupCount}, missing_env=${input.assessment.officialApiReadiness.missingEnvCount}, missing_reference=${input.assessment.officialApiReadiness.missingReferenceCount}, missing_media_id=${input.assessment.officialApiReadiness.missingMediaIdCount}`,
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
+    `- Trend analysis: ${formatTrendAnalysisSummary(input.assessment.trendAnalysis)}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,
     `- Frame sampling: ${input.assessment.frameSampling.status}`,
@@ -1588,6 +1642,15 @@ function formatAcquisitionPlanSummary(plan: EvidenceWorkflowAssessment["acquisit
     .join(", ");
   const boundarySummary = boundaryMethods.length === 0 ? "" : `, boundary=${boundaryMethods}`;
   return `${plan.methods.length} methods, observedFailure=${plan.observedFailure}, first=${first}, last=${last}${boundarySummary}, decision=${plan.decision}`;
+}
+
+function formatTrendAnalysisSummary(report: TrendAnalysisReport): string {
+  const topTerms = report.topTerms
+    .slice(0, 5)
+    .map((term) => `${term.term}:${term.count}`)
+    .join(", ");
+  const signalGroups = Array.from(new Set(report.signals.map((signal) => signal.kind))).join(", ") || "none";
+  return `${report.status}, ${report.summary}, top_terms=${topTerms || "none"}, signal_groups=${signalGroups}`;
 }
 
 function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): string[] {
