@@ -81,6 +81,35 @@ engagement words, and local/commerce/finance indicators from captured text. It
 is a method/navigation signal, not independent proof of popularity; cite the
 underlying `page_text` or other source artifacts for factual claims.
 
+## Intent / Modality Soft Lock
+
+`src/intent-profile.ts` is the companion wiring for the user's "what exactly
+should we inspect?" question. It is deliberately a soft lock, not a blocking
+approval gate:
+
+- with no explicit intent, the run still proceeds and records an
+  `intent_profile` artifact as `underspecified`
+- with partial intent, it records provisional assumptions and only asks the
+  missing questions that would change capture modality, source universe, or
+  refusal boundaries
+- with complete intent, it records the decision scope, evidence shapes, success
+  criteria, boundaries, and recommended capture options
+
+This preserves autonomy and efficiency while preventing a text-only capture from
+silently standing in for UI, image/OCR, video-frame, map/place, STT/ASR,
+TTS/audio, or byte-faithful BYO evidence. The supported shape vocabulary is:
+`page_text`, `page_html`, `structured_data`, `semi_structured_dom`,
+`ui_screenshot`, `ocr_image_text`, `video_frames`, `captions_transcript`,
+`stt_asr`, `tts_detection`, `audio_events`, `map_place_state`, and
+`byte_faithful_byo`.
+
+The farm-native side covers page text/HTML, structured extraction, screenshots,
+OCR, frame sampling, captions when lawfully served, map/place browser surfaces,
+and exact BYO byte registration. STT/ASR, TTS detection, music/sound-event
+analysis, and raw audio understanding remain outside the trusted farm capture
+path. Those must come from `leesearch-video-heavy` or another lawful heavy/BYO
+extractor and then be registered as exact bytes with clear provenance.
+
 ## Knowledge-Base Bridge
 
 `kb-acquisition-bridge` is the Lee-vault wiring layer for method memory. It

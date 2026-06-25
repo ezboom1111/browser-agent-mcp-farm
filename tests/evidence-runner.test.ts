@@ -112,6 +112,8 @@ describe("runEvidenceWorkflow", () => {
       expect(result.acquisitionPlanRecords.some((record) => record.evidence_kind === "source_strategy")).toBe(true);
       expect(result.sourceRegistry).toMatchObject({ matchReason: "platform" });
       expect(result.sourceRegistryRecords.some((record) => record.evidence_kind === "source_registry")).toBe(true);
+      expect(result.intentProfileRecords.some((record) => record.evidence_kind === "intent_profile")).toBe(true);
+      expect(result.assessment.intentProfile.autonomyMode).toBe("soft_lock");
       expect(result.trendAnalysisRecords.some((record) => record.evidence_kind === "trend_analysis")).toBe(true);
       expect(result.assessment.trendAnalysis.status).toBe("ok");
       expect(result.assessment.sourceRegistry).toMatchObject({
@@ -130,6 +132,7 @@ describe("runEvidenceWorkflow", () => {
       expect(report).toContain("Transcript verified in this run: false");
       expect(report).toContain("Audio verified: false");
       expect(report).toContain("Acquisition plan:");
+      expect(report).toContain("Intent profile:");
       expect(report).toContain("Source registry: platform");
       expect(report).toContain("Trend analysis:");
       expect(report).toContain("## Stage Timings");
@@ -138,6 +141,7 @@ describe("runEvidenceWorkflow", () => {
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
       expect(ledger).toContain('"tool_name":"platform_capabilities"');
       expect(ledger).toContain('"tool_name":"source_registry"');
+      expect(ledger).toContain('"tool_name":"intent_profile"');
       expect(ledger).toContain('"tool_name":"trend_analysis"');
       expect(ledger).toContain('"tool_name":"acquisition_method_plan"');
       expect(ledger).toContain('"tool_name":"farm_sample_frames"');

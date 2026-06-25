@@ -197,9 +197,9 @@ media/item URL or destination follow-up provides a stable media ID. Add
 exit non-zero.
 
 `evidence-run` is the first-class workflow wrapper: it writes platform
-capability artifacts, writes a source strategy artifact, attempts a browser
-page capture, samples timestamped browser-visible frames unless `--no-frames`
-is set, writes an assessment report,
+capability artifacts, writes source strategy and soft intent-profile artifacts,
+attempts a browser page capture, samples timestamped browser-visible frames
+unless `--no-frames` is set, writes an assessment report,
 optionally runs OCR over sampled frames, optionally collects
 credentials-gated official API metadata, classifies
 browser-visible obstructions, adds typed claim/citation ledgers, and runs the
@@ -290,6 +290,17 @@ Useful `evidence-run` options:
   snapshot. Login/paywall/CAPTCHA/age/region gates stay terminal.
 - `--text-only` text capture profile: blocks image/media/font + ad-host
   subrequests and skips the page screenshot (faster text/structure-only runs).
+- `--intent`, `--intent-scope`, `--intent-shapes`, `--success-criteria`, and
+  `--intent-boundaries` add a soft intent lock. The run still proceeds, but it
+  writes an `intent_profile` artifact that records the decision being supported,
+  evidence modalities, missing questions, assumptions, recommended capture
+  options, and refusal boundaries. Use this for focused alpha/trend/price/design
+  work where text-only evidence may be insufficient. Valid shapes are
+  `page_text`, `page_html`, `structured_data`, `semi_structured_dom`,
+  `ui_screenshot`, `ocr_image_text`, `video_frames`, `captions_transcript`,
+  `stt_asr`, `tts_detection`, `audio_events`, `map_place_state`, and
+  `byte_faithful_byo`. STT/TTS/audio shapes are routed as heavy/BYO needs; the
+  farm does not autonomously download or analyze raw audio/video streams.
 - `--capture-cache` opt-in replay: reuse a fresh (≤ 1 h) prior bare-ephemeral
   capture by content hash instead of launching the browser; the page claim is
   labelled `cached_capture` with its staleness age.
