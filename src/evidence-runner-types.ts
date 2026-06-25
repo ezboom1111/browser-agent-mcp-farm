@@ -106,6 +106,7 @@ export interface EvidenceWorkflowAssessment {
   mediaId?: string;
   sourceStrategy: SourceStrategy;
   acquisitionPlan: AcquisitionMethodPlan;
+  runtimeAcquisitionPlan?: AcquisitionMethodPlan;
   sourceRegistry: SourceRegistrySummary;
   browserCaptureRecords: number;
   frameSampling: FrameSamplingAssessment;
@@ -152,10 +153,12 @@ export interface EvidenceWorkflowResult {
   platformCapabilities: PlatformCapabilityMap;
   sourceStrategy: SourceStrategy;
   acquisitionPlan: AcquisitionMethodPlan;
+  runtimeAcquisitionPlan?: AcquisitionMethodPlan;
   sourceRegistry: SourceRegistryMatch;
   capabilityRecords: ArtifactRecord[];
   sourceStrategyRecords: ArtifactRecord[];
   acquisitionPlanRecords: ArtifactRecord[];
+  runtimeAcquisitionPlanRecords: ArtifactRecord[];
   sourceRegistryRecords: ArtifactRecord[];
   pageCaptureRecords: ArtifactRecord[];
   frameRecords: ArtifactRecord[];

@@ -1,4 +1,5 @@
 import type { AcquisitionTier } from "./acquisition-router.js";
+import type { BrowserObstructionKind } from "./browser-obstructions.js";
 import { describeSourceStrategy, type SourceFamily, type SourcePlatform } from "./source-strategy.js";
 
 export type AcquisitionFailureSignal = "none" | "http_fetch_declined" | "empty_shell" | "browser_blocked" | "login_or_paywall" | "captcha_or_challenge" | "manual_selector_pressure";
@@ -216,6 +217,20 @@ export function planAcquisitionMethods(input: AcquisitionMethodPlanInput): Acqui
     knowledgeBaseTags: ["leesearch", "insane-search-dna", "acquisition-router", "byo_capture", "claim-gate"],
     decision: decisionFor(observedFailure, input.allowExternalBridge === true)
   };
+}
+
+export function observedFailureFromBrowserObstructionKinds(kinds: readonly BrowserObstructionKind[]): AcquisitionFailureSignal {
+  const kindSet = new Set(kinds);
+  if (kindSet.has("bot_block")) {
+    return "captcha_or_challenge";
+  }
+  if (kindSet.has("login_wall") || kindSet.has("age_gate") || kindSet.has("region_gate")) {
+    return "login_or_paywall";
+  }
+  if (kindSet.has("app_interstitial") || kindSet.has("media_unavailable")) {
+    return "browser_blocked";
+  }
+  return "none";
 }
 
 function isTerminalAccessFailure(signal: AcquisitionFailureSignal): boolean {
