@@ -44,7 +44,7 @@ import type { LocaleSegment } from "./source-registry.js";
 import { EvidenceRunScheduler } from "./scheduler.js";
 import { isInformationCategory, isLocaleSegment, listSourceRegistryEntries, selectSourceRegistryEntriesForIntent, selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch, type SourceRegistryFilter } from "./source-registry.js";
 import type { SourceFamily, SourcePlatform } from "./source-strategy.js";
-import { BrowserChannelSchema, type BrowserChannel } from "./schemas.js";
+import { BrowserChannelSchema, EvidenceShapeSchema, type BrowserChannel, type EvidenceShape } from "./schemas.js";
 
 export async function main(): Promise<void> {
   const command = process.argv[2] ?? "help";
@@ -1038,6 +1038,7 @@ async function runEvidenceRunCommand(): Promise<void> {
   const denseMaxArg = getArgValue("--dense-max-frames");
   const denseSceneThresholdArg = getArgValue("--dense-scene-threshold");
   const denseSceneMaxHitsArg = getArgValue("--dense-scene-max-hits");
+  const intentShapesArg = getArgValue("--intent-shapes");
   const input = await normalizeEvidenceRunInput({
     url,
     runDir: getArgValue("--run-dir"),
@@ -1055,6 +1056,16 @@ async function runEvidenceRunCommand(): Promise<void> {
     storagePolicy: hasFlag("--persistent-profile") ? "persistent-profile" : undefined,
     headed: hasFlag("--headed"),
     browserChannel: browserChannelFromArgs(),
+    researchIntent:
+      getArgValue("--intent") === undefined && getArgValue("--intent-scope") === undefined && intentShapesArg === undefined && getArgValue("--success-criteria") === undefined && getArgValue("--intent-boundaries") === undefined
+        ? undefined
+        : {
+            decisionNeeded: getArgValue("--intent"),
+            targetScope: getArgValue("--intent-scope"),
+            evidenceShapes: intentShapesArg === undefined ? undefined : parseEvidenceShapeList(intentShapesArg),
+            successCriteria: getArgValue("--success-criteria"),
+            boundaries: getArgValue("--intent-boundaries")
+          },
     httpFetch: hasFlag("--http-fetch"),
     captureRouting: hasFlag("--auto-capture") ? "auto" : "browser",
     captureCache: hasFlag("--capture-cache"),
@@ -1104,6 +1115,7 @@ async function runEvidenceRunCommand(): Promise<void> {
           family: result.sourceStrategy.sourceFamily
         },
         sourceRegistry: result.assessment.sourceRegistry,
+        intentProfile: result.assessment.intentProfile,
         trendAnalysis: result.assessment.trendAnalysis,
         mediaId: result.platformCapabilities.mediaId,
         claims: result.claims.length,
@@ -1115,6 +1127,7 @@ async function runEvidenceRunCommand(): Promise<void> {
           officialApi: result.officialApiRecords.length,
           sourceStrategy: result.sourceStrategyRecords.length,
           sourceRegistry: result.sourceRegistryRecords.length,
+          intentProfile: result.intentProfileRecords.length,
           trendAnalysis: result.trendAnalysisRecords.length,
           overlayDismissal: result.overlayDismissalRecords.length,
           obstruction: result.obstructionRecords.length
@@ -1513,6 +1526,16 @@ Options:
           opt-in replay: reuse a fresh (<=1h) prior bare-ephemeral capture by content hash instead of launching the browser; the page claim is labelled cached_capture with its staleness age
   --text-only
           text capture profile: block image/media/font + ad-host subrequests and skip the page screenshot (faster text/structure-only browser runs)
+  --intent <text>
+          Soft intent lock: record the decision this run should support without blocking capture
+  --intent-scope <text>
+          Scope for the intent profile, such as entity/product/place, locale, time horizon, and source universe
+  --intent-shapes <a,b>
+          Evidence modalities for the intent profile: ${EvidenceShapeSchema.options.join(", ")}
+  --success-criteria <text>
+          What would count as useful, surprising, or decision-changing for this run
+  --intent-boundaries <text>
+          Login/profile/BYO and refusal boundaries; CAPTCHA/paywall/raw-media bypass remains terminal
   --no-overlay-dismissal
           Disable cautious pre-capture overlay dismissal
   --overlay-dismissal-max-actions <0-10>
@@ -1662,6 +1685,23 @@ function parseNumberList(value: string): number[] {
     .split(",")
     .map((part) => Number(part.trim()))
     .filter((part) => Number.isFinite(part));
+}
+
+function parseStringList(value: string): string[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function parseEvidenceShapeList(value: string): EvidenceShape[] {
+  return parseStringList(value).map((part) => {
+    const parsed = EvidenceShapeSchema.safeParse(part);
+    if (!parsed.success) {
+      throw new Error(`Invalid --intent-shapes value '${part}'. Allowed: ${EvidenceShapeSchema.options.join(", ")}`);
+    }
+    return parsed.data;
+  });
 }
 
 function parsePositiveIntegerArg(name: string, fallback: number): number {

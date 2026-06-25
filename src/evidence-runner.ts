@@ -14,6 +14,7 @@ import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
 import type { DestinationVisibleLink } from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
+import { planIntentProfile } from "./intent-profile.js";
 import { LeaseManager } from "./lease-manager.js";
 import { collectOfficialApiEvidence, writeOfficialApiReadinessArtifact } from "./official-api.js";
 import { runOcrForFrameArtifacts } from "./ocr.js";
@@ -153,6 +154,30 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   );
   throwIfAborted(options.abortSignal);
 
+  const intentProfile = planIntentProfile({
+    url: options.url,
+    sourcePlatform: sourceStrategy.platform,
+    sourceFamily: sourceStrategy.sourceFamily,
+    ...(options.researchIntent === undefined ? {} : { intent: options.researchIntent })
+  });
+  const intentProfileRecords = await runStage("intent_profile_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "intent-profile",
+        captureId: `${baseCaptureId}-intent-profile`,
+        status: intentProfile.status === "locked" ? "ok" : "partial",
+        metadata: { intentProfile },
+        text: JSON.stringify(intentProfile, null, 2),
+        captureMethod: "browser-agent-mcp-farm intent-profile",
+        toolName: "intent_profile",
+        evidenceKind: "intent_profile"
+      }),
+      options.abortSignal
+    )
+  );
+  throwIfAborted(options.abortSignal);
+
   const officialApiReadiness = await runStage("official_api_readiness", () =>
     writeOfficialApiReadinessArtifact({
       runDir: options.runDir,
@@ -278,6 +303,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     acquisitionPlan,
     ...(runtimeAcquisitionPlan === undefined ? {} : { runtimeAcquisitionPlan }),
     sourceRegistry: summarizeSourceRegistryMatch(sourceRegistry),
+    intentProfile,
     browserCaptureRecords: browserResult.pageCaptureRecords.length,
     frameSampling,
     browserOverlayDismissal: browserResult.overlayDismissal,
@@ -364,6 +390,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     acquisitionPlanRecords,
     runtimeAcquisitionPlanRecords,
     sourceRegistryRecords,
+    intentProfileRecords,
     pageCaptureRecords: browserResult.pageCaptureRecords,
     frameRecords,
     ocrRecords: browserResult.ocrRecords,
@@ -1608,6 +1635,7 @@ async function writeReport(
     `- Source strategy: ${input.assessment.sourceStrategy.platform} / ${input.assessment.sourceStrategy.sourceFamily}`,
     `- Acquisition plan: ${formatAcquisitionPlanSummary(input.assessment.acquisitionPlan)}`,
     ...(input.assessment.runtimeAcquisitionPlan === undefined ? [] : [`- Runtime acquisition re-plan: ${formatAcquisitionPlanSummary(input.assessment.runtimeAcquisitionPlan)}`]),
+    `- Intent profile: ${formatIntentProfileSummary(input.assessment.intentProfile)}`,
     `- Official API readiness: ${input.assessment.officialApiReadiness.platform}, supported=${input.assessment.officialApiReadiness.supportedLookupCount}, ready=${input.assessment.officialApiReadiness.readyLookupCount}, missing_env=${input.assessment.officialApiReadiness.missingEnvCount}, missing_reference=${input.assessment.officialApiReadiness.missingReferenceCount}, missing_media_id=${input.assessment.officialApiReadiness.missingMediaIdCount}`,
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Trend analysis: ${formatTrendAnalysisSummary(input.assessment.trendAnalysis)}`,
@@ -1642,6 +1670,12 @@ function formatAcquisitionPlanSummary(plan: EvidenceWorkflowAssessment["acquisit
     .join(", ");
   const boundarySummary = boundaryMethods.length === 0 ? "" : `, boundary=${boundaryMethods}`;
   return `${plan.methods.length} methods, observedFailure=${plan.observedFailure}, first=${first}, last=${last}${boundarySummary}, decision=${plan.decision}`;
+}
+
+function formatIntentProfileSummary(profile: EvidenceWorkflowAssessment["intentProfile"]): string {
+  const shapes = profile.inferredShapes.join(", ") || "none";
+  const questions = profile.questions.length === 0 ? "none" : profile.questions.length;
+  return `${profile.status}, autonomy=${profile.autonomyMode}, shapes=${shapes}, questions=${questions}, heavyPath=${profile.recommendedOptions.heavyPath}, captureProfile=${profile.recommendedOptions.captureProfile}`;
 }
 
 function formatTrendAnalysisSummary(report: TrendAnalysisReport): string {

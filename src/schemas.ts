@@ -26,6 +26,7 @@ export const EvidenceKindSchema = z.enum([
   "api_cache",
   "source_strategy",
   "source_registry",
+  "intent_profile",
   "trend_analysis",
   "source_navigation_plan",
   "source_navigation_execution_plan",
@@ -286,6 +287,16 @@ export const OfficialApiCredentialsSchema = z.object({
   tiktokResearchTokenEnv: z.string().min(1).optional()
 });
 
+export const EvidenceShapeSchema = z.enum(["page_text", "page_html", "structured_data", "semi_structured_dom", "ui_screenshot", "ocr_image_text", "video_frames", "captions_transcript", "stt_asr", "tts_detection", "audio_events", "map_place_state", "byte_faithful_byo"]);
+
+export const ResearchIntentSchema = z.object({
+  decisionNeeded: z.string().min(1).optional().describe("What decision this run supports: alpha pick, trend watch, price compare, UI/design teardown, user-pain mining, source verification, etc."),
+  targetScope: z.string().min(1).optional().describe("Entity/product/person/place, geography/language, time horizon, and must-include or must-exclude sources."),
+  evidenceShapes: z.array(EvidenceShapeSchema).max(20).optional().describe("Modalities that matter for this run: text/html, structured data, UI screenshot, OCR, video frames, captions, STT/ASR, TTS/audio, map/place state, or BYO bytes."),
+  successCriteria: z.string().min(1).optional().describe("What would count as useful, surprising, or decision-changing."),
+  boundaries: z.string().min(1).optional().describe("Login/profile/BYO permissions and refusal lines such as no paywall/CAPTCHA/raw-media bypass.")
+});
+
 export const EvidenceRunInputSchema = z.object({
   url: z.url().describe("The page to research. The farm captures the rendered page, derives evidence (frames/OCR/transcript/official-API/obstructions), runs source strategy, and produces a claim-gated report."),
   runDir: z.string().min(1).optional().describe("Directory for this run's artifacts. Defaults to a temp directory; the chosen path is returned as `runDir`."),
@@ -303,6 +314,7 @@ export const EvidenceRunInputSchema = z.object({
   storagePolicy: StoragePolicySchema.optional(),
   headed: z.boolean().default(false).describe("Run with a visible browser window. NOT supported over MCP (use the CLI); MCP evidence-run is headless."),
   browserChannel: BrowserChannelSchema.optional(),
+  researchIntent: ResearchIntentSchema.optional().describe("Soft intent lock. The farm records decision scope, required evidence shapes, recommended modalities, missing questions, and boundaries without blocking capture."),
   httpFetch: z.boolean().default(false).describe("Tier-0 browserless capture: try a plain HTTP GET first (no Chromium) when the page is server-rendered; falls back to the browser if it declines. No screenshots/frames are produced on the tier-0 path. Default false."),
   captureRouting: z
     .enum(["browser", "auto"])
@@ -537,6 +549,7 @@ export type PressInput = z.input<typeof PressInputSchema>;
 export type SelectOptionInput = z.input<typeof SelectOptionInputSchema>;
 export type ClaimType = z.infer<typeof ClaimTypeSchema>;
 export type EvidenceKind = z.infer<typeof EvidenceKindSchema>;
+export type EvidenceShape = z.infer<typeof EvidenceShapeSchema>;
 export type VerificationLevel = z.infer<typeof VerificationLevelSchema>;
 export type OcrEvidenceMetadata = z.infer<typeof OcrEvidenceMetadataSchema>;
 export type OcrWord = z.infer<typeof OcrWordSchema>;

@@ -607,6 +607,7 @@ export class FarmService {
         family: result.sourceStrategy.sourceFamily
       },
       sourceRegistry: result.assessment.sourceRegistry,
+      intentProfile: result.assessment.intentProfile,
       trendAnalysis: result.assessment.trendAnalysis,
       mediaId: result.platformCapabilities.mediaId,
       claims: result.claims.length,
@@ -617,6 +618,7 @@ export class FarmService {
         capability: result.capabilityRecords.length,
         sourceStrategy: result.sourceStrategyRecords.length,
         sourceRegistry: result.sourceRegistryRecords.length,
+        intentProfile: result.intentProfileRecords.length,
         trendAnalysis: result.trendAnalysisRecords.length,
         page: result.pageCaptureRecords.length,
         frames: result.frameRecords.length,
@@ -672,7 +674,7 @@ function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "text/html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "trend_analysis") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis") {
     return "application/json";
   }
   return "application/octet-stream";
@@ -685,7 +687,7 @@ function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "trend_analysis") {
+  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis") {
     return "json";
   }
   return "bin";

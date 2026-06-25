@@ -59,6 +59,22 @@ evidence, run source/acquisition strategy, and produce a claim-gated report:
    optional `evidenceKind` filter) and re-validate with `farm_run_claim_gate`.
 
 Useful `farm_evidence_run` options:
+- `researchIntent` — a soft intent lock for focused/alpha/trend/price/design
+  work. Provide `decisionNeeded`, `targetScope`, `evidenceShapes`,
+  `successCriteria`, and `boundaries` when the answer depends on what kind of
+  evidence should be captured. The run records an `intent_profile` artifact with
+  inferred modalities, missing questions, assumptions, and recommended capture
+  options; it does not block autonomous capture.
+  - Evidence shapes: `page_text`, `page_html`, `structured_data`,
+    `semi_structured_dom`, `ui_screenshot`, `ocr_image_text`, `video_frames`,
+    `captions_transcript`, `stt_asr`, `tts_detection`, `audio_events`,
+    `map_place_state`, `byte_faithful_byo`.
+  - Ask the user only when the missing intent changes capture modality, source
+    universe, or refusal boundary. Otherwise proceed and label assumptions as
+    provisional.
+  - STT/ASR, TTS detection, music/sound-event analysis, and raw audio claims are
+    not farm-native. Route them to `leesearch-video-heavy` or another lawful
+    heavy/BYO path, then register exact transcript/diagnostic bytes here.
 - `captureRouting: "auto"` — try tier-0 browserless HTTP first, then escalate to
   browser capture when the HTTP path declines. This is the preferred default for
   text-heavy public pages when you do not need an initial screenshot.
@@ -75,6 +91,11 @@ Acquisition behavior to rely on:
 - Every evidence run writes an `acquisition_method_plan` artifact. Supported
   official API readiness is evaluated before browser capture without calling
   provider APIs; live provider calls still require explicit `officialApi.enabled`.
+- Every evidence run writes an `intent_profile` artifact. With no explicit
+  intent, it stays `underspecified` and records provisional assumptions plus the
+  questions an agent should ask before stamping focused alpha/trend/price/design
+  conclusions. With explicit intent, it locks the decision scope softly and
+  maps evidence shapes to capture modalities without reviving selector recipes.
 - Every evidence run writes a `trend_analysis` artifact derived from captured
   page text/title. It extracts deterministic trend signals such as recurring
   terms, recency markers, engagement words, local/commerce/finance indicators,

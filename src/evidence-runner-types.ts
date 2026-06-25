@@ -13,9 +13,10 @@ import type { OcrOptions, OcrWorkerFactory } from "./ocr.js";
 import type { OfficialApiReadinessReport } from "./official-api.js";
 import type { PlatformCapabilityMap } from "./platform-adapters/index.js";
 import type { PublicGatewayAssessment, PublicGatewayCapture } from "./public-gateway-capture.js";
-import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
+import type { ClaimType, EvidenceKind, NormalizedEvidenceRunInput, VerificationLevel } from "./schemas.js";
 import type { SourceRegistryMatch, SourceRegistrySummary } from "./source-registry.js";
 import type { SourceStrategy } from "./source-strategy.js";
+import type { IntentProfileReport } from "./intent-profile.js";
 import type { TrendAnalysisReport } from "./trend-analysis.js";
 
 export interface EvidenceWorkflowOptions {
@@ -35,6 +36,7 @@ export interface EvidenceWorkflowOptions {
   storagePolicy?: StoragePolicy | undefined;
   headed?: boolean | undefined;
   browserChannel?: string | undefined;
+  researchIntent?: NormalizedEvidenceRunInput["researchIntent"] | undefined;
   /** Tier-0 browserless capture: attempt a plain HTTP GET before the browser (A1). No frames. */
   httpFetch?: boolean | undefined;
   /** Capture routing (D2). "auto" tries tier-0 first and escalates to the browser on any decline
@@ -111,6 +113,7 @@ export interface EvidenceWorkflowAssessment {
   acquisitionPlan: AcquisitionMethodPlan;
   runtimeAcquisitionPlan?: AcquisitionMethodPlan;
   sourceRegistry: SourceRegistrySummary;
+  intentProfile: IntentProfileReport;
   browserCaptureRecords: number;
   frameSampling: FrameSamplingAssessment;
   browserOverlayDismissal: BrowserOverlayDismissalReport;
@@ -166,6 +169,7 @@ export interface EvidenceWorkflowResult {
   acquisitionPlanRecords: ArtifactRecord[];
   runtimeAcquisitionPlanRecords: ArtifactRecord[];
   sourceRegistryRecords: ArtifactRecord[];
+  intentProfileRecords: ArtifactRecord[];
   pageCaptureRecords: ArtifactRecord[];
   frameRecords: ArtifactRecord[];
   ocrRecords: ArtifactRecord[];
