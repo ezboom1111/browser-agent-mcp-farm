@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { chromium } from "playwright";
 import { runEvidenceWorkflow } from "../src/evidence-runner.js";
 import type { OcrWorker } from "../src/ocr.js";
-import { profilePaths } from "../src/profile-store.js";
 
 let runDirs: string[] = [];
 
@@ -109,6 +108,8 @@ describe("runEvidenceWorkflow", () => {
       expect(result.claims).toHaveLength(4);
       expect(result.sourceStrategy).toMatchObject({ platform: "generic", sourceFamily: "generic_web" });
       expect(result.sourceStrategyRecords.some((record) => record.evidence_kind === "source_strategy")).toBe(true);
+      expect(result.acquisitionPlan.methods.at(-1)?.key).toBe("universal_byo_capture_registration");
+      expect(result.acquisitionPlanRecords.some((record) => record.evidence_kind === "source_strategy")).toBe(true);
       expect(result.sourceRegistry).toMatchObject({ matchReason: "platform" });
       expect(result.sourceRegistryRecords.some((record) => record.evidence_kind === "source_registry")).toBe(true);
       expect(result.assessment.sourceRegistry).toMatchObject({
@@ -124,6 +125,7 @@ describe("runEvidenceWorkflow", () => {
       const report = await readFile(result.reportPath, "utf8");
       expect(report).toContain("Transcript verified in this run: false");
       expect(report).toContain("Audio verified: false");
+      expect(report).toContain("Acquisition plan:");
       expect(report).toContain("Source registry: platform");
       expect(report).toContain("## Stage Timings");
       expect(report).toContain("browser_page_capture");
@@ -131,6 +133,7 @@ describe("runEvidenceWorkflow", () => {
       const ledger = await readFile(join(runDir, "artifacts.jsonl"), "utf8");
       expect(ledger).toContain('"tool_name":"platform_capabilities"');
       expect(ledger).toContain('"tool_name":"source_registry"');
+      expect(ledger).toContain('"tool_name":"acquisition_method_plan"');
       expect(ledger).toContain('"tool_name":"farm_sample_frames"');
       expect(ledger).toContain('"tool_name":"evidence_run"');
 

@@ -36,6 +36,7 @@ For a new Codex or Claude session, read these files in this order:
 | `docs/PRODUCT_DEVELOPMENT_PLAN.md` | Top-level product plan and scope. | Read when deciding whether a feature belongs in the product, especially source coverage, portal-native navigation, Naver/Google/SNS/platform support, and evidence-first research behavior. |
 | `docs/INFORMATION_SOURCE_TAXONOMY.md` | Information-source category registry: search, social, community, content, news, review, map/local, marketplace, DB, messenger/private, recommendation, AI-agent sources. | Read before changing source coverage, top-slot priorities, locale support, or platform category mapping. |
 | `docs/SOURCE_STRATEGY.md` | Evidence strategy for different source families. | Read before changing source-strategy artifacts, source family decisions, or claim/evidence expectations by platform type. |
+| `docs/ACQUISITION_METHOD_PLANNER.md` | Ordered acquisition-method planning and the Lee-vault KB bridge for reusable method memory, inspired by method-selection tools such as insane-search and bounded by farm provenance rules. | Read before changing acquisition fallback order, external/BYO capture guidance, blocked-source escalation behavior, or `kb-acquisition-bridge`. |
 
 ## Portal Navigation Docs
 

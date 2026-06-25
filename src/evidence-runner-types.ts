@@ -3,6 +3,7 @@
 // live in separate modules. evidence-runner.ts re-exports these, so external importers are
 // unaffected. Type-only module: no runtime code.
 import type { ArtifactRecord, ArtifactWriter } from "./artifact-writer.js";
+import type { AcquisitionMethodPlan } from "./acquisition-method-planner.js";
 import type { BrowserObstructionReport } from "./browser-obstructions.js";
 import type { BrowserOverlayDismissalReport, BrowserPool } from "./browser-pool.js";
 import type { ClaimGateResult } from "./claim-gate.js";
@@ -104,6 +105,7 @@ export interface EvidenceWorkflowAssessment {
   platform: PlatformCapabilityMap["platform"];
   mediaId?: string;
   sourceStrategy: SourceStrategy;
+  acquisitionPlan: AcquisitionMethodPlan;
   sourceRegistry: SourceRegistrySummary;
   browserCaptureRecords: number;
   frameSampling: FrameSamplingAssessment;
@@ -149,9 +151,11 @@ export interface EvidenceWorkflowResult {
   url: string;
   platformCapabilities: PlatformCapabilityMap;
   sourceStrategy: SourceStrategy;
+  acquisitionPlan: AcquisitionMethodPlan;
   sourceRegistry: SourceRegistryMatch;
   capabilityRecords: ArtifactRecord[];
   sourceStrategyRecords: ArtifactRecord[];
+  acquisitionPlanRecords: ArtifactRecord[];
   sourceRegistryRecords: ArtifactRecord[];
   pageCaptureRecords: ArtifactRecord[];
   frameRecords: ArtifactRecord[];

@@ -456,7 +456,10 @@ Read-only tools to inspect and re-verify evidence (no browser):
 
 Cite-or-fail authoring (so the gate covers your own answer, not just runner output):
 
-- `farm_register_evidence` — register the bytes you saw as a hash-verified artifact.
+- `farm_register_evidence` — register the bytes you saw as a hash-verified
+  artifact. Use `text` for citeable UTF-8 text, or `bytesBase64` + `mime` +
+  `format` for byte-faithful BYO captures such as screenshots, HAR, media, or an
+  external bridge output that must not be retyped.
 - `farm_add_claim` — author a claim citing an artifact with an `anchor`; the gate
   rejects a claim whose quoted text is not present in the cited bytes.
 

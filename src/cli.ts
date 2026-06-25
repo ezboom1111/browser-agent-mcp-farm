@@ -8,7 +8,6 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium, type BrowserContext } from "playwright";
-import { ArtifactWriter } from "./artifact-writer.js";
 import { BrowserPool } from "./browser-pool.js";
 import { normalizeEvidenceRunInput } from "./evidence-run-input.js";
 import {
@@ -37,6 +36,7 @@ import { ensureHardenedDir, listProfiles, profilePaths, removeProfile } from "./
 import { encryptStorageStateFileInPlace, storageStateEncryptionEnabled } from "./secret-store.js";
 import { completeNextCritiqueTask, getNextCritiqueTask } from "./critique-runner.js";
 import { describePlatformCapabilities } from "./platform-adapters/index.js";
+import { writeAcquisitionMethodMemoryBridge, type AcquisitionMethodMemoryBridgeInput } from "./acquisition-method-memory-bridge.js";
 import { refreshStaleSkillSnapshot, registerAll, registerClaude, registerCodex, registerCodexSkill, registerCodexSkills, type RegisterOptions } from "./registration.js";
 import { ensureChromiumInstalled } from "./browser-install.js";
 import { describeLens, listLenses } from "./lens.js";
@@ -277,6 +277,11 @@ export async function main(): Promise<void> {
 
   if (command === "destination-recovery-plan") {
     await runDestinationRecoveryPlanCommand();
+    return;
+  }
+
+  if (command === "kb-acquisition-bridge") {
+    await runKbAcquisitionBridgeCommand();
     return;
   }
 
@@ -942,6 +947,77 @@ function destinationRecoveryPlanCheckOptionsFromArgs(): DestinationRecoveryPlanC
   return options;
 }
 
+async function runKbAcquisitionBridgeCommand(): Promise<void> {
+  const runDir = getArgValue("--run-dir");
+  if (runDir === undefined) {
+    throw new Error("kb-acquisition-bridge requires --run-dir <evidence-run-dir>");
+  }
+  const vaultRoot = getArgValue("--vault-root") ?? defaultVaultRoot();
+  if (vaultRoot === undefined) {
+    throw new Error("kb-acquisition-bridge requires --vault-root <vault-root> unless LEE_VAULT_ROOT, LOOP_VAULT_ROOT, or C:\\lee-vault exists");
+  }
+  const bridgeInput: AcquisitionMethodMemoryBridgeInput = {
+    runDir: resolve(runDir),
+    vaultRoot: resolve(vaultRoot),
+    apply: hasFlag("--apply")
+  };
+  const sourceUrl = getArgValue("--url");
+  const merkleRoot = getArgValue("--merkle-root");
+  const methodId = getArgValue("--method-id");
+  const decisionId = getArgValue("--decision-id");
+  const now = getArgValue("--now");
+  if (sourceUrl !== undefined) {
+    bridgeInput.sourceUrl = sourceUrl;
+  }
+  if (merkleRoot !== undefined) {
+    bridgeInput.merkleRoot = merkleRoot;
+  }
+  if (methodId !== undefined) {
+    bridgeInput.methodId = methodId;
+  }
+  if (decisionId !== undefined) {
+    bridgeInput.decisionId = decisionId;
+  }
+  if (now !== undefined) {
+    bridgeInput.now = now;
+  }
+  const result = await writeAcquisitionMethodMemoryBridge(bridgeInput);
+  console.log(
+    JSON.stringify(
+      {
+        ok: result.ok,
+        applied: result.applied,
+        written: result.written,
+        runDir: result.runDir,
+        vaultRoot: result.vaultRoot,
+        methodId: result.methodId,
+        sourceUrl: result.sourceUrl,
+        merkleRoot: result.merkleRoot,
+        acquisitionPlanArtifactId: result.acquisitionPlanArtifactId,
+        obstructionArtifactIds: result.obstructionArtifactIds,
+        notes: result.notes.map((note) => ({
+          kind: note.kind,
+          path: note.path,
+          relativePath: note.relativePath,
+          changed: note.changed
+        })),
+        warnings: result.warnings
+      },
+      null,
+      2
+    )
+  );
+}
+
+function defaultVaultRoot(): string | undefined {
+  const envRoot = process.env.LEE_VAULT_ROOT ?? process.env.LOOP_VAULT_ROOT;
+  if (envRoot !== undefined && envRoot.length > 0) {
+    return envRoot;
+  }
+  const leeVaultAlias = "C:\\lee-vault";
+  return existsSync(leeVaultAlias) ? leeVaultAlias : undefined;
+}
+
 async function runEvidenceRunCommand(): Promise<void> {
   const url = getArgValue("--url");
   if (!url) {
@@ -1387,6 +1463,11 @@ Commands:
           Inspect information-source coverage registry entries and support tiers
   destination-recovery-plan --run-dir <evidence-run-dir> [--format json|check|markdown|commands|setup-commands|retry-commands] [--output-file <path>] [--fail-empty] [--fail-check] [--check-profiles] [--only-check-ok]
           Extract blocked-child recovery advice from destination_triage artifacts
+  kb-acquisition-bridge --run-dir <evidence-run-dir> [--url <source-url>] [--vault-root <path>] [--merkle-root <hex>] [--apply]
+          Bridge an acquisition_method_plan run into Lee-vault method memory:
+          SYSTEM_DNA row, acquisition recipe, frontier ledger, bridge note, and LOG entry.
+          Pass --url for older sealed runs that predate acquisition_method_plan artifacts.
+          Dry-run by default; --apply writes markdown. This is a personal KB bridge, not farm core.
   evidence-run --url <url> [--run-dir <path>] [--timestamps-sec 0,10]
           Capture platform/page/frame evidence, write claims/citations/report, and run final claim gate
   auth-login --profile <name> --url <url> [--wait-ms <n>]

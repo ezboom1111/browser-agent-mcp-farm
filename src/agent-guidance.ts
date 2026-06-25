@@ -20,7 +20,11 @@ export const AGENT_GUIDANCE = {
     "farm_read_report { reportPath } -> read the report.",
     "Optional: farm_list_artifacts / farm_read_artifact (re-hashes on read) / farm_run_claim_gate to inspect and re-verify."
   ],
-  authoring: ["To make your OWN answer cite-or-fail: farm_register_evidence { text, evidenceKind, sourceUrl } -> artifactId,", "then farm_add_claim { claim, artifactId, anchor: { type: 'text_span', quote } } -> the gate REJECTS a claim whose quote is not in the cited bytes."],
+  authoring: [
+    "To make your OWN answer cite-or-fail: farm_register_evidence { text, evidenceKind, sourceUrl } -> artifactId,",
+    "For byte-faithful BYO captures, use farm_register_evidence { bytesBase64, mime, format, evidenceKind, sourceUrl, captureMethod } instead of retyping external bytes as text.",
+    "then farm_add_claim { claim, artifactId, anchor: { type: 'text_span', quote } } -> the gate REJECTS a claim whose quote is not in the cited bytes."
+  ],
   verify: [
     "Inspect a prior run without re-fetching: farm_list_runs -> farm_read_report / farm_list_artifacts / farm_read_artifact (re-hashes on read) / farm_run_claim_gate.",
     "Portable attestation: farm_export_bundle { runDir } -> a Merkle-rooted (optionally Ed25519-signed) manifest; another agent runs farm_verify_bundle to detect any tampered file or manifest, fully offline.",

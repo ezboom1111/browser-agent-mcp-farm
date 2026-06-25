@@ -4,6 +4,7 @@ import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { computeCaptureCacheKey, isEngineResolved, lookupCachedCapture, playwrightPackageVersion, readEngineIdentity, stalenessAgeMs, storeCachedCapture, writeEngineIdentity, type CachedCaptureArtifact, type CaptureCacheProfile } from "./capture-cache.js";
 import { attachTypedFacts, crossCheckStructured, extractStructuredData } from "./structured-extractor.js";
+import { planAcquisitionMethods } from "./acquisition-method-planner.js";
 import { httpTier0Capture } from "./http-tier0-capture.js";
 import { summarizeStageTimings } from "./run-metrics.js";
 import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
@@ -20,7 +21,6 @@ import { describePlatformCapabilities, type PlatformCapabilityMap } from "./plat
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
 import { describeSourceStrategy } from "./source-strategy.js";
-import { detectedTextScriptFamilies, destinationQueryFromUrl, hasDominantTextScriptMismatch, matchingTextTokens, normalizeEvidenceText } from "./evidence-runner-text.js";
 import type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageTiming, FrameSamplingAssessment } from "./evidence-runner-types.js";
 export type {
   EvidenceWorkflowAssessment,
@@ -73,6 +73,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
   const writer = deps.artifactWriter ?? new ArtifactWriter();
   const platformCapabilities = describePlatformCapabilities(options.url);
   const sourceStrategy = describeSourceStrategy(options.url);
+  const acquisitionPlan = planAcquisitionMethods({ url: options.url, allowExternalBridge: false });
   const sourceRegistry = selectSourceRegistryEntriesForUrl(options.url);
   const baseCaptureId = sanitizeFileBase(options.captureId ?? `evidence-${platformCapabilities.platform}-${parsedUrl.hostname}`);
   const common = {
@@ -108,6 +109,23 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
         text: JSON.stringify(sourceStrategy, null, 2),
         captureMethod: "browser-agent-mcp-farm source-strategy",
         toolName: "source_strategy",
+        evidenceKind: "source_strategy"
+      }),
+      options.abortSignal
+    )
+  );
+  throwIfAborted(options.abortSignal);
+
+  const acquisitionPlanRecords = await runStage("acquisition_method_plan_artifact", () =>
+    withAbort(
+      writer.writeCaptureBundle({
+        ...common,
+        pageId: "acquisition-method-plan",
+        captureId: `${baseCaptureId}-acquisition-method-plan`,
+        metadata: { acquisitionPlan },
+        text: JSON.stringify(acquisitionPlan, null, 2),
+        captureMethod: "browser-agent-mcp-farm acquisition-method-plan",
+        toolName: "acquisition_method_plan",
         evidenceKind: "source_strategy"
       }),
       options.abortSignal
@@ -176,6 +194,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     platform: platformCapabilities.platform,
     ...(platformCapabilities.mediaId === undefined ? {} : { mediaId: platformCapabilities.mediaId }),
     sourceStrategy,
+    acquisitionPlan,
     sourceRegistry: summarizeSourceRegistryMatch(sourceRegistry),
     browserCaptureRecords: browserResult.pageCaptureRecords.length,
     frameSampling,
@@ -250,9 +269,11 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     url: options.url,
     platformCapabilities,
     sourceStrategy,
+    acquisitionPlan,
     sourceRegistry,
     capabilityRecords,
     sourceStrategyRecords,
+    acquisitionPlanRecords,
     sourceRegistryRecords,
     pageCaptureRecords: browserResult.pageCaptureRecords,
     frameRecords,
@@ -1403,6 +1424,7 @@ async function writeReport(
     "",
     `- Platform: ${input.assessment.platform}`,
     `- Source strategy: ${input.assessment.sourceStrategy.platform} / ${input.assessment.sourceStrategy.sourceFamily}`,
+    `- Acquisition plan: ${formatAcquisitionPlanSummary(input.assessment.acquisitionPlan)}`,
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,
@@ -1422,6 +1444,12 @@ async function writeReport(
     ""
   ].join("\n");
   await writeFile(path, report, "utf8");
+}
+
+function formatAcquisitionPlanSummary(plan: EvidenceWorkflowAssessment["acquisitionPlan"]): string {
+  const first = plan.methods[0]?.key ?? "none";
+  const last = plan.methods.at(-1)?.key ?? "none";
+  return `${plan.methods.length} methods, first=${first}, last=${last}, decision=${plan.decision}`;
 }
 
 function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): string[] {
