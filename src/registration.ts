@@ -80,7 +80,7 @@ export async function registerCodex(configPath = join(homedir(), ".codex", "conf
   const existing = existsSync(configPath) ? await readFile(configPath, "utf8") : "";
   const backupPath = existsSync(configPath) ? await backupFile(configPath) : undefined;
   const pattern = new RegExp(`\\n?${escapeRegex(CODEX_BEGIN)}[\\s\\S]*?${escapeRegex(CODEX_END)}\\n?`, "m");
-  const next = pattern.test(existing) ? existing.replace(pattern, `\n${block}`) : `${existing.trimEnd()}\n\n${block}`;
+  const next = pattern.test(existing) ? existing.replace(pattern, `\n${block}`) : appendCodexBlock(removeLegacyCodexServerTables(existing), block);
   await writeFile(configPath, next, "utf8");
 
   const registration: RegistrationResult = {
@@ -93,6 +93,39 @@ export async function registerCodex(configPath = join(homedir(), ".codex", "conf
     registration.backupPath = backupPath;
   }
   return registration;
+}
+
+function appendCodexBlock(existing: string, block: string): string {
+  const prefix = existing.trimEnd();
+  return prefix.length === 0 ? block : `${prefix}\n\n${block}`;
+}
+
+function removeLegacyCodexServerTables(content: string): string {
+  const lines = content.split(/\r?\n/);
+  const kept: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!isFarmCodexTableHeader(lines[index]?.trim() ?? "")) {
+      kept.push(lines[index] ?? "");
+      continue;
+    }
+
+    while (index + 1 < lines.length) {
+      const next = lines[index + 1]?.trim() ?? "";
+      if (isTomlTableHeader(next) && !isFarmCodexTableHeader(next)) {
+        break;
+      }
+      index += 1;
+    }
+  }
+  return kept.join("\n");
+}
+
+function isTomlTableHeader(line: string): boolean {
+  return /^\[[^\]]+\]$/.test(line);
+}
+
+function isFarmCodexTableHeader(line: string): boolean {
+  return line === `[mcp_servers.${SERVER_NAME}]` || line.startsWith(`[mcp_servers.${SERVER_NAME}.`);
 }
 
 export async function registerClaude(options: RegisterOptions = {}): Promise<RegistrationResult> {
