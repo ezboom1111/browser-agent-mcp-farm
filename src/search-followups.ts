@@ -49,6 +49,7 @@ export interface SearchFollowupOutcome {
   itemId: string;
   status: SearchFollowupOutcomeStatus;
   sourceUrl: string;
+  finalClaimGate?: boolean;
   childRunDir?: string;
   reportPath?: string;
   ok?: boolean;
@@ -81,6 +82,7 @@ export interface RunSearchFollowupsOptions extends BuildSearchFollowupPlanOption
   waitMs?: number | undefined;
   navigationTimeoutMs?: number | undefined;
   sampleFrames?: boolean | undefined;
+  childFinalClaimGate?: boolean | undefined;
 }
 
 export interface RunSearchFollowupsResult {
@@ -242,12 +244,13 @@ async function executePlanItems(plan: SearchFollowupPlan, options: RunSearchFoll
       continue;
     }
     try {
+      const finalClaimGate = options.childFinalClaimGate ?? false;
       const result = await options.workflowRunner({
         url: item.sourceUrl,
         runDir: item.childRunDir,
         captureId: sanitizeFileBase(`followup-${item.order}-${item.itemId}`),
         sampleFrames: options.sampleFrames ?? item.evidenceShapes.includes("video_frames"),
-        finalClaimGate: false,
+        finalClaimGate,
         waitMs: options.waitMs ?? 800,
         navigationTimeoutMs: options.navigationTimeoutMs ?? 30_000,
         researchIntent: {
@@ -263,6 +266,7 @@ async function executePlanItems(plan: SearchFollowupPlan, options: RunSearchFoll
         itemId: item.itemId,
         status: result.ok ? "executed" : "failed",
         sourceUrl: item.sourceUrl,
+        finalClaimGate,
         childRunDir: result.runDir,
         reportPath: result.reportPath,
         ok: result.ok,

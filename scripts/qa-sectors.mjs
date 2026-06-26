@@ -112,7 +112,7 @@ const FIXTURES = [
     id: "travel",
     sector: "Travel / Hospitality",
     dataClass: "semi-structured",
-    html: page("Hotel Azure", `<h1>Hotel Azure</h1><p>Beachfront hotel rated 4.4/5. Rooms from $230/night.</p>` + jsonld({ "@context": "https://schema.org", "@type": "Hotel", name: "Hotel Azure", aggregateRating: { "@type": "AggregateRating", ratingValue: "4.4" } })),
+    html: page("Hotel Azure", `<h1>Hotel Azure</h1><p>Beachfront hotel rated 4.4/5. Rooms from $230/night.</p>${jsonld({ "@context": "https://schema.org", "@type": "Hotel", name: "Hotel Azure", aggregateRating: { "@type": "AggregateRating", ratingValue: "4.4" } })}`),
     grounded: "rated 4.4/5. Rooms from $230/night",
     fabricated: "offers free private island transfers",
     expectFacts: ["price", "rating"],
@@ -194,7 +194,7 @@ const FIXTURES = [
     id: "crypto",
     sector: "Crypto / Web3",
     dataClass: "structured",
-    html: page("Token stats", `<h1>NOVA token</h1>` + jsonld({ "@context": "https://schema.org", "@type": "Product", name: "NOVA", offers: { "@type": "Offer", price: "3.27", priceCurrency: "USD" } }) + `<p>NOVA trades at $3.27, down 6% on the day, 2026-05-20.</p>`),
+    html: page("Token stats", `<h1>NOVA token</h1>${jsonld({ "@context": "https://schema.org", "@type": "Product", name: "NOVA", offers: { "@type": "Offer", price: "3.27", priceCurrency: "USD" } })}<p>NOVA trades at $3.27, down 6% on the day, 2026-05-20.</p>`),
     grounded: "NOVA trades at $3.27, down 6%",
     fabricated: "NOVA is guaranteed to 100x by Friday",
     expectFacts: ["price", "percentage", "date"],
@@ -258,7 +258,7 @@ async function run() {
     }
     if (id === "adv-contradict") {
       res.writeHead(200, { "content-type": "text/html" });
-      res.end(page("Deal", `<h1>Widget</h1><p>The price shown on the page is $1,299.00 today.</p>` + jsonld({ "@context": "https://schema.org", "@type": "Product", name: "Widget", offers: { "@type": "Offer", price: "999.00", priceCurrency: "USD" } })));
+      res.end(page("Deal", `<h1>Widget</h1><p>The price shown on the page is $1,299.00 today.</p>${jsonld({ "@context": "https://schema.org", "@type": "Product", name: "Widget", offers: { "@type": "Offer", price: "999.00", priceCurrency: "USD" } })}`));
       return;
     }
     if (id === "adv-korean") {
@@ -376,7 +376,7 @@ async function run() {
   const rShell = await httpTier0Capture({ runDir: await advRun(), url: `${base}/adv-shell`, allowedDomains: [host], writer: aw, captureId: "a", contextToken: "q", pageId: "p" });
   adv.checks.push(check("client-rendered shell DECLINED (escalate to browser)", rShell.ok === false));
   // D. Markup that CONTRADICTS the visible text -> crossCheck flags it (don't trust contradictory JSON-LD).
-  const sData = extractStructuredData(`<h1>Widget</h1>` + jsonld({ "@type": "Product", name: "Widget", offers: { "@type": "Offer", price: "999.00", priceCurrency: "USD" } }));
+  const sData = extractStructuredData(`<h1>Widget</h1>${jsonld({ "@type": "Product", name: "Widget", offers: { "@type": "Offer", price: "999.00", priceCurrency: "USD" } })}`);
   const cc = crossCheckStructured(sData, "The price shown on the page is $1,299.00 today.");
   const priceCC = cc.find((c) => c.field === "price.value");
   adv.checks.push(check("contradictory JSON-LD price flagged uncorroborated", priceCC !== undefined && priceCC.corroborated === false, JSON.stringify(cc)));
@@ -443,12 +443,12 @@ async function run() {
   // ---- REPORT ----
   console.log(`\n================ FARM QA/QC — ${results.length} sectors x {structured | semi-structured | unstructured} ================\n`);
   const col = (s, n) => String(s).padEnd(n).slice(0, n);
-  console.log(col("SECTOR", 30) + col("CLASS", 18) + "RESULT");
+  console.log(`${col("SECTOR", 30) + col("CLASS", 18)}RESULT`);
   console.log("-".repeat(72));
   for (const r of results) {
     const failed = r.checks.filter((c) => !c.pass);
     console.log(col(r.fx.sector, 30) + col(r.fx.dataClass, 18) + (r.pass ? "✅ PASS" : `❌ ${failed.map((c) => c.name).join(", ")}`));
-    for (const c of failed) console.log("      ↳ " + c.name + (c.detail ? `: ${c.detail}` : ""));
+    for (const c of failed) console.log(`      ↳ ${c.name}${c.detail ? `: ${c.detail}` : ""}`);
   }
   console.log("\n---- cross-source corroboration ----");
   for (const c of corr.checks) console.log((c.pass ? "✅ " : "❌ ") + c.name + (c.detail ? ` — ${c.detail}` : ""));
@@ -471,7 +471,7 @@ async function run() {
     console.log(`  ${col(dc, 16)} ${rs.filter((r) => r.pass).length}/${rs.length} sectors pass`);
   }
   const allPass = allChecks.every((c) => c.pass);
-  console.log("\nVERDICT: " + (allPass ? `USABLE — data collected across all 3 classes & ${results.length} sectors; every fabricated/near-miss/tampered/contradictory claim was blocked or flagged; SSRF/non-HTML/shell declined; Korean + Japanese + entities work.` : "REVIEW NEEDED — see failures above."));
+  console.log(`\nVERDICT: ${allPass ? `USABLE — data collected across all 3 classes & ${results.length} sectors; every fabricated/near-miss/tampered/contradictory claim was blocked or flagged; SSRF/non-HTML/shell declined; Korean + Japanese + entities work.` : "REVIEW NEEDED — see failures above."}`);
   if (!allPass) {
     process.exitCode = 1; // Tier 4: a regression gate, not just a report.
   }

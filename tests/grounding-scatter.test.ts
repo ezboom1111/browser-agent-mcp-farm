@@ -27,7 +27,7 @@ describe("aggregated-claim scatter warning", () => {
 
   it("warns when aggregated tokens are scattered across unrelated content (no block)", async () => {
     const { service, runDir } = await newRun();
-    const text = "Alpha grew twelve percent last year. " + "filler ".repeat(60) + "Bravo grew forty-seven percent this year.";
+    const text = `Alpha grew twelve percent last year. ${"filler ".repeat(60)}Bravo grew forty-seven percent this year.`;
     const reg = await service.registerEvidence({ runDir, sourceUrl: "https://example.com/r", text, evidenceKind: "page_text" });
     const result = await service.addClaim({
       runDir,

@@ -13,11 +13,11 @@
 | Field | Value |
 | --- | --- |
 | Package | `browser-agent-mcp-farm` v0.7.0 |
-| Commit | `68555b8` |
-| Generated | 2026-06-26T01:32:20.516Z |
+| Commit | `dd91613` |
+| Generated | 2026-06-26T01:41:05.262Z |
 | **Build-completeness** | **9.7/10** (mean of domain gate-wiring; not a quality grade) |
 | Weakest domain | `engineering` (7.5/10) |
-| Coverage (lines) | 78.24% |
+| Coverage (lines) | 78.43% |
 
 | Domain | Score | Gates |
 | --- | --- | --- |
@@ -75,4 +75,4 @@
   - [x] (measured) Full verify gate green
   - [x] (wired) Per-run metrics.json (p50/p95)
   - [x] (wired) Shared src/util helpers
-  - [ ] (measured) Product line coverage ≥ 80% — 78.24%
+  - [ ] (measured) Product line coverage ≥ 80% — 78.43%

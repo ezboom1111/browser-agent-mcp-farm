@@ -1029,7 +1029,8 @@ async function runSearchFollowupsCommand(): Promise<void> {
     maxTotal: optionalNumberArg("--max-total"),
     waitMs: optionalNumberArg("--wait-ms"),
     navigationTimeoutMs: optionalNumberArg("--timeout-ms"),
-    sampleFrames: hasFlag("--frames") ? true : hasFlag("--no-frames") ? false : undefined
+    sampleFrames: hasFlag("--frames") ? true : hasFlag("--no-frames") ? false : undefined,
+    childFinalClaimGate: hasFlag("--child-final-claim-gate")
   });
   console.log(
     JSON.stringify(
@@ -1542,11 +1543,12 @@ Commands:
           SYSTEM_DNA row, acquisition recipe, frontier ledger, bridge note, and LOG entry.
           Pass --url for older sealed runs that predate acquisition_method_plan artifacts.
           Dry-run by default; --apply writes markdown. This is a personal KB bridge, not farm core.
-  search-followups --run-dir <evidence-run-dir> [--max-arms <n>] [--max-candidates <n>] [--max-total <n>] [--execute]
+  search-followups --run-dir <evidence-run-dir> [--max-arms <n>] [--max-candidates <n>] [--max-total <n>] [--execute] [--child-final-claim-gate]
           Build a bounded follow-up queue from search_strategy_plan and candidate_deepening_ledger.
           Default is plan-only and writes search_followup_plan + search_followup_outcome_ledger artifacts.
           --execute runs only the bounded queue sequentially under runDir/search-followups; manual/profile/BYO
-          items are recorded as skipped, not bypassed.
+          items are recorded as skipped, not bypassed. Add --child-final-claim-gate when the child run's
+          generated claims should be final-gated instead of treated as exploratory collection.
   evidence-run --url <url> [--run-dir <path>] [--timestamps-sec 0,10]
           Capture platform/page/frame evidence, write claims/citations/report, and run final claim gate
   auth-login --profile <name> --url <url> [--wait-ms <n>]
