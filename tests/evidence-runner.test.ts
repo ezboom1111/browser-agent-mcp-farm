@@ -251,7 +251,11 @@ describe("runEvidenceWorkflow", () => {
       });
 
       expect(result.searchResultCandidateRecords.some((record) => record.evidence_kind === "search_result_candidates")).toBe(true);
+      expect(result.searchStrategyPlanRecords.some((record) => record.evidence_kind === "search_strategy_plan")).toBe(true);
+      expect(result.candidateDeepeningLedgerRecords.some((record) => record.evidence_kind === "candidate_deepening_ledger")).toBe(true);
       expect(result.assessment.searchResultCandidates.status).toBe("ok");
+      expect(result.assessment.searchStrategyPlan.arms.map((arm) => arm.armId)).toContain("dissent_probe");
+      expect(result.assessment.candidateDeepeningLedger.selectedCount).toBeGreaterThan(0);
       expect(result.assessment.searchResultCandidates.candidates[0]).toMatchObject({
         title: "로라바운스 천호점: 주차 가격 놀이시설 음식 리뷰 (내돈내산)",
         url: `${fixture.baseUrl}/blog/lorabounce-review`
@@ -260,7 +264,10 @@ describe("runEvidenceWorkflow", () => {
       expect(textRecord).toBeDefined();
       const report = JSON.parse(await readFile(join(runDir, textRecord?.path ?? ""), "utf8")) as { candidates?: Array<{ title?: string }> };
       expect(report.candidates?.map((candidate) => candidate.title)).toContain("7살 내돈내산 키즈카페 추천 : 로라바운스 서울 천호점");
-      expect(await readFile(result.reportPath, "utf8")).toContain("Search result candidates: ok, candidates=2");
+      const finalReport = await readFile(result.reportPath, "utf8");
+      expect(finalReport).toContain("Search result candidates: ok, candidates=2");
+      expect(finalReport).toContain("Search strategy plan: ok");
+      expect(finalReport).toContain("Candidate deepening ledger: ok");
     } finally {
       await fixture.close();
     }

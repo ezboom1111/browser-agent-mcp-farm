@@ -610,6 +610,8 @@ export class FarmService {
       intentProfile: result.assessment.intentProfile,
       trendAnalysis: result.assessment.trendAnalysis,
       searchResultCandidates: result.assessment.searchResultCandidates,
+      searchStrategyPlan: result.assessment.searchStrategyPlan,
+      candidateDeepeningLedger: result.assessment.candidateDeepeningLedger,
       mediaId: result.platformCapabilities.mediaId,
       claims: result.claims.length,
       claimGate: result.claimGate,
@@ -622,6 +624,8 @@ export class FarmService {
         intentProfile: result.intentProfileRecords.length,
         trendAnalysis: result.trendAnalysisRecords.length,
         searchResultCandidates: result.searchResultCandidateRecords.length,
+        searchStrategyPlan: result.searchStrategyPlanRecords.length,
+        candidateDeepeningLedger: result.candidateDeepeningLedgerRecords.length,
         page: result.pageCaptureRecords.length,
         frames: result.frameRecords.length,
         ocr: result.ocrRecords.length,
@@ -676,7 +680,17 @@ function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "text/html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis" || evidenceKind === "search_result_candidates") {
+  if (
+    evidenceKind === "metadata" ||
+    evidenceKind === "structured_data" ||
+    evidenceKind === "source_strategy" ||
+    evidenceKind === "source_registry" ||
+    evidenceKind === "intent_profile" ||
+    evidenceKind === "trend_analysis" ||
+    evidenceKind === "search_result_candidates" ||
+    evidenceKind === "search_strategy_plan" ||
+    evidenceKind === "candidate_deepening_ledger"
+  ) {
     return "application/json";
   }
   return "application/octet-stream";
@@ -689,7 +703,17 @@ function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
   if (evidenceKind === "page_html") {
     return "html";
   }
-  if (evidenceKind === "metadata" || evidenceKind === "structured_data" || evidenceKind === "source_strategy" || evidenceKind === "source_registry" || evidenceKind === "intent_profile" || evidenceKind === "trend_analysis" || evidenceKind === "search_result_candidates") {
+  if (
+    evidenceKind === "metadata" ||
+    evidenceKind === "structured_data" ||
+    evidenceKind === "source_strategy" ||
+    evidenceKind === "source_registry" ||
+    evidenceKind === "intent_profile" ||
+    evidenceKind === "trend_analysis" ||
+    evidenceKind === "search_result_candidates" ||
+    evidenceKind === "search_strategy_plan" ||
+    evidenceKind === "candidate_deepening_ledger"
+  ) {
     return "json";
   }
   return "bin";

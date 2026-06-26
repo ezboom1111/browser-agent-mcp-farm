@@ -11,6 +11,7 @@ import { isAbortError, throwIfAborted, withAbort } from "./abort.js";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord, type CaptureBundleInput } from "./artifact-writer.js";
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
 import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.js";
+import { planCandidateDeepeningLedger, type CandidateDeepeningLedger } from "./candidate-deepening-ledger.js";
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
 import type { DestinationVisibleLink } from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
@@ -23,6 +24,7 @@ import { publicGatewayCapture, skippedPublicGatewayCapture, type PublicGatewayCa
 import type { ClaimType, EvidenceKind, VerificationLevel } from "./schemas.js";
 import { selectSourceRegistryEntriesForUrl, summarizeSourceRegistryMatch } from "./source-registry.js";
 import { extractSearchResultCandidates, type SearchResultCandidatesReport } from "./search-result-candidates.js";
+import { planSearchStrategy, type SearchStrategyPlan } from "./search-strategy-planner.js";
 import { describeSourceStrategy } from "./source-strategy.js";
 import { analyzeTrendSignals, type TrendAnalysisReport } from "./trend-analysis.js";
 import type { EvidenceWorkflowAssessment, EvidenceWorkflowClaim, EvidenceWorkflowDeps, EvidenceWorkflowOptions, EvidenceWorkflowResult, EvidenceWorkflowStageTiming, FrameSamplingAssessment } from "./evidence-runner-types.js";
@@ -247,6 +249,35 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     })
   );
 
+  const searchStrategyPlanResult = await runStage("search_strategy_plan", () =>
+    writeSearchStrategyPlanArtifact({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      baseCaptureId,
+      sourceStrategy,
+      intentProfile,
+      trendAnalysis: trendAnalysisResult.report,
+      contextToken: common.contextToken,
+      pageId: "search-strategy-plan",
+      writer,
+      signal: options.abortSignal
+    })
+  );
+
+  const candidateDeepeningLedgerResult = await runStage("candidate_deepening_ledger", () =>
+    writeCandidateDeepeningLedgerArtifact({
+      runDir: options.runDir,
+      sourceUrl: options.url,
+      baseCaptureId,
+      intentProfile,
+      searchResultCandidates: searchResultCandidateResult.report,
+      contextToken: common.contextToken,
+      pageId: "candidate-deepening-ledger",
+      writer,
+      signal: options.abortSignal
+    })
+  );
+
   const obstructionResult = await runStage("browser_obstruction_classification", () =>
     classifyBrowserObstructionArtifacts({
       runDir: options.runDir,
@@ -326,6 +357,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     browserObstructions: obstructionResult.report,
     trendAnalysis: trendAnalysisResult.report,
     searchResultCandidates: searchResultCandidateResult.report,
+    searchStrategyPlan: searchStrategyPlanResult.report,
+    candidateDeepeningLedger: candidateDeepeningLedgerResult.report,
     publicGateway: publicGatewayAssessment(publicGatewayResult),
     officialApiReadiness: officialApiReadiness.report,
     stageTimings,
@@ -418,6 +451,8 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     obstructionRecords: obstructionResult.records,
     trendAnalysisRecords: trendAnalysisResult.records,
     searchResultCandidateRecords: searchResultCandidateResult.records,
+    searchStrategyPlanRecords: searchStrategyPlanResult.records,
+    candidateDeepeningLedgerRecords: candidateDeepeningLedgerResult.records,
     publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     assessment,
@@ -1243,6 +1278,83 @@ async function writeSearchResultCandidatesArtifact(input: {
   return { report, records };
 }
 
+async function writeSearchStrategyPlanArtifact(input: {
+  runDir: string;
+  sourceUrl: string;
+  baseCaptureId: string;
+  sourceStrategy: ReturnType<typeof describeSourceStrategy>;
+  intentProfile: IntentProfileReport;
+  trendAnalysis: TrendAnalysisReport;
+  contextToken: string;
+  pageId: string;
+  writer: ArtifactWriter;
+  signal?: AbortSignal | undefined;
+}): Promise<{ report: SearchStrategyPlan; records: ArtifactRecord[] }> {
+  const report = planSearchStrategy({
+    sourceUrl: input.sourceUrl,
+    sourceStrategy: input.sourceStrategy,
+    intentProfile: input.intentProfile,
+    trendTerms: input.trendAnalysis.topTerms.map((term) => term.term)
+  });
+  const records = await withAbort(
+    input.writer.writeCaptureBundle({
+      runDir: input.runDir,
+      sourceUrl: input.sourceUrl,
+      contextToken: input.contextToken,
+      pageId: input.pageId,
+      captureId: `${input.baseCaptureId}-search-strategy-plan`,
+      status: report.status === "ok" ? "ok" : "partial",
+      metadata: { searchStrategyPlan: report },
+      text: JSON.stringify(report, null, 2),
+      captureMethod: "browser-agent-mcp-farm search-strategy-plan",
+      toolName: "search_strategy_plan",
+      evidenceKind: "search_strategy_plan",
+      note: "deterministic search-arm plan; arms are hypotheses for follow-up captures, not proof of destination content"
+    }),
+    input.signal
+  );
+  return { report, records };
+}
+
+async function writeCandidateDeepeningLedgerArtifact(input: {
+  runDir: string;
+  sourceUrl: string;
+  baseCaptureId: string;
+  intentProfile: IntentProfileReport;
+  searchResultCandidates: SearchResultCandidatesReport;
+  contextToken: string;
+  pageId: string;
+  writer: ArtifactWriter;
+  signal?: AbortSignal | undefined;
+}): Promise<{ report: CandidateDeepeningLedger; records: ArtifactRecord[] }> {
+  const report = planCandidateDeepeningLedger({
+    sourceUrl: input.sourceUrl,
+    intentProfile: input.intentProfile,
+    searchResultCandidates: input.searchResultCandidates
+  });
+  if (report.status === "not_search_surface") {
+    return { report, records: [] };
+  }
+  const records = await withAbort(
+    input.writer.writeCaptureBundle({
+      runDir: input.runDir,
+      sourceUrl: input.sourceUrl,
+      contextToken: input.contextToken,
+      pageId: input.pageId,
+      captureId: `${input.baseCaptureId}-candidate-deepening-ledger`,
+      status: report.status === "ok" ? "ok" : "partial",
+      metadata: { candidateDeepeningLedger: report },
+      text: JSON.stringify(report, null, 2),
+      captureMethod: "browser-agent-mcp-farm candidate-deepening-ledger",
+      toolName: "candidate_deepening_ledger",
+      evidenceKind: "candidate_deepening_ledger",
+      note: "deterministic follow-up queue for search result destinations; cite destination evidence before making destination claims"
+    }),
+    input.signal
+  );
+  return { report, records };
+}
+
 async function pageCaptureTextFromRecords(runDir: string, records: ArtifactRecord[], signal: AbortSignal | undefined): Promise<{ text?: string; html?: string; finalUrl?: string; title?: string; visibleLinks?: DestinationVisibleLink[] }> {
   let text: string | undefined;
   let html: string | undefined;
@@ -1751,6 +1863,8 @@ async function writeReport(
     `- Source registry: ${input.assessment.sourceRegistry.matchReason}, ${input.assessment.sourceRegistry.matchedEntryCount} entries, platforms ${input.assessment.sourceRegistry.platforms.join(", ") || "none"}, categories ${input.assessment.sourceRegistry.categories.join(", ") || "none"}, support tier ${input.assessment.sourceRegistry.minSupportTier ?? "none"}-${input.assessment.sourceRegistry.maxSupportTier ?? "none"}, top slots ${input.assessment.sourceRegistry.topSlotCount}`,
     `- Trend analysis: ${formatTrendAnalysisSummary(input.assessment.trendAnalysis)}`,
     `- Search result candidates: ${input.assessment.searchResultCandidates.status}, candidates=${input.assessment.searchResultCandidates.candidates.length}`,
+    `- Search strategy plan: ${formatSearchStrategyPlanSummary(input.assessment.searchStrategyPlan)}`,
+    `- Candidate deepening ledger: ${formatCandidateDeepeningLedgerSummary(input.assessment.candidateDeepeningLedger)}`,
     `- Media ID: ${input.assessment.mediaId ?? "unknown"}`,
     `- Browser capture records: ${input.assessment.browserCaptureRecords}`,
     `- Frame sampling: ${input.assessment.frameSampling.status}`,
@@ -1797,6 +1911,22 @@ function formatTrendAnalysisSummary(report: TrendAnalysisReport): string {
     .join(", ");
   const signalGroups = Array.from(new Set(report.signals.map((signal) => signal.kind))).join(", ") || "none";
   return `${report.status}, ${report.summary}, top_terms=${topTerms || "none"}, signal_groups=${signalGroups}`;
+}
+
+function formatSearchStrategyPlanSummary(report: SearchStrategyPlan): string {
+  const firstArms = report.arms
+    .slice(0, 5)
+    .map((arm) => `${arm.armId}:${arm.status}`)
+    .join(", ");
+  return `${report.status}, base_query=${report.baseQuery || "none"}, arms=${report.arms.length}${firstArms.length === 0 ? "" : ` (${firstArms})`}`;
+}
+
+function formatCandidateDeepeningLedgerSummary(report: CandidateDeepeningLedger): string {
+  const selected = report.decisions
+    .filter((decision) => decision.selected)
+    .map((decision) => `${decision.candidateRank}:${decision.priority}`)
+    .join(", ");
+  return `${report.status}, selected=${report.selectedCount}/${report.budget.candidateCount}${selected.length === 0 ? "" : ` (${selected})`}`;
 }
 
 function denseSamplingReportLines(frameSampling: FrameSamplingAssessment): string[] {

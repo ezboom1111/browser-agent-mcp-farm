@@ -89,6 +89,20 @@ is an index over witnessed bytes, not a factual claim by itself; cite the
 original `page_text`/`page_screenshot`/`ocr_text` artifacts for load-bearing
 claims.
 
+Every run now also writes a `search_strategy_plan` artifact. It turns the
+captured URL, soft intent, and trend terms into explicit search arms such as
+current surface, Naver VIEW/image, Google cross-check, official-source probe,
+community review, video/social leads, and dissent probe. These arms are
+hypotheses with risk, success metric, and failure mode fields; they are not a
+maintained per-platform scraping harness.
+
+When search candidates exist, the run writes a `candidate_deepening_ledger`
+artifact. It scores each candidate by query fit, review/detail intent, visual or
+OCR evidence availability, source type, promotion risk, and membership/login
+wall risk. The ledger selects a small follow-up queue and records the next
+action (`open_destination_capture`, `manual_profile_or_byo`, or skip), so agents
+can deepen deliberately instead of blindly opening every result.
+
 ## Intent / Modality Soft Lock
 
 `src/intent-profile.ts` is the companion wiring for the user's "what exactly

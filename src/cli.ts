@@ -1118,6 +1118,8 @@ async function runEvidenceRunCommand(): Promise<void> {
         intentProfile: result.assessment.intentProfile,
         trendAnalysis: result.assessment.trendAnalysis,
         searchResultCandidates: result.assessment.searchResultCandidates,
+        searchStrategyPlan: result.assessment.searchStrategyPlan,
+        candidateDeepeningLedger: result.assessment.candidateDeepeningLedger,
         mediaId: result.platformCapabilities.mediaId,
         claims: result.claims.length,
         claimGate: result.claimGate,
@@ -1131,6 +1133,8 @@ async function runEvidenceRunCommand(): Promise<void> {
           intentProfile: result.intentProfileRecords.length,
           trendAnalysis: result.trendAnalysisRecords.length,
           searchResultCandidates: result.searchResultCandidateRecords.length,
+          searchStrategyPlan: result.searchStrategyPlanRecords.length,
+          candidateDeepeningLedger: result.candidateDeepeningLedgerRecords.length,
           overlayDismissal: result.overlayDismissalRecords.length,
           obstruction: result.obstructionRecords.length
         }

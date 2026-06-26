@@ -16,8 +16,10 @@ import type { PublicGatewayAssessment, PublicGatewayCapture } from "./public-gat
 import type { ClaimType, EvidenceKind, NormalizedEvidenceRunInput, VerificationLevel } from "./schemas.js";
 import type { SourceRegistryMatch, SourceRegistrySummary } from "./source-registry.js";
 import type { SourceStrategy } from "./source-strategy.js";
+import type { CandidateDeepeningLedger } from "./candidate-deepening-ledger.js";
 import type { IntentProfileReport } from "./intent-profile.js";
 import type { SearchResultCandidatesReport } from "./search-result-candidates.js";
+import type { SearchStrategyPlan } from "./search-strategy-planner.js";
 import type { TrendAnalysisReport } from "./trend-analysis.js";
 
 export interface EvidenceWorkflowOptions {
@@ -121,6 +123,8 @@ export interface EvidenceWorkflowAssessment {
   browserObstructions: BrowserObstructionReport;
   trendAnalysis: TrendAnalysisReport;
   searchResultCandidates: SearchResultCandidatesReport;
+  searchStrategyPlan: SearchStrategyPlan;
+  candidateDeepeningLedger: CandidateDeepeningLedger;
   publicGateway: PublicGatewayAssessment;
   officialApiReadiness: OfficialApiReadinessReport;
   stageTimings: EvidenceWorkflowStageTiming[];
@@ -182,6 +186,8 @@ export interface EvidenceWorkflowResult {
   obstructionRecords: ArtifactRecord[];
   trendAnalysisRecords: ArtifactRecord[];
   searchResultCandidateRecords: ArtifactRecord[];
+  searchStrategyPlanRecords: ArtifactRecord[];
+  candidateDeepeningLedgerRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   assessment: EvidenceWorkflowAssessment;

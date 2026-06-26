@@ -110,6 +110,16 @@ Acquisition behavior to rely on:
   signals, and whether a page screenshot exists for UI/thumbnail grounding. It is
   a lead index; cite the original `page_text`, `page_screenshot`, destination
   page, or `ocr_text` for load-bearing claims.
+- Every evidence run writes a `search_strategy_plan` artifact. It converts the
+  current URL, intent profile, and trend terms into explicit search arms (current
+  surface, portal-specific review/image arms, cross-check, official-source,
+  community/video leads, dissent probe) with risk, success metric, and failure
+  mode. Treat these arms as hypotheses, not a hardcoded scraping harness.
+- Search-result surfaces with candidates also write a
+  `candidate_deepening_ledger` artifact. It scores candidates by query fit,
+  review/detail intent, screenshot/OCR usefulness, source type, promotion risk,
+  and login/member-wall risk, then recommends a small follow-up queue such as
+  `open_destination_capture` or `manual_profile_or_byo`.
 - If browser-visible obstruction is detected, the run writes an
   `acquisition_method_runtime_plan` artifact from the obstruction signal.
 - For non-terminal public-page failures such as app interstitial or unavailable
