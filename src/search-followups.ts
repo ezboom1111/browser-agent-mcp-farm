@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord } from "./artifact-writer.js";
 import type { CandidateDeepeningDecision, CandidateDeepeningLedger } from "./candidate-deepening-ledger.js";
 import type { EvidenceWorkflowOptions, EvidenceWorkflowResult } from "./evidence-runner-types.js";
@@ -141,10 +141,10 @@ export async function buildSearchFollowupPlan(options: BuildSearchFollowupPlanOp
 
 export async function runSearchFollowups(options: RunSearchFollowupsOptions): Promise<RunSearchFollowupsResult> {
   const runDir = resolve(options.runDir);
-  const plan = await buildSearchFollowupPlan(options);
+  const captureNonce = randomUUID();
+  const plan = options.execute === true ? withExecutionChildRunDirs(await buildSearchFollowupPlan(options), captureNonce) : await buildSearchFollowupPlan(options);
   const writer = new ArtifactWriter();
   const parentSourceUrl = plan.items[0]?.sourceUrl ?? "https://example.com/";
-  const captureNonce = randomUUID();
   const planRecords = await writer.writeCaptureBundle({
     runDir,
     sourceUrl: parentSourceUrl,
@@ -194,6 +194,20 @@ export async function runSearchFollowups(options: RunSearchFollowupsOptions): Pr
     outcomeLedger,
     planRecords,
     outcomeRecords
+  };
+}
+
+function withExecutionChildRunDirs(plan: SearchFollowupPlan, nonce: string): SearchFollowupPlan {
+  if (plan.items.length === 0) {
+    return plan;
+  }
+  const executionId = sanitizeOrderlessId(`execution-${nonce}`).slice(0, 48);
+  return {
+    ...plan,
+    items: plan.items.map((item) => ({
+      ...item,
+      childRunDir: join(plan.parentRunDir, "search-followups", executionId, basename(item.childRunDir))
+    }))
   };
 }
 

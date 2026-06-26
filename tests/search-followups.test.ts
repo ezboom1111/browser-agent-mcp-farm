@@ -87,6 +87,23 @@ describe("search followups", () => {
     expect(result.outcomeLedger.outcomes[0]?.childRunDir).toContain("search-followups");
   });
 
+  it("uses fresh child run directories for repeated executions", async () => {
+    const runDir = await makeParentRun();
+    const workflowRunner = vi.fn(async (options: { url: string; runDir: string }) => ({
+      ok: true,
+      runDir: options.runDir,
+      reportPath: join(options.runDir, "reports", "final.md"),
+      url: options.url
+    }));
+
+    const first = await runSearchFollowups({ runDir, execute: true, workflowRunner, maxArms: 1, maxCandidates: 0, maxTotal: 1 });
+    const second = await runSearchFollowups({ runDir, execute: true, workflowRunner, maxArms: 1, maxCandidates: 0, maxTotal: 1 });
+
+    expect(first.outcomeLedger.outcomes[0]?.childRunDir).not.toBe(second.outcomeLedger.outcomes[0]?.childRunDir);
+    expect(first.outcomeLedger.outcomes[0]?.childRunDir).toContain("execution-");
+    expect(second.outcomeLedger.outcomes[0]?.childRunDir).toContain("execution-");
+  });
+
   it("returns a missing-artifacts plan when the parent run has no search planning artifacts", async () => {
     const runDir = await mkdtemp(join(tmpdir(), "farm-search-followups-empty-"));
     runDirs.push(runDir);
