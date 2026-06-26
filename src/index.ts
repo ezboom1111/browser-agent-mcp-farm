@@ -21,6 +21,7 @@ export * from "./frame-sampler.js";
 export { buildOcrTextProfile, OCR_TEXT_SCRIPT_VALUES } from "./ocr-text-profile.js";
 export * from "./official-api.js";
 export * from "./scheduler.js";
+export * from "./search-followups.js";
 export * from "./source-registry.js";
 export * from "./source-strategy.js";
 export * from "./transcript-parser.js";
