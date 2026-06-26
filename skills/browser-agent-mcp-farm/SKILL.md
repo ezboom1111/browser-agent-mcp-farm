@@ -125,7 +125,9 @@ Acquisition behavior to rely on:
   `search_followup_plan` plus `search_followup_outcome_ledger` artifacts. Add
   `--execute` only for an explicit bounded sequential run under
   `<runDir>/search-followups`; manual/profile/BYO items are recorded as skipped,
-  not bypassed.
+  not bypassed. Child runs are exploratory unless `--child-final-claim-gate` is
+  supplied; use that flag when the child run's generated claims are intended as
+  proof rather than collection.
 - If browser-visible obstruction is detected, the run writes an
   `acquisition_method_runtime_plan` artifact from the obstruction signal.
 - For non-terminal public-page failures such as app interstitial or unavailable

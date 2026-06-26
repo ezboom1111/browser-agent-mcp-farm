@@ -7,7 +7,7 @@ import { captureTlsIdentity, tlsBindingEnabled, type TlsConnector } from "../src
 // real default connector against a local TCP server (which fails the handshake -> undefined, covering
 // the error path).
 
-const fakeConnector: TlsConnector = async (host, port) => ({
+const fakeConnector: TlsConnector = async (host, _port) => ({
   cert: { subject: { CN: host }, issuer: { CN: "Test Issuer", O: "Test CA" }, valid_from: "Jan 1 00:00:00 2026 GMT", valid_to: "Jan 1 00:00:00 2027 GMT", fingerprint256: "AA:BB:CC" },
   protocol: "TLSv1.3",
   authorized: true

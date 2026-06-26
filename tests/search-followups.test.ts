@@ -80,6 +80,7 @@ describe("search followups", () => {
     expect(result.outcomeLedger.status).toBe("ok");
     expect(result.outcomeLedger.executedCount).toBe(3);
     expect(result.outcomeLedger.skippedCount).toBe(1);
+    expect(workflowRunner.mock.calls[0]?.[0]).toMatchObject({ finalClaimGate: false });
     expect(result.outcomeLedger.outcomes.find((outcome) => outcome.itemId === "candidate-3")).toMatchObject({
       status: "skipped",
       reason: "manual_profile_or_byo"
@@ -102,6 +103,21 @@ describe("search followups", () => {
     expect(first.outcomeLedger.outcomes[0]?.childRunDir).not.toBe(second.outcomeLedger.outcomes[0]?.childRunDir);
     expect(first.outcomeLedger.outcomes[0]?.childRunDir).toContain("execution-");
     expect(second.outcomeLedger.outcomes[0]?.childRunDir).toContain("execution-");
+  });
+
+  it("can require final claim gates for executed child runs", async () => {
+    const runDir = await makeParentRun();
+    const workflowRunner = vi.fn(async (options: { url: string; runDir: string; finalClaimGate?: boolean }) => ({
+      ok: true,
+      runDir: options.runDir,
+      reportPath: join(options.runDir, "reports", "final.md"),
+      url: options.url
+    }));
+
+    const result = await runSearchFollowups({ runDir, execute: true, workflowRunner, childFinalClaimGate: true, maxArms: 1, maxCandidates: 0, maxTotal: 1 });
+
+    expect(workflowRunner).toHaveBeenCalledWith(expect.objectContaining({ finalClaimGate: true }));
+    expect(result.outcomeLedger.outcomes[0]).toMatchObject({ status: "executed", finalClaimGate: true });
   });
 
   it("returns a missing-artifacts plan when the parent run has no search planning artifacts", async () => {

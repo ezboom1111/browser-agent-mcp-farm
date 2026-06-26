@@ -117,7 +117,10 @@ The default is plan-only. It writes `search_followup_plan` and
 `search_followup_outcome_ledger` artifacts back into the parent run. Add
 `--execute` only when you deliberately want the bounded queue to run
 sequentially under `<runDir>/search-followups`. Deferred/manual/profile/BYO
-items are recorded as skipped; they are not bypassed.
+items are recorded as skipped; they are not bypassed. Child runs are
+exploratory by default. Add `--child-final-claim-gate` when the generated child
+claims should be final-gated for use as proof rather than merely collected as
+follow-up evidence.
 
 ## Intent / Modality Soft Lock
 
