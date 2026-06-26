@@ -23,6 +23,7 @@ import { FarmService } from "./farm-service.js";
 import { LeaseManager } from "./lease-manager.js";
 import { runStdioServer } from "./mcp-server.js";
 import { runEvidenceWorkflow } from "./evidence-runner.js";
+import { runSearchFollowups } from "./search-followups.js";
 import { runClaimGate } from "./claim-gate.js";
 import { buildBundleManifest, exportBundleArchive, signManifest, verifyBundle, verifyBundleArchive, type BundleArchive, type BundleManifest } from "./evidence-bundle.js";
 import { scanRunArtifacts } from "./secret-scan.js";
@@ -282,6 +283,11 @@ export async function main(): Promise<void> {
 
   if (command === "kb-acquisition-bridge") {
     await runKbAcquisitionBridgeCommand();
+    return;
+  }
+
+  if (command === "search-followups") {
+    await runSearchFollowupsCommand();
     return;
   }
 
@@ -1009,6 +1015,44 @@ async function runKbAcquisitionBridgeCommand(): Promise<void> {
   );
 }
 
+async function runSearchFollowupsCommand(): Promise<void> {
+  const runDir = getArgValue("--run-dir");
+  if (runDir === undefined) {
+    throw new Error("search-followups requires --run-dir <evidence-run-dir>");
+  }
+  const result = await runSearchFollowups({
+    runDir: resolve(runDir),
+    execute: hasFlag("--execute"),
+    workflowRunner: runEvidenceWorkflow,
+    maxArms: optionalNumberArg("--max-arms"),
+    maxCandidates: optionalNumberArg("--max-candidates"),
+    maxTotal: optionalNumberArg("--max-total"),
+    waitMs: optionalNumberArg("--wait-ms"),
+    navigationTimeoutMs: optionalNumberArg("--timeout-ms"),
+    sampleFrames: hasFlag("--frames") ? true : hasFlag("--no-frames") ? false : undefined
+  });
+  console.log(
+    JSON.stringify(
+      {
+        ok: result.ok,
+        runDir: resolve(runDir),
+        execute: hasFlag("--execute"),
+        plan: result.plan,
+        outcomeLedger: result.outcomeLedger,
+        artifacts: {
+          searchFollowupPlan: result.planRecords.length,
+          searchFollowupOutcomeLedger: result.outcomeRecords.length
+        }
+      },
+      null,
+      2
+    )
+  );
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
 function defaultVaultRoot(): string | undefined {
   const envRoot = process.env.LEE_VAULT_ROOT ?? process.env.LOOP_VAULT_ROOT;
   if (envRoot !== undefined && envRoot.length > 0) {
@@ -1016,6 +1060,15 @@ function defaultVaultRoot(): string | undefined {
   }
   const leeVaultAlias = "C:\\lee-vault";
   return existsSync(leeVaultAlias) ? leeVaultAlias : undefined;
+}
+
+function optionalNumberArg(name: string): number | undefined {
+  const value = getArgValue(name);
+  if (value === undefined) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 async function runEvidenceRunCommand(): Promise<void> {
@@ -1489,6 +1542,11 @@ Commands:
           SYSTEM_DNA row, acquisition recipe, frontier ledger, bridge note, and LOG entry.
           Pass --url for older sealed runs that predate acquisition_method_plan artifacts.
           Dry-run by default; --apply writes markdown. This is a personal KB bridge, not farm core.
+  search-followups --run-dir <evidence-run-dir> [--max-arms <n>] [--max-candidates <n>] [--max-total <n>] [--execute]
+          Build a bounded follow-up queue from search_strategy_plan and candidate_deepening_ledger.
+          Default is plan-only and writes search_followup_plan + search_followup_outcome_ledger artifacts.
+          --execute runs only the bounded queue sequentially under runDir/search-followups; manual/profile/BYO
+          items are recorded as skipped, not bypassed.
   evidence-run --url <url> [--run-dir <path>] [--timestamps-sec 0,10]
           Capture platform/page/frame evidence, write claims/citations/report, and run final claim gate
   auth-login --profile <name> --url <url> [--wait-ms <n>]

@@ -689,7 +689,9 @@ function mimeForRegisteredBytes(evidenceKind: EvidenceKind): string {
     evidenceKind === "trend_analysis" ||
     evidenceKind === "search_result_candidates" ||
     evidenceKind === "search_strategy_plan" ||
-    evidenceKind === "candidate_deepening_ledger"
+    evidenceKind === "candidate_deepening_ledger" ||
+    evidenceKind === "search_followup_plan" ||
+    evidenceKind === "search_followup_outcome_ledger"
   ) {
     return "application/json";
   }
@@ -712,7 +714,9 @@ function formatForRegisteredBytes(evidenceKind: EvidenceKind): string {
     evidenceKind === "trend_analysis" ||
     evidenceKind === "search_result_candidates" ||
     evidenceKind === "search_strategy_plan" ||
-    evidenceKind === "candidate_deepening_ledger"
+    evidenceKind === "candidate_deepening_ledger" ||
+    evidenceKind === "search_followup_plan" ||
+    evidenceKind === "search_followup_outcome_ledger"
   ) {
     return "json";
   }

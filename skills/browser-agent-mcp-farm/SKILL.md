@@ -120,6 +120,12 @@ Acquisition behavior to rely on:
   review/detail intent, screenshot/OCR usefulness, source type, promotion risk,
   and login/member-wall risk, then recommends a small follow-up queue such as
   `open_destination_capture` or `manual_profile_or_byo`.
+- To deepen a completed search run without creating a broad crawler, use the CLI
+  `search-followups --run-dir <runDir>`. It is plan-only by default and writes
+  `search_followup_plan` plus `search_followup_outcome_ledger` artifacts. Add
+  `--execute` only for an explicit bounded sequential run under
+  `<runDir>/search-followups`; manual/profile/BYO items are recorded as skipped,
+  not bypassed.
 - If browser-visible obstruction is detected, the run writes an
   `acquisition_method_runtime_plan` artifact from the obstruction signal.
 - For non-terminal public-page failures such as app interstitial or unavailable

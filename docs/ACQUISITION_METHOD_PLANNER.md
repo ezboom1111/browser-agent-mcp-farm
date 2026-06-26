@@ -103,6 +103,22 @@ wall risk. The ledger selects a small follow-up queue and records the next
 action (`open_destination_capture`, `manual_profile_or_byo`, or skip), so agents
 can deepen deliberately instead of blindly opening every result.
 
+To close the next loop without turning the farm into a crawler, use the
+`search-followups` CLI on a finished parent run:
+
+```powershell
+node .\dist\cli.js search-followups `
+  --run-dir <parent-evidence-run-dir> `
+  --max-arms 2 `
+  --max-candidates 3
+```
+
+The default is plan-only. It writes `search_followup_plan` and
+`search_followup_outcome_ledger` artifacts back into the parent run. Add
+`--execute` only when you deliberately want the bounded queue to run
+sequentially under `<runDir>/search-followups`. Deferred/manual/profile/BYO
+items are recorded as skipped; they are not bypassed.
+
 ## Intent / Modality Soft Lock
 
 `src/intent-profile.ts` is the companion wiring for the user's "what exactly
