@@ -12,6 +12,7 @@ import { ArtifactWriter, sanitizeFileBase, type ArtifactRecord, type CaptureBund
 import { classifyBrowserObstructions, type BrowserObstructionReport } from "./browser-obstructions.js";
 import { BrowserPool, type BrowserOverlayDismissalReport } from "./browser-pool.js";
 import { planCandidateDeepeningLedger, type CandidateDeepeningLedger } from "./candidate-deepening-ledger.js";
+import { maybeExtractNaverPlaceApolloDestinations } from "./client-state-destinations.js";
 import { runClaimGate, type ClaimGateResult } from "./claim-gate.js";
 import type { DestinationVisibleLink } from "./destination-triage.js";
 import { analyzeSceneChanges, buildDenseTimestampPlan, type DenseSamplingEvent, type DenseSamplingSource, type DenseTimestampPlan, type FrameSampleRunResult, type SceneChangeDetectionDiagnostics, type SceneChangeHit } from "./frame-sampler.js";
@@ -453,6 +454,7 @@ export async function runEvidenceWorkflow(options: EvidenceWorkflowOptions, deps
     searchResultCandidateRecords: searchResultCandidateResult.records,
     searchStrategyPlanRecords: searchStrategyPlanResult.records,
     candidateDeepeningLedgerRecords: candidateDeepeningLedgerResult.records,
+    clientStateDestinationsRecords: browserResult.clientStateDestinationsRecords,
     publicGatewayRecords: publicGatewayResult.records,
     assessmentRecords,
     assessment,
@@ -561,6 +563,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
   ocrRecords: ArtifactRecord[];
   overlayDismissal: BrowserOverlayDismissalReport;
   overlayDismissalRecords: ArtifactRecord[];
+  clientStateDestinationsRecords: ArtifactRecord[];
   frameError?: string;
 }> {
   const leaseManager = input.deps.leaseManager ?? new LeaseManager();
@@ -610,7 +613,8 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
           frameFailureRecords,
           ocrRecords: [],
           overlayDismissal: skippedOverlayDismissalReport("tier-0 http_fetch capture: no browser, overlay dismissal not applicable"),
-          overlayDismissalRecords: []
+          overlayDismissalRecords: [],
+          clientStateDestinationsRecords: []
         };
       }
       // tier-0 declined (non-HTML / off-domain / bot-blocked) -> escalate to the browser path.
@@ -644,7 +648,8 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
           frameFailureRecords,
           ocrRecords: [],
           overlayDismissal: skippedOverlayDismissalReport("C4 cached_capture replay: no browser, overlay dismissal not applicable"),
-          overlayDismissalRecords: []
+          overlayDismissalRecords: [],
+          clientStateDestinationsRecords: []
         };
       }
     }
@@ -928,6 +933,44 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
     } catch {
       // structured extraction is best-effort; never fail the run for it
     }
+
+    // naver_place_apollo client-state destination mining (best-effort, never fails the run). Only
+    // engaged when the captured HTML shows Apollo hydration AND the requested host is a known Naver
+    // map/place surface: readClientState re-queries the STILL-OPEN page (before the context below is
+    // released) for window.__APOLLO_STATE__ per frame, and extractClientStateDestinationCandidates
+    // mines it for place-entry destination URLs.
+    const clientStateDestinationsRecords: ArtifactRecord[] = [];
+    try {
+      const htmlRecordForApollo = capture.records.find((record) => record.evidence_kind === "page_html" && typeof record.path === "string");
+      const htmlForApollo = htmlRecordForApollo?.path === undefined ? undefined : await readFile(join(input.options.runDir, htmlRecordForApollo.path), "utf8");
+      const extraction =
+        htmlForApollo === undefined
+          ? undefined
+          : await maybeExtractNaverPlaceApolloDestinations({
+              html: htmlForApollo,
+              hostname: input.parsedUrl.hostname,
+              readClientState: () => pool.readClientState(agentId, lease.contextToken, page.pageId, "__APOLLO_STATE__")
+            });
+      if (extraction !== undefined) {
+        const records = await input.writer.writeCaptureBundle({
+          runDir: input.options.runDir,
+          sourceUrl: input.options.url,
+          contextToken: lease.contextToken,
+          pageId: page.pageId,
+          captureId: `${input.baseCaptureId}-client-state-destinations`,
+          metadata: { clientStateDestinations: extraction },
+          text: JSON.stringify(extraction, null, 2),
+          captureMethod: "browser-agent-mcp-farm client-state-destinations (naver_place_apollo)",
+          toolName: "client_state_destinations",
+          evidenceKind: "client_state_destinations",
+          note: "deterministic destination candidates mined from the captured page's __APOLLO_STATE__ client state; cite original page_text/page_screenshot for load-bearing claims"
+        });
+        clientStateDestinationsRecords.push(...records);
+      }
+    } catch {
+      // client-state destination extraction is best-effort; never fail the run for it
+    }
+
     await pool.releaseContext(agentId, lease.contextToken).catch(() => undefined);
     released = true;
     return {
@@ -938,6 +981,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       ocrRecords,
       overlayDismissal,
       overlayDismissalRecords,
+      clientStateDestinationsRecords,
       ...(frameError === undefined ? {} : { frameError })
     };
   } catch (error) {
@@ -963,6 +1007,7 @@ async function captureBrowserEvidence(input: { options: EvidenceWorkflowOptions;
       ocrRecords: [],
       overlayDismissal: failedOverlayDismissalReport("page capture did not reach overlay dismissal"),
       overlayDismissalRecords: [],
+      clientStateDestinationsRecords: [],
       frameError: message
     };
   } finally {

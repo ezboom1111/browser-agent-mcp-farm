@@ -1,6 +1,6 @@
 {
   "name": "browser-agent-mcp-farm",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": false,
   "type": "module",
   "description": "Local browser research farm (MCP server) with a cite-or-fail verification floor: every cited claim must re-match hash-registered bytes, exported as tamper-evident, offline-re-verifiable evidence bundles.",

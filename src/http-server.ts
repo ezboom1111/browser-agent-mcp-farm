@@ -5,6 +5,13 @@ import type { EvidenceRunInput } from "./schemas.js";
 
 export interface HttpServerOptions {
   scheduler?: EvidenceRunScheduler;
+  /**
+   * Shared-secret bearer token. When set, every request must carry a matching
+   * `Authorization: Bearer <token>` header or the server responds 401 before any
+   * route logic runs. When unset, the daemon is unauthenticated (only safe on loopback —
+   * see the non-loopback bind guard in cli.ts's serve-http command).
+   */
+  authToken?: string;
 }
 
 const JSON_BODY_LIMIT_BYTES = 1_000_000;
@@ -12,8 +19,13 @@ const SCHEDULED_STATUS_VALUES: ScheduledEvidenceRunStatus[] = ["queued", "runnin
 
 export function createHttpServer(options: HttpServerOptions = {}): Server {
   const scheduler = options.scheduler ?? new EvidenceRunScheduler(1);
+  const authToken = options.authToken;
   return createServer(async (request, response) => {
     try {
+      if (authToken !== undefined && !isAuthorized(request, authToken)) {
+        writeJson(response, 401, { ok: false, error: "unauthorized: missing or invalid Authorization: Bearer <token> header" });
+        return;
+      }
       await routeRequest(request, response, scheduler);
     } catch (error) {
       const statusCode = error instanceof HttpRequestError ? error.statusCode : 500;
@@ -163,6 +175,15 @@ function nonNegativeInteger(value: unknown, field: string): number {
 
 function isScheduledStatus(status: string): status is ScheduledEvidenceRunStatus {
   return SCHEDULED_STATUS_VALUES.includes(status as ScheduledEvidenceRunStatus);
+}
+
+function isAuthorized(request: IncomingMessage, token: string): boolean {
+  const header = request.headers.authorization;
+  if (typeof header !== "string") {
+    return false;
+  }
+  const match = /^Bearer (.+)$/.exec(header);
+  return match !== null && match[1] === token;
 }
 
 class HttpRequestError extends Error {

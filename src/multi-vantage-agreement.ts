@@ -5,7 +5,7 @@
 // strong signal the bytes are not viewer-specific; DISAGREEMENT is the valuable flag the single capture
 // would have missed. This module is the pure comparison core: given the per-vantage captures, it decides
 // agreed / split / insufficient. The browser orchestration that actually fans the url across proxied
-// leases lives separately (multi-vantage-capture.ts) so this stays deterministic and trivially testable.
+// leases lives separately so this stays deterministic and trivially testable.
 //
 // HONESTY (deliberate, no theater): agreement proves CONSISTENCY ACROSS VANTAGES, not TRUTH. It rules out
 // per-viewer divergence (cloaking/geo/one-hop MITM), but N vantages that all reach an origin serving the

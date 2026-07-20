@@ -6,6 +6,61 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-20
+
+### Added
+
+- **HTTP daemon shared-secret auth**: `serve-http` (and `createHttpServer`) now accept a bearer
+  token via `--token` or the `FARM_HTTP_TOKEN` env var (`--token` wins when both are set). When a
+  token is configured, every request must carry a matching `Authorization: Bearer <token>` header
+  or the daemon responds 401 before any route logic runs. Starting `serve-http` on a non-loopback
+  `--host` (anything other than `127.0.0.1` / `localhost` / `::1`) without a token is now refused
+  at startup with a clear error — loopback-only remains the sole case where an unauthenticated
+  daemon is acceptable.
+- **`claim-gate --strict-provenance` CLI flag**: wires the existing `strictProvenance` gate option
+  (already available to MCP callers via `farm_run_claim_gate`) through to the CLI, turning an
+  agent-authored (self-asserted) `structured_data` citation from a warning into a hard error.
+- **`naver_place_apollo` client-state destination mining wired into the runtime capture pipeline**:
+  when a captured page's HTML shows an `__APOLLO_STATE__` hydration hint and the requested host is
+  a known Naver map/place surface (`map.naver.com` / `m.place.naver.com` / `pcmap.place.naver.com`),
+  the still-open browser page is re-queried for `window.__APOLLO_STATE__` and mined for place-entry
+  destination candidates, registered as a new `client_state_destinations` artifact (same
+  run-artifact pattern as `search_result_candidates` / `candidate_deepening_ledger`). The gate +
+  extraction logic (`maybeExtractNaverPlaceApolloDestinations`) is dependency-injected so it is
+  unit-testable without a live browser.
+- **Search strategy pipeline**: `search_strategy_plan` and `candidate_deepening_ledger` artifacts
+  round out `search_result_candidates` into a full plan → candidates → deepening-queue chain
+  (`candidate-deepening-ledger.ts`).
+- **Bounded search follow-up execution** (`search-followups.ts`): executes a capped number of
+  follow-up captures from a deepening ledger, later hardened with additional QA and tightened
+  proof-gate requirements (destination-provenance citation chain enforcement in the claim gate).
+- **Naver trend signal analysis** and a **soft research intent profile** feed into the search
+  strategy plan and OCR-language/routing defaults.
+- **Legal public gateway capture** with a **Wayback Machine public-gateway fallback**
+  (`public-gateway-capture.ts`), engaged by obstruction-driven acquisition replanning when the
+  browser path is blocked.
+- **Acquisition method KB bridge** — acquisition method plans get a persisted knowledge-base
+  memory bridge; the acquisition engine path is documented in the farm skill.
+
+### Changed
+
+- **Official API readiness check now runs before browser capture** in the evidence-run pipeline,
+  so official-API eligibility is known ahead of (and can short-circuit) the browser path.
+- Codex MCP registration now avoids writing a duplicate entry.
+
+### Fixed
+
+- `hono` transitive dependency vulnerability patched; `package-lock.json` reconciled for `npm ci`.
+
+### Removed
+
+- **Dead modules deleted** (verified unreferenced from `src/cli.ts` / `src/index.ts`, and not
+  wired into `scripts/generate-scorecard.mjs`'s status checks): `src/evidence-runner-text.ts`,
+  `src/multi-vantage-capture.ts`, `src/util/text.ts`, and their dedicated test files. (Note:
+  `src/structured-benchmark.ts` and `structured-benchmark-thresholds.json` were considered for the
+  same cleanup but kept — `scripts/generate-scorecard.mjs` reads both to compute the
+  `benchmark_scorer` / `ci_threshold_gate` scorecard entries, a genuine non-test consumer.)
+
 ## [0.7.0] — 2026-06-10
 
 ### Added

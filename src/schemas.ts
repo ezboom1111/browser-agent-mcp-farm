@@ -40,6 +40,7 @@ export const EvidenceKindSchema = z.enum([
   "source_navigation_action",
   "source_navigation_followup",
   "destination_candidate",
+  "client_state_destinations",
   "destination_triage",
   "destination_deepening_proposal",
   "destination_deepening_run",

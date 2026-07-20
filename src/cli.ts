@@ -489,8 +489,17 @@ async function runHttpServerCommand(): Promise<void> {
   const host = getArgValue("--host") ?? "127.0.0.1";
   const concurrency = parsePositiveIntegerArg("--concurrency", 1);
   const maxTerminalJobs = parseNonNegativeIntegerArg("--max-terminal-jobs", 500);
+  // --token takes precedence over FARM_HTTP_TOKEN so a one-off invocation can override the
+  // ambient env. Unauthenticated binds are refused on any non-loopback host below — loopback-only
+  // (the default) is the sole case where running without a shared secret is acceptable.
+  const token = nonEmpty(getArgValue("--token")) ?? nonEmpty(process.env.FARM_HTTP_TOKEN);
+  if (token === undefined && !isLoopbackHost(host)) {
+    console.error(`Refusing to start serve-http on non-loopback host '${host}' without an auth token. Set --token <secret> or FARM_HTTP_TOKEN, or bind to 127.0.0.1/localhost/::1.`);
+    process.exitCode = 1;
+    return;
+  }
   const scheduler = new EvidenceRunScheduler({ concurrency, maxTerminalJobs });
-  const server = createHttpServer({ scheduler });
+  const server = createHttpServer(token === undefined ? { scheduler } : { scheduler, authToken: token });
   try {
     await new Promise<void>((resolvePromise, rejectPromise) => {
       const onError = (error: NodeJS.ErrnoException): void => rejectPromise(error);
@@ -1189,6 +1198,7 @@ async function runEvidenceRunCommand(): Promise<void> {
           searchResultCandidates: result.searchResultCandidateRecords.length,
           searchStrategyPlan: result.searchStrategyPlanRecords.length,
           candidateDeepeningLedger: result.candidateDeepeningLedgerRecords.length,
+          clientStateDestinations: result.clientStateDestinationsRecords.length,
           overlayDismissal: result.overlayDismissalRecords.length,
           obstruction: result.obstructionRecords.length
         }
@@ -1214,8 +1224,13 @@ async function runClaimGateCommand(): Promise<void> {
   if (minClaims !== undefined && (!Number.isInteger(minClaims) || minClaims < 0)) {
     throw new Error("claim-gate --min-claims must be a non-negative integer");
   }
+  const strictProvenance = hasFlag("--strict-provenance");
 
-  const result = await runClaimGate(runDir, minClaims === undefined ? { mode } : { mode, minClaims });
+  const result = await runClaimGate(runDir, {
+    mode,
+    ...(minClaims === undefined ? {} : { minClaims }),
+    ...(strictProvenance ? { strictProvenance: true } : {})
+  });
 
   // Opt-in: append this verdict to a tamper-evident, hash-chained decision log.
   const decisionLog = getArgValue("--decision-log");
@@ -1486,8 +1501,10 @@ function printHelp(): void {
 
 Commands:
   serve   Start the MCP stdio server
-  serve-http [--host 127.0.0.1] [--port 9876] [--concurrency 1] [--max-terminal-jobs 500]
-          Start a local HTTP server with /health, /evidence-run, and /jobs endpoints
+  serve-http [--host 127.0.0.1] [--port 9876] [--concurrency 1] [--max-terminal-jobs 500] [--token <secret>]
+          Start a local HTTP server with /health, /evidence-run, and /jobs endpoints.
+          --token (or FARM_HTTP_TOKEN env, --token wins) requires Authorization: Bearer <token> on every
+          request; binding a non-loopback --host without a token is refused.
   smoke   Capture three local fixture pages in isolated contexts
   smoke-web
           Capture three public pages with strict timeout and JSON report
@@ -1495,9 +1512,10 @@ Commands:
           Verify first-class media artifact capture with a local fixture
   smoke-proxy
           Verify lease-level proxy routing through a local proxy fixture
-  claim-gate --run-dir <path> [--mode smoke|final] [--min-claims <n>] [--decision-log <path>]
+  claim-gate --run-dir <path> [--mode smoke|final] [--min-claims <n>] [--decision-log <path>] [--strict-provenance]
           Fail when claims cite missing or unregistered artifacts; optionally append the
-          verdict to a tamper-evident hash-chained decision log
+          verdict to a tamper-evident hash-chained decision log. --strict-provenance turns an
+          agent-authored (self-asserted) structured_data citation into a hard error instead of a warning.
   verify-decision-log --log-file <decisions.jsonl>
           Verify the hash chain of a gate-verdict decision log (exit 1 if broken/tampered)
   verify-timestamp-log --log-file <transparency-log.ndjson>
@@ -1792,6 +1810,17 @@ function parseNonNegativeIntegerArg(name: string, fallback: number): number {
     throw new Error(`${name} must be a non-negative integer`);
   }
   return value;
+}
+
+function nonEmpty(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
+}
+
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
+
+function isLoopbackHost(host: string): boolean {
+  return LOOPBACK_HOSTS.has(host.trim().toLowerCase());
 }
 
 function splitCommaArg(value: string): string[] {
