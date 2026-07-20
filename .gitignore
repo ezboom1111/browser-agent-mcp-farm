@@ -9,3 +9,6 @@ tmp/
 
 # npm pack output
 *.tgz
+
+# research output bundles never belong in the tool repo (2026-07-20 audit)
+research/
