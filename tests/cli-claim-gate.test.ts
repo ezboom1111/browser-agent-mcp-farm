@@ -2,6 +2,7 @@ import { appendFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { FarmService } from "../src/farm-service.js";
 import { makeRun, runCli, trackTempDirs } from "./helpers/cli-harness.js";
 
 const { dirs, cleanup } = trackTempDirs();
@@ -92,6 +93,43 @@ describe("cli claim-gate command", () => {
     expect(out).toContain('"ok": true');
     expect(out).toContain("no claims were present for claim-gate validation");
     expect(exitCode).toBeFalsy();
+  });
+
+  it("--strict-provenance turns an agent-authored structured_data citation from a warning into a hard error", async () => {
+    const runDir = await makeRun(dirs);
+    const service = new FarmService();
+    const reg = await service.registerEvidence({
+      runDir,
+      sourceUrl: "https://api.example.org/v1/stats",
+      text: '{"viewCount": "658078"}',
+      evidenceKind: "structured_data"
+    });
+    const artifactId = reg.artifactId as string;
+    await appendFile(
+      join(runDir, "claims.jsonl"),
+      `${JSON.stringify({
+        schema_version: "1.0",
+        claim_id: "structured-1",
+        claim_type: "metadata",
+        claim: "A typed figure read from structured data.",
+        artifact_id: artifactId,
+        evidence: artifactId,
+        evidence_kind: "structured_data",
+        verification_level: "structured",
+        anchor: { type: "text_span", quote: '"viewCount": "658078"' }
+      })}\n`
+    );
+    await appendFile(join(runDir, "citations.jsonl"), `${JSON.stringify({ claim_id: "structured-1", evidence: artifactId, artifact_id: artifactId, evidence_kind: "structured_data" })}\n`);
+
+    const warnOnly = await runCli(["claim-gate", "--run-dir", runDir, "--mode", "final"]);
+    expect(warnOnly.out).toContain('"ok": true');
+    expect(warnOnly.out).toContain("agent-authored");
+    expect(warnOnly.exitCode).toBeFalsy();
+
+    const strict = await runCli(["claim-gate", "--run-dir", runDir, "--mode", "final", "--strict-provenance"]);
+    expect(strict.out).toContain('"ok": false');
+    expect(strict.out).toContain("agent-authored");
+    expect(strict.exitCode).toBe(1);
   });
 
   it("--decision-log appends a hash-chained verdict that verify-decision-log accepts", async () => {

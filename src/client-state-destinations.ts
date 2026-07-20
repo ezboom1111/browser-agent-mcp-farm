@@ -3,6 +3,13 @@ import type { DestinationUrlResolutionMethod } from "./destination-url.js";
 
 export type ClientStateDestinationExtractor = "naver_place_apollo";
 
+const NAVER_PLACE_APOLLO_HOSTS = new Set(["map.naver.com", "m.place.naver.com", "pcmap.place.naver.com"]);
+
+/** True when a hostname is one of the Naver map/place surfaces that hydrate place data into `window.__APOLLO_STATE__`. */
+export function isNaverPlaceApolloHost(host: string): boolean {
+  return NAVER_PLACE_APOLLO_HOSTS.has(host.toLowerCase());
+}
+
 export interface ClientStateDestinationCandidate {
   url: string;
   originalUrl?: string | undefined;
@@ -20,6 +27,27 @@ export interface ClientStateDestinationExtractionResult {
   truncatedFrameCount: number;
   rawCandidateCount: number;
   uniqueCandidateCount: number;
+}
+
+/**
+ * Gate + extract for the runtime capture pipeline (evidence-runner.ts). Engages ONLY when the
+ * already-captured page_html shows an `__APOLLO_STATE__` hydration hint AND the requested host is a
+ * known Naver map/place surface — `readClientState` (a live re-query of the still-open page) is the
+ * caller's responsibility and is intentionally injected here so this gate is unit-testable without a
+ * live browser. Returns undefined when the gate does not open or no candidates were found, so the
+ * caller never registers an empty/irrelevant artifact.
+ */
+export async function maybeExtractNaverPlaceApolloDestinations(input: { html: string; hostname: string; maxLinks?: number; destinationPath?: string | undefined; readClientState: () => Promise<BrowserClientStateResult> }): Promise<ClientStateDestinationExtractionResult | undefined> {
+  if (!input.html.includes("__APOLLO_STATE__") || !isNaverPlaceApolloHost(input.hostname)) {
+    return undefined;
+  }
+  const state = await input.readClientState();
+  const extraction = extractClientStateDestinationCandidates(state, {
+    extractor: "naver_place_apollo",
+    maxLinks: input.maxLinks ?? 20,
+    destinationPath: input.destinationPath
+  });
+  return extraction.candidates.length > 0 ? extraction : undefined;
 }
 
 export function extractClientStateDestinationCandidates(

@@ -94,7 +94,6 @@ browser path can still record the weaker `securityDetails` provenance if needed.
 | Tier-0 https transport (same-socket cert) | `src/http-tier0-capture.ts` (`acquireViaHttps` / `httpsOneShot`) |
 | Transparency log + TSA seam | `src/timestamp-anchor.ts` |
 | Agreement core (pure) | `src/multi-vantage-agreement.ts` |
-| Multi-vantage orchestrator | `src/multi-vantage-capture.ts` |
 
 The more aggressive **origin-binding** line (proving captured bytes came from
 origin X to a capturer-distrusting third party) is a separate design whose

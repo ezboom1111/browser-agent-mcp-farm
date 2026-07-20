@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { BrowserClientStateFrame, BrowserClientStateResult } from "../src/browser-pool.js";
-import { extractClientStateDestinationCandidates } from "../src/client-state-destinations.js";
+import { extractClientStateDestinationCandidates, maybeExtractNaverPlaceApolloDestinations } from "../src/client-state-destinations.js";
 
 function frame(json: unknown, overrides: Partial<BrowserClientStateFrame> = {}): BrowserClientStateFrame {
   return {
@@ -82,5 +82,43 @@ describe("extractClientStateDestinationCandidates", () => {
     const capped = extractClientStateDestinationCandidates(stateOf([frame(placeApollo("6000001", "P1")), frame(placeApollo("6000002", "P2")), frame(placeApollo("6000003", "P3"))]), { ...opts, maxLinks: 2 });
     expect(capped.uniqueCandidateCount).toBe(3);
     expect(capped.candidates).toHaveLength(2);
+  });
+});
+
+// The runtime capture pipeline (evidence-runner.ts) wiring: a gate that only re-queries the live
+// page (readClientState, injected here so this is testable without a browser) when the ALREADY
+// CAPTURED page_html shows an __APOLLO_STATE__ hint and the requested host is a known Naver
+// map/place surface.
+describe("maybeExtractNaverPlaceApolloDestinations (runtime pipeline gate)", () => {
+  const htmlWithApollo = '<html><script>window.__APOLLO_STATE__ = {"ROOT_QUERY": {}}</script></html>';
+  const htmlWithoutApollo = "<html><body>no hydration here</body></html>";
+
+  it("does not re-query the live page for a non-Naver host, even with the hydration hint present", async () => {
+    const readClientState = vi.fn(async (): Promise<BrowserClientStateResult> => stateOf([frame(placeApollo("1234567", "Should Not Run"))]));
+    const result = await maybeExtractNaverPlaceApolloDestinations({ html: htmlWithApollo, hostname: "example.com", readClientState });
+    expect(result).toBeUndefined();
+    expect(readClientState).not.toHaveBeenCalled();
+  });
+
+  it("does not re-query the live page on a Naver host when the captured HTML has no __APOLLO_STATE__ hint", async () => {
+    const readClientState = vi.fn(async (): Promise<BrowserClientStateResult> => stateOf([frame(placeApollo("1234567", "Should Not Run"))]));
+    const result = await maybeExtractNaverPlaceApolloDestinations({ html: htmlWithoutApollo, hostname: "m.place.naver.com", readClientState });
+    expect(result).toBeUndefined();
+    expect(readClientState).not.toHaveBeenCalled();
+  });
+
+  it("re-queries the live page and returns candidates when both the hint and the host match", async () => {
+    const readClientState = vi.fn(async (): Promise<BrowserClientStateResult> => stateOf([frame(placeApollo("1234567", "호텔 아주레", { category: "호텔", roadAddress: "해변로 12" }))]));
+    const result = await maybeExtractNaverPlaceApolloDestinations({ html: htmlWithApollo, hostname: "map.naver.com", readClientState });
+    expect(readClientState).toHaveBeenCalledTimes(1);
+    expect(result?.candidates).toHaveLength(1);
+    expect(result?.candidates[0]?.sourceId).toBe("1234567");
+  });
+
+  it("returns undefined when the gate opens but no candidates are found (no artifact should be registered)", async () => {
+    const readClientState = vi.fn(async (): Promise<BrowserClientStateResult> => stateOf([frame({ ROOT: { id: "7654321", name: "No Place Signal" } })]));
+    const result = await maybeExtractNaverPlaceApolloDestinations({ html: htmlWithApollo, hostname: "pcmap.place.naver.com", readClientState });
+    expect(readClientState).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
   });
 });

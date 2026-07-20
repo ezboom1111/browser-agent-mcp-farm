@@ -188,6 +188,7 @@ export interface EvidenceWorkflowResult {
   searchResultCandidateRecords: ArtifactRecord[];
   searchStrategyPlanRecords: ArtifactRecord[];
   candidateDeepeningLedgerRecords: ArtifactRecord[];
+  clientStateDestinationsRecords: ArtifactRecord[];
   publicGatewayRecords: ArtifactRecord[];
   assessmentRecords: ArtifactRecord[];
   assessment: EvidenceWorkflowAssessment;

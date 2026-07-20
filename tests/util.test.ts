@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { unique, uniqueSorted, uniqueNonEmpty } from "../src/util/collections.js";
 import { safeUrl } from "../src/util/url.js";
-import { stripBom } from "../src/util/text.js";
 
 describe("util/collections", () => {
   it("unique dedupes preserving first-seen order", () => {
@@ -25,15 +24,5 @@ describe("util/url", () => {
 
   it("returns undefined for malformed input", () => {
     expect(safeUrl("not a url")).toBeUndefined();
-  });
-});
-
-describe("util/text", () => {
-  it("strips a leading BOM", () => {
-    expect(stripBom("﻿hello")).toBe("hello");
-  });
-
-  it("leaves BOM-less text unchanged", () => {
-    expect(stripBom("hello")).toBe("hello");
   });
 });

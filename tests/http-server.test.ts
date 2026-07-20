@@ -144,6 +144,35 @@ describe("createHttpServer", () => {
     }
   });
 
+  it("requires a matching bearer token when authToken is configured", async () => {
+    const server = createHttpServer({ authToken: "secret-token" });
+    servers.push(server);
+    const baseUrl = await listen(server);
+
+    const noHeader = await fetch(`${baseUrl}/health`);
+    expect(noHeader.status).toBe(401);
+    await expect(noHeader.json()).resolves.toMatchObject({ ok: false });
+
+    const wrongToken = await fetch(`${baseUrl}/health`, { headers: { authorization: "Bearer wrong-token" } });
+    expect(wrongToken.status).toBe(401);
+
+    const malformedHeader = await fetch(`${baseUrl}/health`, { headers: { authorization: "secret-token" } });
+    expect(malformedHeader.status).toBe(401);
+
+    const authorized = await fetch(`${baseUrl}/health`, { headers: { authorization: "Bearer secret-token" } });
+    expect(authorized.status).toBe(200);
+    await expect(authorized.json()).resolves.toMatchObject({ ok: true, service: "browser-agent-mcp-farm" });
+  });
+
+  it("allows unauthenticated requests when no authToken is configured (default)", async () => {
+    const server = createHttpServer();
+    servers.push(server);
+    const baseUrl = await listen(server);
+
+    const health = await fetch(`${baseUrl}/health`);
+    expect(health.status).toBe(200);
+  });
+
   it("rejects invalid HTTP queue filters and prune inputs with client errors", async () => {
     const server = createHttpServer();
     servers.push(server);
