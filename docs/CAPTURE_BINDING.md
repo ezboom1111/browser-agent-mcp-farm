@@ -23,7 +23,7 @@ byte-for-byte unchanged.
 | **Server TLS identity** (separate handshake) | `FARM_BIND_TLS=1` → `metadata.serverTlsIdentity` | The cert a *second* probe to the final host presented (cert pin, MITM/issuer change, expiry detection). | That the cert was on the *same* connection that delivered the bytes — a second probe can hit a different edge node or a rotated cert. |
 | **Same-connection TLS binding** | `FARM_BIND_TLS_SAMECONN=1` → `metadata.sameConnectionTls` | The cert presented on the **exact socket** that delivered the bytes (no second handshake). Tier-0 (`node:https`) only. | A server *signature over the bytes*. A terminating proxy/CDN holding the session keys is still trusted; TLS is transport provenance, not a payload signature. |
 | **Bundle transparency log** (ordering anchor) | `export-bundle --anchor-log <f>`; `verify-timestamp-log` | The **relative order** of anchored bundle Merkle roots, and that the log was not edited after the fact (hash-chained, tamper-evident). | **Absolute wall-clock time** — the `at` field is the untrusted local clock. Ordering ≠ timestamping. |
-| **Multi-vantage agreement** | `FARM_ENABLE_MULTI_VANTAGE=1` → `multi_vantage_agreement` artifact | **Consistency across N independent egress points** — flags cloaking / geo-fencing / A-B / price discrimination / one-hop MITM that a single capture records silently. | **Truth.** N vantages reaching an origin that serves everyone the same content (true or false) still agree. Browser path only (see deferred). |
+| **Multi-vantage comparison core** | `src/multi-vantage-agreement.ts` (library + tests; no runtime capture orchestrator) | For captures explicitly supplied by a caller, computes whether content agrees across named vantage points. | **Truth, independent egress, or a shipped multi-vantage capture path.** The v0.8.0 runtime does not create those captures. |
 
 The two-layer model still holds: a **deterministic floor** (hash + span
 citation) plus a **caged ceiling** (the LLM judge proposes; the gate verifies
@@ -58,20 +58,15 @@ would be false assurance. The intended wiring delegates to vetted crypto
 
 Until wired, every anchor is honestly labeled `ordering`.
 
-### 2. Tier-0 (browserless) per-vantage proxy egress
+### 2. Runtime multi-vantage capture
 
-Multi-vantage capture is **browser-path only**. The tier-0 browserless transport
-(global `fetch`, i.e. undici) cannot route through a per-vantage proxy without a
-`ProxyAgent`, and **`undici` is not importable** in this runtime
-(`MODULE_NOT_FOUND`) — global fetch is undici, but the module is not exposed.
-Adding it would mean a **fourth runtime dependency** (currently only
-`@modelcontextprotocol/sdk`, `playwright`, `zod`).
-
-**Why deferred:** the three-dependency budget is a deliberate supply-chain
-constraint. The browser path already gives real per-egress rendering through a
-proxied Playwright context (`LeaseManager.acquire({ proxy })`), which is also the
-*stronger* signal (it sees what a real browser at that egress sees). Tier-0
-multi-vantage would only add a faster, weaker variant.
+Runtime multi-vantage orchestration is **not shipped** in v0.8.0. The former
+orchestrator was removed with the selector stack; only the pure agreement core
+and its tests remain. A future implementation would need to prove that its
+vantage points are independently configured, define credential/proxy handling,
+and record each underlying capture as normal evidence before emitting an
+agreement derivative. Until then, do not describe the comparison helper as a
+live multi-egress capture feature.
 
 ### 3. Browser-path TLS fingerprint
 

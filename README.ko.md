@@ -21,6 +21,19 @@ DevTools MCP, 브라우저 확장형 에이전트들이 이미 웹을 잘 구동
 봤다고 말했다"가 "여기 바이트가 있고, 해시가 있고, 그 안에 인용문이 있으며,
 나를 믿지 않고도 재검증할 수 있는 번들이 있다"로 바뀝니다.
 
+## 30초 코드 검토 경로
+
+| 검토 질문 | 먼저 볼 곳 |
+| --- | --- |
+| 만들어낸 인용문이 실제로 실패하는가? | [`src/claim-gate.ts`](src/claim-gate.ts), [`tests/claim-gate.test.ts`](tests/claim-gate.test.ts) |
+| 두 번째 에이전트가 인수인계를 오프라인 검증할 수 있는가? | [`src/evidence-bundle.ts`](src/evidence-bundle.ts), [`tests/evidence-exchange.test.ts`](tests/evidence-exchange.test.ts) |
+| 브라우저 행동이 제한되는가? | [`src/browser-pool.ts`](src/browser-pool.ts), [`src/lease-manager.ts`](src/lease-manager.ts)와 테스트 |
+| 한계를 숨기지 않았는가? | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md), [`SECURITY.md`](SECURITY.md) |
+| 같은 결과를 재현할 수 있는가? | `npm ci && npm run verify`; Ubuntu/Windows, Node 22/24에서 같은 게이트 실행 |
+
+개인 프로젝트이므로 공개 근거는 팀 규모나 운영 사용을 과장하는 문구가 아니라,
+구현 코드·적대적 fixture·생성된 상태 문서·재현 가능한 CI입니다.
+
 ## 왜 필요한가
 
 에이전트는 브라우징한 뒤 단정합니다. 그 출력이 실제 의사결정·문서·분쟁에

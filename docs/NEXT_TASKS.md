@@ -2076,7 +2076,7 @@ official-API real-account checks, npm publish) follows below.
   verdicts, and explicit depth-2 deepening exist, but default-autonomous
   search-to-source traversal still depends on provider-maintained selectors,
   repeated calibration, and QA. A new design note was saved at
-  `C:\Users\이지범\.gstack\projects\browser-agent-mcp-farm\codex-main-design-20260527-133637.md`.
+  `C:\Users\<user>\.gstack\projects\browser-agent-mcp-farm\codex-main-design-20260527-133637.md`.
 - Extended the top/middle/lower development docs with the natural deepening
   product requirement: Google/Naver-style portal surfaces are parent evidence,
   news/blog/official/map/review/community/commerce/media links are candidate
