@@ -19,6 +19,20 @@ and consented in-browser agents already drive the web well. The farm is the
 few claims here, so "the model said it saw it" becomes "here are the bytes, the
 hash, the quote inside them, and a bundle you can re-check without trusting me."
 
+## 30-second code review
+
+| Review question | Start here |
+| --- | --- |
+| Does a fabricated quote fail? | [`src/claim-gate.ts`](src/claim-gate.ts) and [`tests/claim-gate.test.ts`](tests/claim-gate.test.ts) |
+| Can another agent verify the hand-off offline? | [`src/evidence-bundle.ts`](src/evidence-bundle.ts) and [`tests/evidence-exchange.test.ts`](tests/evidence-exchange.test.ts) |
+| Are browser actions bounded? | [`src/browser-pool.ts`](src/browser-pool.ts), [`src/lease-manager.ts`](src/lease-manager.ts), and their tests |
+| Are the limits explicit? | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) and [`SECURITY.md`](SECURITY.md) |
+| Is the repository reproducibly green? | `npm ci && npm run verify`; the same gate runs on Ubuntu/Windows and Node 22/24 |
+
+The project was built as a solo engineering system, so the public evidence is
+the implementation, adversarial fixtures, generated status, and reproducible CI
+rather than claims of team-scale production usage.
+
 ## Why
 
 Agents browse, then assert. When the output feeds a real decision, document, or

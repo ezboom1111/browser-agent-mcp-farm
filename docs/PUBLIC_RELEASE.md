@@ -90,14 +90,12 @@ devDependencies(biome, vitest, typescript 등)는 배포물에 포함되지 않�
       0.6.1/0.7.0 게시됨 ③"Node 24+" vs engines `>=22` 모순 ④사내용 GStack 섹션
       ⑤런타임 경로가 0.8.0에서 삭제된 multi-vantage 언급 — 전부 해소.
 - [ ] `NOTICE`, `SECURITY.md`, `docs/PUBLIC_RELEASE.md`(이 문서) 커밋.
-- [ ] 문서 부패 정리(공개 전 권장, 차단은 아님):
-  - `AGENTS.md` — 로컬 머신 경로(`C:\Users\이지범\...`)·설정 백업 파일명·보조
-    이메일 노출 + 0.7.0에서 삭제된 source-navigation 모듈 9종이 "Main Modules"에
-    잔존. 공개 전 스크럽 권장.
-  - `docs/CAPTURE_BINDING.md` — multi-vantage가 "Shipped"로 표기되어 있으나
-    0.8.0에서 런타임 오케스트레이터(`multi-vantage-capture.ts`) 삭제로 실행 경로
-    없음(비교 코어 라이브러리+테스트만 잔존). 상태 표기 정정 필요.
-  - `docs/ARCHITECTURE.md` — Intelligence 레이어에 `source-navigation*` 잔존 표기.
+- [x] 공개 문서 부패 정리:
+  - `AGENTS.md`에서 머신별 경로·백업 파일명·삭제된 런타임 모듈 설명 제거.
+  - `docs/CAPTURE_BINDING.md`에서 multi-vantage를 비교 코어(런타임 오케스트레이터
+    없음)로 정정.
+  - `docs/ARCHITECTURE.md`와 `docs/DOCUMENTATION_MAP.md`에서 제거된
+    source-navigation 스택을 현행 기능처럼 안내하던 부분 정정.
 - [ ] GitHub repo description + topics 설정 (현재 비어 있음):
       `gh repo edit --description "..." --add-topic mcp --add-topic evidence --add-topic browser-automation --add-topic playwright --add-topic provenance`
 - [ ] 미푸시 커밋 push (`1054bf6` gitignore, `cb1b70d` 0.8.0 + 이번 수정들).
