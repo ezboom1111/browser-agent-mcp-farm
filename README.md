@@ -2,498 +2,127 @@
 
 [![CI](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml)
 [![qa (anti-hallucination fuzz)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml)
+[![npm](https://img.shields.io/npm/v/browser-agent-mcp-farm.svg)](https://www.npmjs.com/package/browser-agent-mcp-farm)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
-Local browser research farm exposed as an MCP stdio server — a **verification
-floor** for agent web research: it captures what the browser actually saw and
-**fails any cited claim that doesn't re-match hash-registered bytes**
-(cite-or-fail), then exports tamper-evident bundles a second agent re-verifies
-offline. It proves your citations are grounded in the captured bytes — **not**
-that the page equals live-origin truth (see
-[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)).
+> 한국어 README: [README.ko.md](./README.ko.md)
 
-> **Removed (2026-06-10): the source-navigation selector/calibration subsystem.**
-> Per-site selector recipes, their calibration loops, and promotion machinery were excised —
-> model vision + consented-browser capture solved the problem they were built for, and selector
-> recipes rot permanently. The deterministic core (hash registration, cite-or-fail claim gate,
-> caged judge, Merkle bundles, acquisition-tier routing) is unaffected; destination triage and
-> tier routing survive as libraries. Plan + what was kept:
-> [`docs/SELECTOR_STACK_EXCISION.md`](docs/SELECTOR_STACK_EXCISION.md); the selector-era README
-> is archived at `docs/archive/README-selector-era.md`.
+**Tamper-evident web evidence for AI agents.** An MCP server (plus CLI) that
+captures what the browser actually saw, SHA-256-registers every artifact, and
+**fails any cited claim that doesn't re-match the registered bytes**
+(cite-or-fail) — then exports a Merkle-rooted, optionally Ed25519-signed bundle
+that a second agent re-verifies **fully offline**.
 
-## Install & 60-second Quickstart
+This is **not another browser driver.** Playwright MCP, Chrome DevTools MCP,
+and consented in-browser agents already drive the web well. The farm is the
+**verification layer beside them**: gather anywhere, then seal the load-bearing
+few claims here, so "the model said it saw it" becomes "here are the bytes, the
+hash, the quote inside them, and a bundle you can re-check without trusting me."
 
-Requirements: Node 24+. Install dependencies and the Chromium browser once:
+## Why
 
-```powershell
+Agents browse, then assert. When the output feeds a real decision, document, or
+dispute, three failure modes matter:
+
+1. **Hallucinated citations** — the quoted page never said that.
+2. **Silent tampering** — the saved evidence changed after capture.
+3. **Unverifiable hand-offs** — a second agent (or a human reviewer) has no way
+   to re-check the first agent's evidence without redoing the work.
+
+The farm closes these with a deterministic floor: every artifact is
+hash-registered at capture; a claim must cite a registered, typed artifact and
+(for anchored claims) its quoted `text_span` must actually exist in the cited
+bytes; the run **fails** on uncited or misquoted claims; the exported bundle is
+re-verified at export time and again, offline, by whoever receives it.
+
+Adjacent tools solve adjacent problems: C2PA / Content Credentials signs media
+assets at creation; WACZ / signed web archives seal page archives; zkTLS /
+TLSNotary proves TLS sessions. The farm sits in the gap those leave —
+**claim-level, agent-integrated (MCP), locally verifiable web evidence** — and
+is designed to interoperate with them rather than replace them.
+
+## What it proves — and what it doesn't
+
+This project treats its own limits as a feature. The short version
+(full detail: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)):
+
+| | Proves | Does NOT prove |
+| --- | --- | --- |
+| **Claim gate** | Every registered artifact's bytes still match their recorded SHA-256 (re-hashed at gate time); every final claim cites a registered, typed artifact; an anchored claim's quote is present in the cited bytes | That the captured bytes faithfully represent the live page (a malicious *producer* could register fabricated bytes); that an un-anchored claim is true; anything about free-text prose outside the ledger |
+| **Evidence bundle** | Offline: every manifest artifact present and hash-matching; Merkle root recomputes; with a public key, the root was signed by the matching private-key holder | That the sealed bytes are a faithful record of the live web — the signature attests *who sealed*, not *what was true* |
+
+Read a green gate as *"this evidence is internally consistent, byte-stable, and
+the claims are grounded in it"* — never as *"this answer is true."* For truth,
+corroborate the highest-stakes numbers across independent sources; for
+origin-binding (proving bytes came from the origin server), see the opt-in
+capture-binding tiers below and their honest limits.
+
+## Install & 60-second quickstart
+
+Requires Node.js **22+** (CI tests 22 and 24). Chromium is auto-installed on
+first `serve` if missing (opt out with `FARM_SKIP_BROWSER_AUTOINSTALL=1`).
+
+**From npm (recommended):** register a portable `npx`-resolved invocation with
+Claude Code and/or Codex — the host config carries no build path, and upgrades
+flow through the package manager:
+
+```sh
+npx -y browser-agent-mcp-farm@latest register-all --npx
+# or pin / use a scope:  ... register-all --npx --package-spec browser-agent-mcp-farm@0.8.0
+```
+
+**From a clone (development):**
+
+```sh
 npm ci
 npx playwright install --with-deps chromium
 npm run build
+node ./dist/cli.js register-all        # registers the absolute path of this build
 ```
 
-Team onboarding shortcut (from a cloned repo): `./install.ps1` (Windows) or
-`sh install.sh` (macOS/Linux) runs the steps above and `register-all` in one go.
-After registration, `serve` auto-installs Chromium on first run if it is missing
-(opt out with `FARM_SKIP_BROWSER_AUTOINSTALL=1`).
+(`./install.ps1` on Windows or `sh install.sh` on macOS/Linux runs those steps
+plus `register-all` in one go, with timestamped config backups.)
 
-Register the MCP server **and** the Claude skill with Codex and Claude, then
-restart your agent:
+Restart your agent, then verify: `claude mcp get browser-agent-mcp-farm`. The
+tools appear as `mcp__browser-agent-mcp-farm__farm_*`.
 
-```powershell
-node ./dist/cli.js register-all
-```
+Run one auditable, claim-gated capture from the CLI:
 
-This registers an absolute path to your local build (the right choice for a
-git-clone dev install). When the farm is distributed as a published npm package,
-register a portable, package-manager-upgradable invocation instead — the host
-config then carries no build directory and upgrades flow through the package
-manager (no path re-register):
-
-```powershell
-node ./dist/cli.js register-all --npx
-# or pin / use a private scope:  --npx --package-spec @your-org/browser-agent-mcp-farm@1.2.3
-```
-
-Because the Claude skill is installed as a copy, `serve` self-heals a stale skill
-snapshot after an upgrade (re-copies it when the installed version marker differs
-from the running package). Re-run `register-all` after an upgrade to also refresh
-the Codex guidance block.
-
-Run one auditable, claim-gated evidence capture from the CLI:
-
-```powershell
+```sh
 node ./dist/cli.js evidence-run --url https://example.com/ --no-frames --wait-ms 0 --timeout-ms 10000
 ```
 
-From an agent, call the MCP tool `mcp__browser-agent-mcp-farm__farm_evidence_run`
-with `{ "url": "https://example.com/" }`, then read the result with
-`farm_read_report` using the returned `reportPath`. The full agent workflow is in
-[`skills/browser-agent-mcp-farm/SKILL.md`](skills/browser-agent-mcp-farm/SKILL.md).
+From an agent, call `farm_evidence_run` with `{ "url": "https://example.com/" }`,
+then `farm_read_report` with the returned `reportPath`. The full agent playbook
+lives in [`skills/browser-agent-mcp-farm/SKILL.md`](skills/browser-agent-mcp-farm/SKILL.md)
+(installed for Claude automatically by `register-all`; the copy self-heals on
+`serve` after upgrades).
 
-Run the quality gate (build, typecheck, dependency-boundary guard, browser
-guard, tests + coverage, smokes, audit, STATUS):
+## The core loop: cite-or-fail
 
-```powershell
-npm run verify
+The strongest way to use the farm is as a **verification layer over research
+you gathered any way you like**:
+
+```text
+1. capture / register bytes      farm_evidence_run { url }                    (farm captures)
+                                 farm_register_evidence { text | bytesBase64 } (you captured — BYO)
+2. author claims against them    farm_add_claim { claim, artifactId,
+                                                  anchor: { type: "text_span", quote } }
+3. gate                          farm_run_claim_gate { strictProvenance: true }
+                                 → a claim whose quote is NOT in the cited bytes FAILS the run
+4. seal                          farm_export_bundle { runDir }  (auto-verifies before shipping)
+5. hand off                      farm_verify_bundle — anyone re-checks offline
 ```
 
-Build/test status is tracked in [`STATUS.md`](STATUS.md) (generated by the gate).
-
-## Scope
-
-This package implements the local capture-and-verify slice:
-
-- Playwright BrowserContext per lease
-- lease ownership, TTL, heartbeat, max page, and domain checks
-- read-only page open/capture
-- read-write browser actions except payment-like pages
-- storage-state and persistent-profile modes
-- profile lock to prevent concurrent writes to the same saved login state
-- proxy and fingerprint options per lease
-- artifact bundle writer with hashes, including image-like media artifacts and media indexes
-- structured transcript artifacts parsed from legitimately captured WebVTT files
-- MCP stdio server wrapper
-- MCP `farm_evidence_run` workflow tool
-- Codex and Claude MCP auto-registration
-- wait, selector wait, scroll, and capture-after-idle tools
-- timestamped browser-visible frame sampling for media elements
-- typed evidence kinds, claim types, and verification levels
-- final claim-gate checks for visual frame, transcript cue, and audio transcription evidence
-- optional OCR pass over sampled frames with timestamp, language, confidence,
-  word-box, script, and price-like text-profile metadata when `tesseract.js` is
-  installed
-- dense frame sampling windows around browser-exposed transcript cue hits, OCR
-  text hits, and browser-visible scene-change hits, with typed per-source
-  diagnostics in run assessments
-- explicit-credential official API metadata attempts and per-run API cache artifacts
-- source strategy classification for search, map, blog, portal/news, travel
-  booking, commerce, video/social, and generic web sources
-- source coverage registry for category/locale/top-slot planning, including
-  explicit ko-KR, en-US, ja-JP search, and global representative slots, support
-  tiers, AI derivative evidence, and private-network capture policy
-- (removed 2026-06-10) the per-site source-navigation selector/recipe/calibration
-  subsystem: selector recipes rot, and a consented browser + model vision reads
-  portal pages without them. The selector-era scope chronicle is preserved in
-  `docs/archive/README-selector-era.md`; the excision plan and what was kept
-  (destination triage + acquisition-tier routing as libraries) in
-  `docs/SELECTOR_STACK_EXCISION.md`.
-- browser-visible obstruction classification for login walls, app interstitials,
-  bot blocks, region gates, age gates, and unavailable media pages
-- cautious browser overlay dismissal before evidence capture for ordinary
-  close/not-now/reject/necessary-only surfaces, without clicking login, CAPTCHA,
-  age-gate, payment, or app-open actions
-- local HTTP queue for evidence-run jobs
-- package metadata and GitHub Actions verification workflow
-- unit and smoke tests
-
-Out of scope:
-
-- payment actions
-- DRM bypass or raw platform video download
-- production remote multi-user server
-- published npm distribution
-
-## Commands
-
-```powershell
-npm ci
-npm test
-npm run test:ocr-integration
-npm run test:official-api
-npm run build
-npm run verify
-node .\dist\cli.js serve
-node .\dist\cli.js serve-http --port 3333
-node .\dist\cli.js smoke
-node .\dist\cli.js smoke-web --timeout-ms 10000
-node .\dist\cli.js smoke-media
-node .\dist\cli.js smoke-proxy
-node .\dist\cli.js claim-gate --run-dir <path> --mode final --min-claims 1
-node .\dist\cli.js html-preview --run-dir <path>
-node .\dist\cli.js critique-next --queue <path>
-node .\dist\cli.js critique-complete --queue <path> --task-id MEDIA-CRIT-01
-node .\dist\cli.js platform-capabilities --url https://www.youtube.com/watch?v=dQw4w9WgXcQ
-node .\dist\cli.js official-api-readiness --url https://www.youtube.com/watch?v=dQw4w9WgXcQ --youtube-api-key-env FARM_YOUTUBE_API_KEY
-node .\dist\cli.js source-registry --category search --locale ko-KR
-node .\dist\cli.js destination-recovery-plan --run-dir <evidence-run-dir> --format commands
-node .\dist\cli.js evidence-run --url https://www.youtube.com/watch?v=dQw4w9WgXcQ --timestamps-sec 0,10 --dense-sampling
-node .\dist\cli.js evidence-run --url https://example.com/ --profile my-site --headed --official-api
-node .\dist\cli.js auth-login --profile my-site --url https://example.com/login --wait-ms 120000 --chrome
-node .\dist\cli.js auth-cdp-launch --profile my-site --url https://accounts.google.com/ --port 9222
-node .\dist\cli.js auth-cdp-import --profile my-site --cdp-url http://127.0.0.1:9222 --save-now --cookie-domains google.com,youtube.com
-node .\dist\cli.js profile-list
-node .\dist\cli.js register-all
-```
-
-`claim-gate` exits non-zero when a claim cites missing or unregistered
-evidence. In `--mode final`, it also fails zero-claim reports by default.
-
-`smoke-media` serves a local page with PNG, SVG, poster, VTT, and video
-resources. Image-like resources and VTT files are written under `media/`;
-captured VTT files are also parsed into `structured/*.transcripts/*.json`.
-Video/audio/stream resources are indexed in `structured/*.media-index.json`
-unless a legitimate byte source is captured without bypassing platform limits.
-
-`html-preview` writes `html/farm-evidence-preview.html` with screenshot
-thumbnails and links to raw artifacts.
-
-`critique-next` prints exactly one next media critical review task. It does not
-mutate the queue. `critique-complete` advances the queue only when that task's
-configured output file exists and is non-empty, so a 10-round review cannot be
-collapsed into one untracked response.
-
-`platform-capabilities` prints a static, source-linked capability map for
-YouTube, Instagram, TikTok, or a generic browser fallback. It does not fetch the
-URL; it labels each evidence path as `available`, `unavailable`, or
-`not_attempted` with credential and legal constraints.
-
-`official-api-readiness --url <url>` checks official API credential readiness
-without calling provider APIs. It reports which supported lookups exist for the
-URL, which credential env var references were supplied, and whether those env
-vars are set, while never printing raw token values. Search, hashtag, profile,
-or listing URLs on supported platforms report `missing_media_id` until a direct
-media/item URL or destination follow-up provides a stable media ID. Add
-`--fail-not-ready` in automation when any missing reference/env/media ID should
-exit non-zero.
-
-`evidence-run` is the first-class workflow wrapper: it writes platform
-capability artifacts, writes source strategy and soft intent-profile artifacts,
-attempts a browser page capture, samples timestamped browser-visible frames
-unless `--no-frames` is set, writes an assessment report,
-optionally runs OCR over sampled frames, optionally collects
-credentials-gated official API metadata, classifies
-browser-visible obstructions, adds typed claim/citation ledgers, and runs the
-final claim gate. Dense sampling can
-trigger from browser-exposed transcript cues, OCR text hits, and browser-visible
-scene changes detected through a small canvas fingerprint of sampled video
-frames. Run assessments preserve dense sampling events with the trigger source,
-hit timestamps, planned timestamps, captured timestamps, caps, and scene-change
-distances when available. Scene-change diagnostics also include threshold
-recommendations when the sampled distance distribution suggests keeping,
-lowering, raising, or manually reviewing the current threshold, and
-scene-change hit expansion can be capped independently from the dense frame
-capture budget. When
-`--dense-sampling` and `--ocr` are both enabled, verified OCR text
-hits can trigger additional browser-visible frame sampling around the hit
-timestamp, followed by OCR over those dense frames. Before capture, the workflow
-also attempts a bounded dismissal pass for ordinary overlays such as close
-buttons, not-now prompts, newsletter modals, and reject/necessary-only cookie
-banners. It records that pass as `browser_overlay_dismissal` evidence when an
-action occurs, and it intentionally skips login, CAPTCHA, age-gate, payment,
-accept-all, and app-open buttons. The pass is configurable through
-`overlayDismissal` in MCP/HTTP input and through CLI flags. Login walls, app-open
-interstitials, bot blocks, region/age gates, and unavailable-media pages are
-recorded as structured `browser_obstruction` evidence instead of being treated
-as successful content access. Audio and transcript understanding remain marked
-unverified unless an authorized caption body, transcript cue, or audio
-transcription artifact exists in the run. The farm performs no audio capture or
-speech-to-text (an explicit non-goal): `audio_transcription` is a lawful
-provider/operator-supplied transcript only, and the autonomous pipeline emits
-captured captions as `transcript_cue`, never a fabricated transcription. The
-workflow also reports stage
-timings for setup, browser open/capture/frame sampling, official API, OCR,
-OCR-hit dense sampling, scene-change dense sampling, overlay dismissal,
-obstruction classification, claim gate, and final report generation.
-
-Every source-registry entry carries a `legalBasis` recording the lawful access
-posture under which the farm reads it: `public_browser_visible` (public pages a
-human can view without auth, robots-respecting, no bypass), `official_api` (the
-provider's official API under the operator's own credentials), `user_provided`
-(an operator-supplied authenticated session the user owns), `derivative_citation`
-(AI/aggregator output used only to point at primary sources), or `planning_only`.
-It records the INTENDED basis, not a license, and pairs with the hard non-goals —
-no login/CAPTCHA/paywall/age-gate bypass, no raw audio/video stream download, no
-payment/booking/account actions.
-
-Source-navigation recipe execution was removed 2026-06-10 with the selector
-subsystem (`docs/SELECTOR_STACK_EXCISION.md`): per-site selector recipes rot,
-and a consented browser + model vision navigates portal pages without them.
-Navigate with your own (consented) browser or the manual farm tools, then
-capture/register the bytes; the claim gate still validates the historical
-`source_navigation_*` / `destination_*` evidence kinds in old runs, including
-their destination-provenance citation chain.
-
-`destination-recovery-plan --run-dir <evidence-run-dir>` is a read-only
-handoff inspector for `destination_triage` artifacts. It extracts
-`blockedChildRecoveryAdvice` from a completed evidence run and can print JSON,
-Markdown, all commands, setup-only commands, retry-only commands, or a
-preflight check without opening a browser. Use this after a run reports blocked
-child recovery candidates to copy the Chrome persistent-profile setup and
-headed evidence-run commands from the artifact bundle instead of re-opening raw
-triage JSON. If an older triage artifact only contains
-`blockedChildRecoveryCandidates`, the CLI synthesizes equivalent
-profile/headed recovery advice from those candidates, and it tolerates UTF-8
-BOM-prefixed JSON artifacts written by Windows handoff scripts. JSON and
-Markdown output mark whether each item came from original artifact advice or
-synthesized recovery candidates. Markdown output includes the same preflight
-summary, and `--check-profiles` adds saved-profile readiness to that handoff. Add
-`--format check --check-profiles --fail-check` when QA should confirm the
-deterministic recovery profile already exists before retry execution, or
-`--only-check-ok` when rendering only passing recovery commands.
-
-Useful `evidence-run` options:
-
-- `--profile <name>` reuses a saved profile from `auth-login`.
-- `--persistent-profile` uses a full Chromium user data directory.
-- `--headed` opens a visible Chromium window for CLI debugging.
-- `--http-fetch` tries a browserless HTTP GET first (tier-0) and escalates to
-  the browser if it declines; no screenshot/frames on the tier-0 path.
-- `--auto-capture` like `--http-fetch`, but escalates on **any** decline
-  (client-rendered shell / non-HTML / off-domain / bot-block), so it is never a
-  worse capture than the browser. A server-rendered page is captured without
-  launching Chromium and labelled `http_fetch`.
-- Every evidence run also writes acquisition artifacts: initial
-  `acquisition_method_plan`, official API readiness before the browser opens
-  (no provider calls unless `--official-api` is set), obstruction-driven
-  `acquisition_method_runtime_plan`, and, for non-terminal public-page
-  failures, legal public gateway capture through Jina Reader and Wayback latest
-  snapshot. Login/paywall/CAPTCHA/age/region gates stay terminal.
-- `--text-only` text capture profile: blocks image/media/font + ad-host
-  subrequests and skips the page screenshot (faster text/structure-only runs).
-- `--intent`, `--intent-scope`, `--intent-shapes`, `--success-criteria`, and
-  `--intent-boundaries` add a soft intent lock. The run still proceeds, but it
-  writes an `intent_profile` artifact that records the decision being supported,
-  evidence modalities, missing questions, assumptions, recommended capture
-  options, and refusal boundaries. Use this for focused alpha/trend/price/design
-  work where text-only evidence may be insufficient. Valid shapes are
-  `page_text`, `page_html`, `structured_data`, `semi_structured_dom`,
-  `ui_screenshot`, `ocr_image_text`, `video_frames`, `captions_transcript`,
-  `stt_asr`, `tts_detection`, `audio_events`, `map_place_state`, and
-  `byte_faithful_byo`. STT/TTS/audio shapes are routed as heavy/BYO needs; the
-  farm does not autonomously download or analyze raw audio/video streams.
-- `--capture-cache` opt-in replay: reuse a fresh (≤ 1 h) prior bare-ephemeral
-  capture by content hash instead of launching the browser; the page claim is
-  labelled `cached_capture` with its staleness age.
-- `--no-overlay-dismissal` disables the cautious pre-capture overlay dismissal
-  pass.
-- `--overlay-dismissal-max-actions <0-10>` changes how many ordinary overlay
-  dismissals can happen before capture; the default is `3`.
-- `--ocr` runs bounded OCR over sampled frame screenshots. The `tesseract.js`
-  engine auto-installs as an optional dependency, so it is normally present;
-  if a lean/offline install skipped it, OCR records an OCR-unavailable artifact
-  (run `npm install tesseract.js` to enable). Empty text and low-confidence text are recorded as
-  partial status so they do not become verified OCR evidence. OCR text-profile
-  metadata distinguishes price, percent/discount, map/local, travel/commerce,
-  rating, distance, hours, contact/address, reservation, menu, and commerce
-  policy text.
-- `--ocr-language <lang>` passes a language code such as `eng` or `eng+kor` to
-  `tesseract.js`.
-- `--ocr-min-confidence <0-100>` marks OCR text partial when reported
-  confidence is below the threshold.
-- `--dense-sampling` captures additional frame windows around browser-exposed
-  transcript cue hits, browser-visible scene changes, and, when OCR is enabled
-  and available, OCR text hits.
-- `--dense-scene-threshold <1-64>` sets the 8x8 visual fingerprint hamming
-  distance needed to treat adjacent sampled frames as a scene-change hit.
-- `--dense-scene-max-hits <1-120>` caps how many scene-change midpoints are
-  expanded before the dense frame cap is applied; by default it follows
-  `--dense-max-frames`.
-- `--no-dense-scene-change` disables scene-change dense sampling while leaving
-  transcript/OCR dense sampling enabled.
-- `--official-api` attempts supported platform APIs only through explicit env var
-  credential references such as `--youtube-api-key-env YOUTUBE_API_KEY`.
-
-See `docs/OFFICIAL_API.md` for YouTube, Instagram, TikTok credential setup and
-the opt-in live integration harness. Normal `npm test` runs do not call live
-official APIs.
-
-See `docs/OCR.md` for optional `tesseract.js` setup and the opt-in OCR
-integration harness. Normal `npm test` does not require the OCR engine.
-
-See `docs/DOCUMENTATION_MAP.md` for the complete development documentation map,
-including the recommended Codex/Claude reading order, QA/QC process, release
-notes, and the current verification caveat. See `docs/CLAUDE_HANDOFF.md` for a
-copyable handoff prompt for Claude.
-
-See `docs/SOURCE_STRATEGY.md` for the generic plan for Naver Map, Naver Blog,
-Google Search/Maps, Agoda, Trip.com, Booking.com, Expedia, and similar sources.
-See `docs/INFORMATION_SOURCE_TAXONOMY.md` for the category/locale coverage
-registry that prioritizes top platform slots across search, social, community,
-content, news, review, map/local, commerce, knowledge, private network,
-recommendation, and AI-agent sources.
-
-`serve-http` starts a local JSON queue. Use `--concurrency <n>` to run multiple
-evidence jobs and `--max-terminal-jobs <n>` to bound retained completed,
-failed, and canceled jobs. Endpoints:
-
-- `GET /health`
-- `POST /evidence-run`
-- `GET /jobs`
-- `GET /jobs?status=queued|running|completed|failed|canceled`
-- `GET /jobs/:id`
-- `POST /jobs/:id/cancel`
-- `DELETE /jobs/:id`
-- `POST /jobs/prune`
-
-Queued jobs are canceled immediately. Running jobs receive an abort signal and
-unwind at workflow and BrowserPool abort checkpoints; owned browser pools are
-released/shut down during cleanup. This server is intended for local
-orchestration, not a production shared service. Job responses include lifecycle
-diagnostics such as `startedAt`, `finishedAt`, `queueDurationMs`,
-`runDurationMs`, `totalDurationMs`, and `abortLatencyMs` when applicable.
-
-`auth-login` opens a visible browser and saves storage state under
-`~/.gstack/browser-profiles/<profile>/storage-state.json`. Use it for normal
-service login flows: the site opens its login/consent popup, the user finishes
-login manually, then the saved profile can be reused by farm leases. Add
-`--persistent-profile` when the site needs a full Chromium user data directory
-instead of storage-state only.
-
-The saved profile directory is created owner-only (POSIX `chmod 0700`; Windows
-`icacls`). On Windows you can additionally encrypt `storage-state.json` at rest
-with DPAPI by setting `FARM_ENCRYPT_STORAGE_STATE=1`: the file is stored as an
-opaque DPAPI wrapper and transparently decrypted in memory when a lease uses it
-(no plaintext temp is ever written). Encryption is opt-in and best-effort — off
-Windows, or if it fails, the file stays plaintext under the owner-only directory
-— and decryption of an existing wrapper is always attempted even with the flag
-unset. DPAPI `CurrentUser` protects an at-rest/offline copy of the file, not
-against code already running as the logged-in user. The persistent-profile
-`user-data` directory is Chromium's own (already DPAPI-encrypted) store. Add `--chrome` or
-`--browser-channel chrome` to use the installed Chrome channel instead of the
-bundled Playwright Chromium for sites that reject automation-oriented browser
-builds.
-
-`auth-cdp-launch` opens a user-controlled Chrome window with a local DevTools
-port and a farm profile user-data directory. `auth-cdp-import` then attaches to
-that Chrome session and saves cookies/storage state into the farm profile
-without reading passwords. Use this pair when a platform rejects direct
-Playwright login: launch Chrome, complete login in that Chrome window, then run
-`auth-cdp-import --profile <name> --cdp-url http://127.0.0.1:9222`. Add
-`--save-now` to skip the Enter prompt and `--cookie-domains <a,b>` to save only
-the target platform's cookies/origins from the attached Chrome session.
-
-Only one active lease may use a given saved profile at a time. This prevents two
-browser workers from overwriting the same cookies, localStorage, or IndexedDB
-snapshot.
-
-Payment pages remain blocked for write actions.
-
-`register-all` installs the MCP server into the local Codex and Claude user
-configs and creates timestamped backups before editing config files.
-
-## GStack Upgrade Safety
-
-This farm is an independent local package. It runs from the absolute path
-registered in Codex/Claude config. A normal gstack skill upgrade updates
-`~/.codex/skills/gstack*`; it should not overwrite this local package or the
-MCP config marker block.
-
-After any gstack or agent-host upgrade, run:
-
-```powershell
-npm run verify
-node .\dist\cli.js register-all
-claude mcp get browser-agent-mcp-farm
-```
-
-If Codex does not expose `mcp__browser-agent-mcp-farm__*` tools after an
-upgrade, restart Codex once and run `register-all` again.
-
-## MCP Write Tools
-
-Write tools require a lease with `capability: "read-write"`:
-
-- `farm_click`
-- `farm_fill`
-- `farm_press`
-- `farm_select_option`
-
-Read/navigation helpers are available for slower dynamic pages and long-scroll
-research pages:
-
-- `farm_evidence_run`
-- `farm_wait`
-- `farm_wait_for_selector`
-- `farm_scroll`
-- `farm_capture_after_idle`
-- `farm_sample_frames`
-
-`farm_sample_frames` seeks a browser-visible media element to timestamped
-positions and writes one screenshot bundle per frame. It does not download raw
-video bytes. Each frame metadata includes timestamp, seek result, active
-caption cues when the page exposes them, and a small browser-visible visual
-fingerprint when the page allows canvas reads. It also records available
-`<track>` elements and text-track metadata in the summary artifact.
-
-`farm_evidence_run` exposes the same evidence workflow through MCP. It uses the
-server BrowserPool lifecycle, so visible headed debugging remains a CLI-only
-option.
-
-## Trust, Verification & Structured Tools
-
-Read-only tools to inspect and re-verify evidence (no browser):
-
-- `farm_list_runs` — discover prior run directories (artifact/claim counts).
-- `farm_read_report` — read a run's Markdown report by `reportPath`.
-- `farm_list_artifacts` — list a run's artifact ledger (optional `evidenceKind`).
-- `farm_read_artifact` — read one artifact's bytes (text/base64), re-hashing on
-  read to flag tampering.
-- `farm_run_claim_gate` — re-validate a run's claims against its artifacts.
-- `farm_capabilities` — server identity, evidence kinds, non-goals, optional deps.
-
-Cite-or-fail authoring (so the gate covers your own answer, not just runner output):
-
-- `farm_register_evidence` — register the bytes you saw as a hash-verified
-  artifact. Use `text` for citeable UTF-8 text, or `bytesBase64` + `mime` +
-  `format` for byte-faithful BYO captures such as screenshots, HAR, media, or an
-  external bridge output that must not be retyped.
-- `farm_add_claim` — author a claim citing an artifact with an `anchor`; the gate
-  rejects a claim whose quoted text is not present in the cited bytes.
-
-Portable attestation and structured derivatives:
-
-- `farm_export_bundle` / `farm_verify_bundle` — a Merkle-rooted (optionally
-  Ed25519-signed) manifest a second agent can re-verify offline; also available as
-  the `export-bundle` / `verify-bundle` CLI commands. Add `--archive-file <bundle.evb>`
-  to produce/verify a **self-contained `.evb`** that embeds the artifact bytes and
-  verifies with no access to the original run directory.
-- `farm_extract_structured` — deterministic JSON-LD / Open Graph / typed
-  price+rating extraction from captured HTML (a *site claim* — cross-check it).
+A hallucinated citation cannot pass step 3: the gate re-reads the registered
+bytes and rejects the claim. `strictProvenance` additionally hard-fails claims
+that cite agent-authored "structured data" (self-asserted JSON) instead of
+farm-derived extraction — closing the measured "news retyped as JSON" hole.
 
 ### Worked agent-to-agent verifiable exchange
 
-The `.evb` archive lets one agent trust another's evidence by trusting hashes, not the
-producer:
+The self-contained `.evb` archive lets one agent trust another's evidence by
+trusting hashes, not the producer:
 
 ```sh
 # Agent A (captured the evidence, holds a private signing key)
@@ -505,21 +134,202 @@ node dist/cli.js verify-bundle --archive-file bundle.evb --public-key-env A_PUBL
 # -> { ok: true, complete: true, merkleMatches: true, signatureValid: true }
 ```
 
-B re-hashes the embedded bytes, recomputes the Merkle root, and checks A's signature
-**fully offline**. It rejects a bundle whose bytes were altered in transit
-(`tamperedArtifacts`), and a bundle signed by an impostor key (`signatureValid: false`).
-The success criterion is "one cooperating second agent can verify", not "the world
-converges" — see `tests/evidence-exchange.test.ts` for the worked A→B example.
+B re-hashes the embedded bytes, recomputes the Merkle root, and checks A's
+signature **fully offline**. Altered bytes → `tamperedArtifacts`; an impostor
+key → `signatureValid: false`. The success criterion is "one cooperating second
+agent can verify," not "the world converges" — see
+`tests/evidence-exchange.test.ts` for the worked A→B example.
 
-See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for exactly what the claim gate
-and the bundle prove and do not prove.
+## MCP tool surface (32 tools)
 
-The cite-or-fail boundary is regression-tested by a versioned, seed-deterministic
-property-based fuzz corpus (`scripts/fuzz-corpus.json`, run by `npm run qa:fuzz`
-and the `qa` CI workflow): it currently holds **0 hallucination leaks across 1,200
-fabrication / near-miss / recombination trials over 8 corpus seeds**. A new hard
-case is added by appending a seed, never removing one.
+| Group | Tools |
+| --- | --- |
+| One-shot workflow | `farm_evidence_run`, `farm_read_report` |
+| Manual capture | `farm_acquire_context`, `farm_open_page`, `farm_capture`, `farm_capture_after_idle`, `farm_wait`, `farm_wait_for_selector`, `farm_scroll`, `farm_sample_frames`, `farm_close_page`, `farm_release_context`, `farm_heartbeat` |
+| Write actions (lease `capability: "read-write"`; payment pages always refused) | `farm_click`, `farm_fill`, `farm_press`, `farm_select_option` |
+| Cite-or-fail authoring | `farm_register_evidence`, `farm_register_transcript`, `farm_add_claim`, `farm_judge_claim` |
+| Verification (no browser) | `farm_run_claim_gate`, `farm_list_runs`, `farm_list_artifacts`, `farm_read_artifact` (re-hashes on read), `farm_capabilities` |
+| Sealing & structure | `farm_export_bundle`, `farm_verify_bundle`, `farm_extract_structured` |
+| Research lenses & ops | `farm_lens`, `farm_list_leases`, `farm_reap_expired` |
 
-The payment guard blocks write actions on URLs, selectors, and target element
-text/attributes containing payment-like terms such as `checkout`, `payment`,
-`billing`, `credit-card`, `card number`, `cvv`, `pay now`, or `결제`.
+`farm_lens` ships declarative claim-type lenses: `market_scan`
+(`competitor_price`, `review_sentiment`, and `market_figure` — the latter
+requires corroboration across ≥2 independent registered domains, verified
+against each source's bytes) and `product_planning` (`user_pain`,
+`feature_gap`, `adoption_figure`).
+
+## CLI
+
+The same engine, scriptable. Highlights (full list: `browser-agent-mcp-farm help`):
+
+| Command | Purpose |
+| --- | --- |
+| `serve` / `serve-http` | MCP stdio server / local HTTP job queue (`/health`, `/evidence-run`, `/jobs`) |
+| `evidence-run` | Full capture → typed artifacts → claims → final gate, one command |
+| `claim-gate` | Re-validate a run; `--strict-provenance`, `--mode final`, non-zero exit on failure |
+| `export-bundle` / `verify-bundle` | Merkle manifest or self-contained signed `.evb`; `--anchor-log` appends the root to a hash-chained transparency log |
+| `verify-decision-log` / `verify-timestamp-log` | Verify gate-verdict / transparency-log hash chains |
+| `scan-secrets` | Scan a finished run for secrets-at-rest (non-zero exit if found) |
+| `purge-run` / `prune-runs` / `archive-run` | Retention: delete, sweep by age/byte budget, or tier-archive runs |
+| `auth-login` / `auth-cdp-launch` / `auth-cdp-import` | Consented login profiles (visible browser; or import cookies from your own Chrome via DevTools port) |
+| `profile-list` / `profile-remove` | Manage saved profiles |
+| `smoke` / `smoke-web` / `smoke-media` / `smoke-proxy` | Fixture and public-page smoke captures |
+| `html-preview` | Human-browsable preview of a run's evidence |
+| `platform-capabilities` / `official-api-readiness` | What evidence paths exist for a platform URL; are the needed credential env vars set (never prints token values) |
+| `register-claude` / `register-codex` / `register-all` | Host registration (with `--npx` for published-package installs); timestamped config backups |
+| `upgrade` | Show installed version + upgrade/re-register instructions |
+
+Useful `evidence-run` options: `--http-fetch` (browserless tier-0 GET) and
+`--auto-capture` (tier-0 first, escalate to the browser on *any* decline);
+`--capture-cache` (replay a ≤1h prior capture by content hash, labelled
+`cached_capture` with staleness age); `--text-only`; `--headed`; `--profile
+<name>` / `--persistent-profile`; `--ocr` (+`--ocr-language`,
+`--ocr-min-confidence`); `--dense-sampling` (extra frame windows around
+transcript-cue / OCR / scene-change hits); `--official-api` (credentials via
+env-var *names* only); `--intent` / `--intent-scope` / `--intent-shapes` /
+`--success-criteria` (soft intent lock recorded as an `intent_profile`
+artifact). Non-terminal public-page failures fall back to legal public gateways
+(Wayback latest snapshot); login/paywall/CAPTCHA/age/region gates stay terminal.
+
+## What a run records
+
+`evidence-run` writes typed, hash-registered artifacts for everything it
+derives: page text/HTML/screenshot, timestamped media frame samples (never raw
+stream downloads), WebVTT transcript cues, OCR passes (as *derivatives* of a
+registered screenshot, with language/confidence/text-profile metadata),
+structured extraction (JSON-LD / Open Graph / typed price+rating), acquisition
+method plans, official-API readiness, source strategy, obstruction
+classifications (login walls, bot blocks, region/age gates — recorded as
+obstructions, **not** treated as content), overlay-dismissal evidence, and
+stage timings. Claims and citations land in append-only ledgers; the final
+claim gate runs last and fails the run on any uncited or misquoted claim.
+
+## Authenticated capture — consent-first
+
+For sites that need login, the operator logs in **manually, once**, in a
+visible browser (`auth-login`, or `auth-cdp-launch`/`auth-cdp-import` to import
+cookies from your own Chrome). Saved profiles live under
+`~/.gstack/browser-profiles/<profile>/`, created owner-only (POSIX `0700` /
+Windows ACL). On Windows, `FARM_ENCRYPT_STORAGE_STATE=1` wraps the storage
+state with DPAPI (CurrentUser) — protecting at-rest/offline copies, not code
+running as the same user. One active lease per profile is enforced across
+processes by an on-disk lock, so parallel workers never clobber a cookie jar.
+
+## Safety boundaries (enforced in code, not prose)
+
+- **No login / CAPTCHA / paywall / age-gate bypass.** Walls are classified and
+  recorded as obstructions; consented profiles are the only authenticated path.
+- **No payment / booking / account-change automation** — write actions are
+  blocked on payment-like URLs, selectors, and element text
+  (`checkout`, `cvv`, `pay now`, `결제`, …).
+- **No raw platform video/audio stream download**, and no claim of audio/video
+  understanding without a matching transcript/frame artifact. The farm performs
+  no speech-to-text; captured captions are registered as `transcript_cue`,
+  never a fabricated transcription.
+- Every source-registry entry carries a `legalBasis`
+  (`public_browser_visible`, `official_api`, `user_provided`,
+  `derivative_citation`, `planning_only`) recording the intended lawful-access
+  posture.
+
+## Security posture
+
+- **Least privilege by default**: leases are read-only unless `read-write` is
+  requested; domain allowlists per lease; payment guard on all write paths.
+- **HTTP mode is authenticated**: `serve-http` refuses to start on a
+  non-loopback host without a token; with `FARM_HTTP_TOKEN` (or `--token`) set,
+  every request needs `Authorization: Bearer <token>` (401 before any route
+  logic). Intended for local orchestration, not as a shared production service.
+- **Small supply chain**: three runtime dependencies
+  (`@modelcontextprotocol/sdk`, `playwright`, `zod`) plus optional
+  `tesseract.js`; `npm audit` runs inside the release gate.
+- Secrets: credentials are passed as env-var *names*, never values, through
+  CLI/MCP/HTTP inputs; `scan-secrets` checks finished runs for leaked tokens.
+- Vulnerability reports: see [`SECURITY.md`](SECURITY.md).
+
+## Opt-in capture-binding tiers
+
+Default captures are plain and unchanged. Opt-in pieces bind a capture closer
+to its origin — each documented with what it does **and does not** prove
+([`docs/CAPTURE_BINDING.md`](docs/CAPTURE_BINDING.md)):
+
+- `FARM_BIND_TLS=1` — record the TLS certificate the final host presents
+  (separate probe): cert pinning / issuer-change detection.
+- `FARM_BIND_TLS_SAMECONN=1` — record the certificate on the **same socket**
+  that delivered the bytes (tier-0 HTTP path).
+- `export-bundle --anchor-log` — append verified Merkle roots to a
+  hash-chained transparency log (proves relative *order*, not wall-clock time;
+  an RFC-3161 TSA seam is in place for real timestamps).
+
+None of these upgrade trust by themselves — the deterministic gate stays the
+trust boundary. Full origin-binding (proving bytes came from the origin server
+against a malicious local producer) requires a neutral notary (zkTLS-class);
+that boundary is documented, not papered over
+([`docs/ORIGIN_BINDING_DESIGN.md`](docs/ORIGIN_BINDING_DESIGN.md)).
+
+## Quality gates
+
+`npm run verify` = build → typecheck → lint → **dependency-boundary guard**
+(the browser/lease primitives may never import platform logic — build-enforced)
+→ tests + coverage (ratcheting floor) → 4 smoke captures → packaged-tarball
+test → `npm audit` → generated status. CI runs the same gate on Ubuntu and
+Windows, Node 22 and 24. Current numbers live in the generated
+[`STATUS.md`](STATUS.md) / [`SCORECARD.md`](SCORECARD.md) — they are not
+restated here by design.
+
+The cite-or-fail boundary itself is regression-tested by a versioned,
+seed-deterministic fuzz corpus (`npm run qa:fuzz`, a hard CI gate): currently
+**0 hallucination leaks across 1,200 fabrication / near-miss / recombination
+trials**. New hard cases are added by appending seeds, never removing one.
+
+## Architecture (one paragraph)
+
+Thin transports (`mcp-server` / `cli` / `http-server`) → a single facade
+(`farm-service`) → generic browser primitives (`lease-manager`,
+`browser-pool`) → platform intelligence (source strategy, adapters, OCR,
+official API) → run orchestration (`evidence-runner`) → integrity
+(`claim-gate`). One hard, build-enforced rule: **primitives never import the
+layers above them** (`npm run boundaries` fails the build otherwise). Details:
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Host integration
+
+Two modes, documented in [`HOST-ADAPTERS.md`](HOST-ADAPTERS.md):
+
+- **Mode A — parent-driven** (default, safest): the parent agent holds the farm
+  tools, captures, and hands saved artifacts to analyzer subagents.
+- **Mode B — browser-worker subagents**: only when the host can grant farm MCP
+  tools to a worker; one task + domain allowlist per worker, own `agentId`,
+  release in a `finally` block, never reuse another worker's context token.
+
+## Documentation
+
+| Doc | What's in it |
+| --- | --- |
+| [`skills/browser-agent-mcp-farm/SKILL.md`](skills/browser-agent-mcp-farm/SKILL.md) | The agent-facing playbook (tool flow, lens claim types, refusal lines) |
+| [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) | Exactly what the gate/bundle prove and do not prove |
+| [`docs/CAPTURE_BINDING.md`](docs/CAPTURE_BINDING.md) | Opt-in provenance pieces, shipped vs deliberately deferred |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layering + the build-enforced boundary rule |
+| [`docs/OFFICIAL_API.md`](docs/OFFICIAL_API.md) / [`docs/OCR.md`](docs/OCR.md) | Optional credentialed-API and OCR surfaces |
+| [`docs/QA_QC_PROCESS.md`](docs/QA_QC_PROCESS.md) | The quality gates and how "verified" is defined |
+| [`docs/DOCUMENTATION_MAP.md`](docs/DOCUMENTATION_MAP.md) | Full doc index (including development history) |
+| [`CHANGELOG.md`](CHANGELOG.md) | Versioned changes (semver) |
+
+## Scope & non-goals
+
+In scope: the local capture-and-verify slice — leases, consented capture,
+hash-registered typed artifacts, claim gating, sealed bundles, host
+registration, and a local HTTP queue.
+
+Out of scope, permanently: payment actions; DRM bypass or raw platform
+video/audio download; login/CAPTCHA/paywall bypass; a production multi-tenant
+remote service. (Historical note: a per-site selector/recipe subsystem was
+deliberately excised in 2026-06 — selector recipes rot; model vision + a
+consented browser replaced them. `docs/SELECTOR_STACK_EXCISION.md` records the
+decision.)
+
+## License
+
+[Apache-2.0](./LICENSE) © 2026 이지범 — with an explicit patent grant, no
+copyleft, and a [`NOTICE`](./NOTICE) file covering attribution. Runtime
+dependencies are MIT/Apache-2.0 only. Release/licensing details for
+redistributors: [`docs/PUBLIC_RELEASE.md`](docs/PUBLIC_RELEASE.md).

@@ -1,0 +1,15 @@
+browser-agent-mcp-farm
+Copyright 2026 이지범
+
+Licensed under the Apache License, Version 2.0.
+
+This product bundles no third-party source code. Its runtime dependencies are
+installed from npm under their own licenses:
+
+  - @modelcontextprotocol/sdk (MIT)
+  - playwright / playwright-core (Apache-2.0)
+  - zod (MIT)
+  - tesseract.js (Apache-2.0, optional — OCR support)
+
+Playwright downloads browser binaries (Chromium) that are distributed under
+their own licenses by their respective projects.
