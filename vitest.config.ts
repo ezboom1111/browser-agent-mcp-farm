@@ -8,6 +8,16 @@ const thresholds = JSON.parse(
   readFileSync(new URL("./coverage-thresholds.json", import.meta.url), "utf8")
 ) as { lines: number; statements: number; functions: number; branches: number };
 
+// The ratchet raises these from local (Windows) runs, but win32-only paths
+// (DPAPI storage-state and friends) never execute on the Linux CI runner, which
+// measures ~0.5pp lower on the exact same commit (e.g. lines 78.44% local vs
+// 77.93% CI). Give non-win32 runs 1pp of slack so the CI gate fails on real
+// regressions, not on the platform gap.
+const platformSlack = process.platform === "win32" ? 0 : 1;
+const effectiveThresholds = Object.fromEntries(
+  Object.entries(thresholds).map(([key, value]) => [key, Math.max(0, value - platformSlack)])
+) as typeof thresholds;
+
 export default defineConfig({
   test: {
     globals: false,
@@ -30,7 +40,7 @@ export default defineConfig({
       // in-gate test runs without ever moving the ratchet. Do NOT widen this to include skills/.
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts", "**/*.d.ts"],
-      thresholds
+      thresholds: effectiveThresholds
     }
   }
 });
