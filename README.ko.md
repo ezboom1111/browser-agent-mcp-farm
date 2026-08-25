@@ -3,7 +3,7 @@
 [![CI](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml)
 [![qa (anti-hallucination fuzz)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml)
 [![npm](https://img.shields.io/npm/v/browser-agent-mcp-farm.svg)](https://www.npmjs.com/package/browser-agent-mcp-farm)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License: Source-Available](https://img.shields.io/badge/License-Source--Available_(view--only)-lightgrey.svg)](./LICENSE)
 
 > English README: [README.md](./README.md)
 
@@ -357,6 +357,10 @@ cite-or-fail 경계 자체는 버전 관리되는 시드 결정론적 퍼즈 코
 
 ## 라이센스
 
-[Apache-2.0](./LICENSE) © 2026 이지범 — 명시적 특허 조항, 카피레프트 없음,
-귀속용 [`NOTICE`](./NOTICE) 포함. 런타임 의존성은 전부 MIT/Apache-2.0.
-재배포자를 위한 상세: [`docs/PUBLIC_RELEASE.md`](docs/PUBLIC_RELEASE.md).
+**소스공개 — 열람·평가 전용** ([LICENSE](./LICENSE)). © 2026 이지범, all
+rights reserved. 포트폴리오 열람과 저자의 작업을 평가하기 위한 무수정 로컬
+설치·실행만 허용되며, 그 외의 사용·복제·수정·재배포는 사전 서면 허가 없이
+금지됩니다(문의: ezboom1111@gmail.com). 런타임 npm 의존성은 각자의 라이센스를
+따릅니다([`NOTICE`](./NOTICE)). npm에 Apache-2.0로 게시됐던 ≤0.7.0 사본은
+그 사본에 한해 기존 라이센스가 유지됩니다. 라이센스 이력·릴리스 절차:
+[`docs/PUBLIC_RELEASE.md`](docs/PUBLIC_RELEASE.md).
