@@ -38,12 +38,17 @@ For a new Codex or Claude session, read these files in this order:
 | `docs/SOURCE_STRATEGY.md` | Evidence strategy for different source families. | Read before changing source-strategy artifacts, source family decisions, or claim/evidence expectations by platform type. |
 | `docs/ACQUISITION_METHOD_PLANNER.md` | Ordered acquisition-method planning and the Lee-vault KB bridge for reusable method memory, inspired by method-selection tools such as insane-search and bounded by farm provenance rules. | Read before changing acquisition fallback order, external/BYO capture guidance, blocked-source escalation behavior, or `kb-acquisition-bridge`. |
 
-## Portal Navigation Docs
+## Historical Portal Navigation Docs
+
+The selector/source-navigation runtime was removed in v0.8.0. The following
+documents are retained to explain historical decisions and the surviving
+destination-triage concepts; they are not a current command reference. Start
+with `docs/SELECTOR_STACK_EXCISION.md` before relying on them.
 
 | File | Purpose | How to use |
 | --- | --- | --- |
-| `docs/PORTAL_NAVIGATION_ARCHITECTURE.md` | Architecture for portal-native navigation, selector calibration, destination follow-up, destination triage, and safe execution. | Read before changing navigation architecture, data flow, failure modes, or evidence boundaries. |
-| `docs/PORTAL_NAVIGATION_IMPLEMENTATION_GUIDE.md` | Lower-level implementation guide for source navigation plans, recipes, calibration, promotion, follow-up, deepening, and QA. | Read when implementing or debugging source-navigation code and tests. |
+| `docs/PORTAL_NAVIGATION_ARCHITECTURE.md` | Historical architecture for the removed selector/calibration stack and surviving destination concepts. | Read only when reconstructing design history. |
+| `docs/PORTAL_NAVIGATION_IMPLEMENTATION_GUIDE.md` | Historical implementation guide for removed source-navigation commands. | Do not use as a current command reference. |
 | `docs/NEXT_TASKS.md` | Current prioritized work queue. | Use as the active task board. Update after each meaningful development pass. |
 
 ## Evidence Feature Docs
