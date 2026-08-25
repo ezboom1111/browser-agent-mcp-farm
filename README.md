@@ -3,7 +3,7 @@
 [![CI](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/ci.yml)
 [![qa (anti-hallucination fuzz)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml/badge.svg)](https://github.com/ezboom1111/browser-agent-mcp-farm/actions/workflows/qa.yml)
 [![npm](https://img.shields.io/npm/v/browser-agent-mcp-farm.svg)](https://www.npmjs.com/package/browser-agent-mcp-farm)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License: Source-Available](https://img.shields.io/badge/License-Source--Available_(view--only)-lightgrey.svg)](./LICENSE)
 
 > 한국어 README: [README.ko.md](./README.ko.md)
 
@@ -343,7 +343,11 @@ decision.)
 
 ## License
 
-[Apache-2.0](./LICENSE) © 2026 이지범 — with an explicit patent grant, no
-copyleft, and a [`NOTICE`](./NOTICE) file covering attribution. Runtime
-dependencies are MIT/Apache-2.0 only. Release/licensing details for
-redistributors: [`docs/PUBLIC_RELEASE.md`](docs/PUBLIC_RELEASE.md).
+**Source-available, view/evaluation only** — see [`LICENSE`](./LICENSE).
+© 2026 이지범. All rights reserved. You may read the code and run it locally,
+unmodified, to evaluate the author's work; any other use, copying,
+modification, or redistribution requires prior written permission
+(ezboom1111@gmail.com). Runtime npm dependencies remain under their own
+licenses ([`NOTICE`](./NOTICE)). Versions up to 0.7.0 previously published to
+npm under Apache-2.0 remain governed by that license for those copies only.
+Licensing history and release process: [`docs/PUBLIC_RELEASE.md`](docs/PUBLIC_RELEASE.md).

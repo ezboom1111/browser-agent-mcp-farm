@@ -1,7 +1,9 @@
 browser-agent-mcp-farm
-Copyright 2026 이지범
+Copyright 2026 이지범. All rights reserved.
 
-Licensed under the Apache License, Version 2.0.
+Source-available, view/evaluation only — see LICENSE. (Versions up to 0.7.0
+were previously published under the Apache License 2.0; those copies remain
+governed by that license.)
 
 This product bundles no third-party source code. Its runtime dependencies are
 installed from npm under their own licenses:

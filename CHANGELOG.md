@@ -44,6 +44,11 @@ adheres to semantic versioning. Build/test status is tracked in
 
 ### Changed
 
+- **(2026-08-25) License switched: Apache-2.0 → Source-Available (view/evaluation only)** by the
+  author's decision — public visibility is for portfolio review; no use/copy/modify/redistribute
+  rights are granted without written permission. Copies of ≤0.7.0 obtained from npm under
+  Apache-2.0 remain governed by that license for those copies only. See `LICENSE` and
+  `docs/PUBLIC_RELEASE.md` §1.
 - **Official API readiness check now runs before browser capture** in the evidence-run pipeline,
   so official-API eligibility is known ahead of (and can short-circuit) the browser path.
 - Codex MCP registration now avoids writing a duplicate entry.
