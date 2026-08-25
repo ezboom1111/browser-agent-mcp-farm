@@ -13,7 +13,7 @@ Facade            farm-service.ts                                (one entry poin
 Primitives        lease-manager.ts · browser-pool.ts             (generic, platform-agnostic)
       |           + abort.ts · artifact-writer.ts · profile-store.ts · profile-lock.ts · frame-sampler.ts
       |
-Intelligence      source-strategy · source-registry · source-navigation*
+Intelligence      source-strategy · source-registry · acquisition-* · search-followups
 (platform logic)  destination-* · platform-adapters/ · ocr* · official-api · browser-obstructions
       |
 Orchestration     evidence-runner.ts                             (composes the stages of one run)
@@ -47,7 +47,7 @@ the core grows new neighbors.
   or uncited claims. Visual claims require a timestamped frame screenshot;
   transcript/audio claims require the matching artifact.
 - Destination evidence claims must cite the full provenance chain
-  (source-navigation action → destination candidate → child follow-up → run).
+  (search-result evidence → destination candidate → child follow-up → run).
 
 ## Safety boundaries (also enforced in code)
 
@@ -73,5 +73,5 @@ for build/test/coverage numbers — do not restate them in narrative docs.
 | a tool's shape | `schemas.ts` + `farm-service.ts` + `mcp-server.ts`/`cli.ts` | mcp-server tests, typecheck |
 | evidence integrity | `claim-gate.ts` | claim-gate tests |
 | a run's stages | `evidence-runner.ts` | evidence-runner tests |
-| platform/site behavior | `source-*` / `destination-*` / `platform-adapters/` | recipe/triage/calibration tests |
+| platform/site behavior | `source-*` / `acquisition-*` / `destination-*` / `platform-adapters/` | strategy, routing, and triage tests |
 | how agents discover the farm | `skills/browser-agent-mcp-farm/SKILL.md`, `registration.ts` | registration tests |

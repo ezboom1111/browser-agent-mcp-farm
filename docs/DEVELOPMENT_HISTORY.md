@@ -13,13 +13,13 @@ YouTube, Instagram, and TikTok.
 The code was first developed inside:
 
 ```text
-C:\Users\이지범\Desktop\일본 여행 플랜!\.gstack\tools\browser-agent-mcp-farm
+C:\Users\<user>\Desktop\일본 여행 플랜!\.gstack\tools\browser-agent-mcp-farm
 ```
 
 It was then split into this independent side-project repository:
 
 ```text
-C:\Users\이지범\Desktop\browser-agent-mcp-farm
+C:\Users\<user>\Desktop\browser-agent-mcp-farm
 ```
 
 ## Product Problem
@@ -769,20 +769,20 @@ node .\dist\cli.js register-all
 
 Passed on 2026-05-26 and updated:
 
-- `C:\Users\이지범\.codex\config.toml`
-- `C:\Users\이지범\.claude.json`
+- `C:\Users\<user>\.codex\config.toml`
+- `C:\Users\<user>\.claude.json`
 
 Backups:
 
-- `C:\Users\이지범\.codex\config.toml.bak-browser-agent-mcp-farm-20260526014724`
-- `C:\Users\이지범\.claude.json.bak-browser-agent-mcp-farm-20260526014724`
+- `C:\Users\<user>\.codex\config.toml.bak-browser-agent-mcp-farm-20260526014724`
+- `C:\Users\<user>\.claude.json.bak-browser-agent-mcp-farm-20260526014724`
 
 ## Repository Split
 
 The independent repo was created at:
 
 ```text
-C:\Users\이지범\Desktop\browser-agent-mcp-farm
+C:\Users\<user>\Desktop\browser-agent-mcp-farm
 ```
 
 Process:
@@ -2736,7 +2736,7 @@ Recommended next implementation sequence:
   search-to-source traversal still waits on provider-maintained selectors,
   repeated calibration, and QA.
 - Saved the office-hours design note to
-  `C:\Users\이지범\.gstack\projects\browser-agent-mcp-farm\codex-main-design-20260527-133637.md`.
+  `C:\Users\<user>\.gstack\projects\browser-agent-mcp-farm\codex-main-design-20260527-133637.md`.
 - Updated the top-level product plan with the current user-facing answer:
   "partially yes, not default autonomous."
 - Updated the architecture plan with a natural deepening maturity ladder that
