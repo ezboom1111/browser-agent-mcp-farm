@@ -41,9 +41,13 @@ before relying on a claim, a gate verdict, or a bundle.
 **Does NOT prove:**
 - That the bytes are a faithful capture of the live page (same caveat as above —
   the signature attests *who sealed* the bytes, not that they are real).
-- Portability beyond the runDir: this is currently a **manifest over the run on
-  disk**, not a self-contained archive. The verifier needs the run's files present.
-  A self-contained signed `.evb` archive is a planned next step.
+- Portability caveat depends on the bundle format. The default **manifest** is a
+  manifest over the run on disk, so its verifier needs the run's files present. The
+  self-contained signed **`.evb`** archive (`export-bundle --archive-file`) removes
+  that dependency: it embeds the artifact bytes, and `verify-bundle --archive-file`
+  re-hashes them, recomputes the Merkle root, and checks the signature **fully
+  offline with no runDir** (worked A→B example in `tests/evidence-exchange.test.ts`).
+  Neither format changes the faithful-capture caveat above.
 
 ## Non-goals (the farm refuses these by design)
 
